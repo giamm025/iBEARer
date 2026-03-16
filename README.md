@@ -1,2 +1,2 @@
 # BEAR
-BEAR - Browser Extension for Academic Research
+Browser Extension for Academic Research
