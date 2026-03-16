@@ -1,0 +1,54 @@
+{
+    "experiment": {
+        "description": "Define here the experiment's parameters, such as its unique ID and duration.",
+        "experiment_id": "reddit_cospiracy",
+        "experiment_duration_minutes": 30       
+    },
+
+    "telemetry_settings": {
+        "description": "Define here the events to track (e.g., clicks, scrolls) and how often to save telemetry data.",
+        "track_events": [],
+        "sync_interval_ms": 10000
+    },
+
+    "target": {
+        "description": "Define here the target website and the specific DOM's elements to monitor.",
+        "url_pattern": "*://*.reddit.com/*",
+        "selectors": "shreddit-post" 
+    },
+    
+    "triggers_description": "Define here the triggers that will activate the intervention.",
+    "triggers": [
+    {
+        "description": "Trigger activated when we find a link containing specific keywords.",
+        "trigger_id": "attribute_match",
+        "target_node": "a", 
+        "target_attribute": "href",
+        "keywords": ["/r/conspiracy", "/r/aliens", "/r/flat_earth"]
+    },
+    {
+        "description": "Trigger activated when we find a keyword in the content's text.",
+        "trigger_id": "text_match",
+        "target_node": "h1, h2, h3, p",
+        "keywords": ["epstein", "vaccini", "terra piatta", "5g"]
+    }
+    ],
+
+    
+    "interventions_description": "Define here the intervention to apply when the triggers are activated.",
+    "interventions": [
+    {
+        "intervention_id": "HIDE",
+        "css_modification": "display: none !important; opacity: 0;"
+    },
+    {
+        "intervention_id": "INJECT_DEBUNKING",
+        "position": "beforebegin", 
+        "html_content": "<div style='background: red; color: white; padding: 5px;'>⚠️ Attenzione: Questo post contiene informazioni non verificate.</div>"
+    },
+    {
+        "intervention_id": "RERANKING",
+        "action": "move_to_bottom"
+    }
+    ]
+}
