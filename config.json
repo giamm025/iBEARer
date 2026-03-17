@@ -16,7 +16,7 @@
     
     "triggers": [
         {
-            "name": "Link Checking",
+            "name": "Text AND Link Checking",
             "description": "This Trigger activates when...",
             "event_source": "DOM_MUTATION",
             "target_selector": "h1, h2, p, a",

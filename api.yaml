@@ -1,0 +1,445 @@
+openapi: 3.0.3
+
+info:
+  title: BEAR API
+  version: 1.0.0
+
+servers:
+  - url: "http://localhost:3000"
+
+tags:
+  - name: Participants
+    description: Operations related to managing A/B testing participants.
+
+security:
+  - BearerAuth: []
+
+components:
+  schemas:
+
+    UUID:
+      type: string
+      format: uuid
+      description: A universally unique identifier (UUID).
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    ResearcherId:
+      $ref: "#/components/schemas/UUID"
+
+    ParticipantId:
+      $ref: "#/components/schemas/UUID"
+    
+    ExperimentId:
+      $ref: "#/components/schemas/UUID"
+
+    ResearcherName:
+      description: "The researcher 'username' of the researcher. Must be between 3 and 50 characters"
+      type: string
+      pattern: '^.*?$'
+      minLength: 3
+      maxLength: 50
+
+    Participant:
+      required: [participantId]
+      properties:
+        participantId:
+          $ref: "#/components/schemas/ParticipantId"
+
+    Group:
+      type: string
+      enum: [CONTROL, TREATMENT]
+      description: The assigned A/B testing group.
+
+    Researcher:
+      required: [researcherId, researcherName]
+      properties:
+        researcherId:
+          $ref: "#/components/schemas/ResearcherId"
+        researcherName:
+          $ref: "#/components/schemas/ResearcherName"
+    
+    Experiment:
+      required: [experimentId, researcherId, name]
+      properties:
+        experimentId:
+          $ref: "#/components/schemas/ExperimentId"
+        researcherId:
+          $ref: "#/components/schemas/ResearcherId"
+        name:
+          type: string
+          pattern: '^.*?$'
+          minLength: 0
+          maxLength: 100
+          description: "The name of the experiment."
+          example: "Homepage Redesign Test"
+
+    TelemetryEvent:
+      required: [type, timestamp]
+      properties:
+        type:
+          type: string
+          enum: [CLICK, SCROLL, VIEW, DOM_MUTATION, SURVEY_START, SURVEY_END]
+          description: "The type of recorded interaction."
+        timestamp:
+          type: string
+          format: date-time
+          description: "Exact moment of the event."
+        metadata:
+          description: "Additional objects for specific data (e.g., CSS selector, scroll depth)."
+          additionalProperties: true
+          example:
+            selector: "button#submit-comment"
+            url: "https://reddit.com/r/conspiracy"
+    
+    TelemetryBatch:
+      description: "A batch of telemetry events sent by a participant for a specific experiment."
+      required: [participantId, experimentId, events]
+      properties:
+        participantId:
+          $ref: "#/components/schemas/ParticipantId"
+        experimentId:
+          $ref: "#/components/schemas/ExperimentId"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelemetryEvent"
+    
+    # MUST be kept in sync with the actual config.json structure used by the extension
+    Config:
+      description: "The configuration schema for an experiment, downloaded by the extension."
+      required: [experiment, telemetry_settings, target, triggers, interventions]
+      properties:
+
+        experiment:
+          required: [experiment_name, experiment_duration_minutes]
+          properties:
+            experiment_name:
+              type: string
+              example: "reddit_cospiracy"
+            experiment_duration_minutes:
+              type: integer
+              example: 30
+
+        telemetry_settings:
+          properties:
+            track_events: 
+              type: array
+              items:
+                type: string
+            sync_interval_ms:
+              type: integer
+              example: 10000
+
+        target:
+          type: object
+          properties:
+            url_pattern:
+              type: string
+              example: "*://*.reddit.com/*"
+            selectors:
+              type: string
+              example: "shreddit-post"
+
+        triggers:
+          description: "Array of triggers for applying interventions."
+          type: array
+          items:
+            $ref: '#/components/schemas/Trigger'
+
+        interventions:
+          description: "Array of interventions that can be applied when triggers are activated."
+          type: array
+          items:
+            $ref: '#/components/schemas/Intervention'
+
+    Trigger:
+      description: "Defines a rule that triggers interventions when certain conditions are met on target elements."
+      required: [name, event_source, target_selector, conditions, apply_interventions]
+      properties:
+        name: 
+          description: "A unique name for the trigger, used for identification and reference within the configuration."
+          type: string 
+          example: "Text AND Link Checking"
+
+        description: 
+          type: string 
+
+        event_source: 
+          description: "The type of event that will trigger the evaluation of conditions. This could be:
+                        - DOM_MUTATION: Triggered when changes occur in the DOM, such as new elements being added or existing ones being modified.
+                        - PAGE_LOAD: Triggered when a page finishes loading.
+                        - USER_CLICK: Triggered when the user clicks on an element matching the target_selector.
+                        - TIMER: Triggered at regular intervals defined by the extension (e.g., every 5 seconds)."
+          type: string
+          enum: ['DOM_MUTATION', 'PAGE_LOAD', 'USER_CLICK', 'TIMER']
+        
+        target_selector:
+          description: "A CSS selector string that identifies the elements to which the trigger conditions will be applied." 
+          type: string 
+          example: "h1, h2, p, a" 
+          # NON conviene fare un array poiche le funzioni native di Javascript document.querySelectorAll() o element.matches()
+          # accettano stringhe di selettori CSS multiple separate da virgole... non array. Dunque conviene prenderlo gia in input
+          # cosi senza dover fare parsing poi.
+
+        logical_operator: 
+          description: "Logical operator to combine multiple conditions. Mandatory if there are multiple conditions."
+          type: string 
+          enum: ['AND', 'OR']
+          default: "OR"         # preferisco mettere OR perche piu permissivo (meglio tracciare di piu che meno)
+          example: "AND"
+        
+        conditions:
+          description: "Array of conditions that trigger the intervention."
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+
+        apply_interventions:
+          description: "Array of intervention names to apply"
+          type: array
+          items: 
+            $ref: '#/components/schemas/InterventionName'
+
+    Condition:
+      description: "Defines a single condition to evaluate on a target element, used within TriggerRule.conditions."      
+      required: [property, operator, value]
+      properties:
+
+        property: 
+          description: "The specific property of the target element to evaluate."  
+          type: string
+          example: "innerText"
+
+        operator: 
+          description: "The logical operator to apply for the condition check."
+          type: string
+          enum: ['CONTAINS', 'NOT_CONTAINS', 'CONTAINS_ALL', 'EQUALS', 'NOT_EQUALS', 'GREATER_THAN', 'LESS_THAN']
+          example: "CONTAINS"
+
+        value:
+          description: "The value to compare against the target element's property, interpreted according to the operator."
+          type: array
+          items:
+            type: string
+          example: ["epstein", "vaccini"]
+
+    InterventionName:
+      description: "The unique name of the intervention, used to reference it in TriggerRule.apply_interventions." 
+      type: string
+
+    Intervention:
+      required: [name, action_type, payload]
+      properties:
+        name: 
+          $ref: '#/components/schemas/InterventionName'
+
+        action_type:
+          description: "The type of action to perform when the intervention is applied. This determines how the payload will be interpreted and executed by the extension." 
+          type: string
+          enum: [APPLY_CSS, INJECT_HTML, DOM_MANIPULATION]
+        
+        payload:
+          additionalProperties: true
+          description: "The specific instructions for executing the intervention, structured according to the action_type. 
+                        - APPLY_CSS, it might include a css_text property with the CSS rules to apply. 
+                        - INJECT_HTML, it could include properties like position (e.g., beforebegin, afterend) and html_content (the HTML string to inject). 
+                        - DOM_MANIPULATION, it might specify a JavaScript function or a set of DOM operations to perform."
+
+    Error:
+      required: [code, message]
+      description: "A generic error response schema."
+      properties:
+        code:
+          type: string
+          pattern: '^.*?$'
+          minLength: 0
+          maxLength: 50
+          description: "A unique code identifying the error type."
+          example: "USERNAME_TAKEN"
+          
+        message:
+          type: string
+          pattern: '^.*?$'
+          minLength: 0
+          maxLength: 2000
+          description: "A human-readable description of the error."
+          example: "The username is already taken."
+
+
+  responses: 
+
+    Error400:
+      description: "Bad Request. Invalid input."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
+
+    Error401:
+      description: "Unauthorized. Authentication token is missing or invalid."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error" 
+
+    Error404:
+      description: "Not Found. The requested resource does not exist."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
+
+    Error403:
+      description: "Forbidden. The user is authenticated but does not have the necessary permissions to perform this specific action (e.g., delete a message that is not theirs)."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
+
+    Error409:
+      description: "Conflict. The request conflicts with the current state."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
+    
+    Error500:
+      description: "Internal Server Error. An unexpected error occurred on the server."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
+
+
+  parameters:
+
+    ResearcherId:
+      name: researcherId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ResearcherId"
+
+    ExperimentId:
+      name: experimentId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ExperimentId"
+    
+    PartecipantId:
+      name: participantId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ParticipantId"
+
+
+paths:
+
+  /experiments/{experimentId}/participants:
+    post:
+      summary: Register a new participant
+      operationId: enrollParticipant
+      tags:
+        - Participants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Participant'
+      responses:
+        '201':
+          description: "Created. The participant has been successfully registered."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Participant'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '409':
+          $ref: '#/components/responses/Error409'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /login:
+      post:
+        tags: ["login"]
+        summary: Logs in the researcher
+        description: |
+          If the researcher does not exist, it will be created,
+          and an identifier is returned.
+          If the researcher exists, the researcher identifier is returned.
+        operationId: doLogin
+        security: [] 
+        
+        requestBody:
+          required: true
+          description: Researcher details
+          content:
+            application/json:
+              schema:
+                description: "Should include the researcher name."
+                required: [researcherName]
+                properties:
+                  researcherName:
+                    $ref: "#/components/schemas/ResearcherName"
+
+        responses:
+          '201':
+            description: Researcher log-in action successful
+            content:
+              application/json:
+                schema:
+                  description: "The logged-in researcher's identifier."
+                  properties:
+                    researcherId:
+                      $ref: "#/components/schemas/ResearcherId"
+    
+  /{researcherId}/experiments/{experimentId}/config:
+    parameters:
+      - $ref: '#/components/parameters/ResearcherId'
+      - $ref: '#/components/parameters/ExperimentId'
+
+    put:
+      tags: [config]
+      summary: "Crea o aggiorna la configurazione di un esperimento."
+      description: "Sovrascrive interamente il config.json per l'esperimento indicato. Ideale per la Web Dashboard."
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Config'
+      responses:
+        '200':
+          description: "OK. Configurazione salvata o aggiornata con successo."
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+    
+  /experiments/{experimentId}/config:
+    parameters:
+      - $ref: '#/components/parameters/ExperimentId'
+      
+    get:
+      tags: [config]
+      summary: "Recupera la configurazione di un esperimento specifico."
+      description: "Usato dalla Web Dashboard per leggere le regole attuali."
+
+      responses:
+        '200':
+          description: "Configurazione recuperata con successo."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
