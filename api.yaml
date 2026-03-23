@@ -8,8 +8,23 @@ servers:
   - url: "http://localhost:3000"
 
 tags:
+  - name: login
+    description: Endpoint for researcher login and registration.
+
+  - name: config
+    description: Endpoints for managing experiment configurations.
+
   - name: Participants
     description: Operations related to managing A/B testing participants.
+
+  - name: Experiments
+    description: Endpoints for creating, retrieving, updating, and deleting experiments.
+
+  - name: Surveys
+    description: Endpoints for handling pre and post surveys.
+
+  - name: Telemetry
+    description: Endpoints for submitting and retrieving telemetry data from participants.
 
 security:
   - BearerAuth: []
@@ -44,6 +59,8 @@ components:
       properties:
         participantId:
           $ref: "#/components/schemas/ParticipantId"
+        group:
+          $ref: '#/components/schemas/Group'
 
     Group:
       description: The assigned A/B testing group.
@@ -80,6 +97,7 @@ components:
       description: "The name of the experiment."
       example: "reddit_cospiracy"
 
+    # Check if it is rigth and complete (?)
     TelemetryEvent:
       required: [type, timestamp]
       properties:
@@ -100,12 +118,8 @@ components:
     
     TelemetryBatch:
       description: "A batch of telemetry events sent by a participant for a specific experiment."
-      required: [participantId, experimentId, events]
+      required: [events]
       properties:
-        participantId:
-          $ref: "#/components/schemas/ParticipantId"
-        experimentId:
-          $ref: "#/components/schemas/ExperimentId"
         events:
           type: array
           items:
@@ -234,6 +248,7 @@ components:
       type: string
 
     Intervention:
+      description: "Defines a specific intervention that can be applied to target elements when triggered. The action_type determines how the payload will be executed by the extension."
       required: [name, action_type, payload]
       properties:
         name: 
@@ -250,6 +265,9 @@ components:
                         - APPLY_CSS, it might include a css_text property with the CSS rules to apply. 
                         - INJECT_HTML, it could include properties like position (e.g., beforebegin, afterend) and html_content (the HTML string to inject). 
                         - DOM_MANIPULATION, it might specify a JavaScript function or a set of DOM operations to perform."
+    
+    SurveyResponses:
+      description: 'A flexible collection of survey responses. It can contain any key-value pairs representing the participants answer'
 
     Error:
       required: [code, message]
@@ -333,7 +351,7 @@ components:
       schema:
         $ref: "#/components/schemas/ExperimentId"
     
-    PartecipantId:
+    ParticipantId:
       name: participantId
       in: path
       required: true
@@ -343,6 +361,7 @@ components:
 
 paths:
 
+  # per ora preso paro paro da WASA ma dobbiamo stabilire come farlo realmente (?)
   /login:
       post:
         tags: ["login"]
@@ -513,8 +532,8 @@ paths:
       # Must be the creator
 
       responses:
-        '200':
-          description: "The experiment has been successfully deleted."
+        '204':
+          description: "Ssuccessfully deleted."
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -579,8 +598,8 @@ paths:
                   $ref: '#/components/schemas/ParticipantId'
       
       responses:
-        '200':
-          description: "OK. The participant has been successfully unregistered from the experiment."
+        '204':
+          description: "OK. Successfully unregistered from the experiment."
         '400':
           $ref: '#/components/responses/Error400'
         '404':
@@ -588,14 +607,62 @@ paths:
         '500':
           $ref: '#/components/responses/Error500'
 
-  /{researcherId}/experiments/{experimentId}/config:
+  /participants/{participantId}:
     parameters:
-      - $ref: '#/components/parameters/ResearcherId'
-      - $ref: '#/components/parameters/ExperimentId'
+      - $ref: '#/components/parameters/ParticipantId'
+    
+    get:
+      tags: [Participants]
+      operationId: getParticipant
+      summary: Get participant details
+      description: "Retrieves detailed information about a specific participant Must be an admin of the experiment to access this endpoint."
 
-    # Per motivi di sicurezza l'aggiornamento delle configurazioni lo facciamo su un percorso che comprende l'ID del ricercatore.
-    # In questo modo, lato Backend, garantiremo che la modifica puo essere fatta solo se il Bearer Token corrisponde al ResearcherId 
-    # specificato nel percorso (o comunque, l'idea è far in modo che solo i ricercatori autorizzati possano modificare le configurazioni).
+      # Must be an admin
+
+      responses:
+        '200':
+          description: "Detailed information about the specified participant."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Participant'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'     
+
+  /participants/{participantId}/group:
+
+    get:
+      tags: [Participants]
+      operationId: getPartecipantGroup
+      summary: Retrieve the participant's group
+      description:  Retrieve the group assigned to a specific participant. 
+
+      responses:
+        '200':
+          description: "OK. Group retrieved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500' 
+
+
+  /experiments/{experimentId}/config:
+    parameters:
+      - $ref: '#/components/parameters/ExperimentId'
 
     put:
       tags: [config]
@@ -613,7 +680,7 @@ paths:
               $ref: '#/components/schemas/Config'
 
       responses:
-        '200':
+        '204':
           description: "OK. Configuration saved or updated successfully."
         '400':
           $ref: '#/components/responses/Error400'
@@ -621,11 +688,6 @@ paths:
           $ref: '#/components/responses/Error401'
         '404':
           $ref: '#/components/responses/Error404'
-    
-  /experiments/{experimentId}/config:
-
-    parameters:
-      - $ref: '#/components/parameters/ExperimentId'
       
     get:
       tags: [config]
@@ -633,7 +695,7 @@ paths:
       summary: "Retrieve experiment configuration."
       description: "Retrieve the configuration for the specified experiment. Must be logged in (either as a researcher or participant) to access this endpoint."
 
-      # Everyone logged in (both researchers and partecipants) can retrive the experiment configuration. 
+      # Everyone logged in (both researchers and participants) can retrive the experiment configuration. 
 
       responses:
         '200':
@@ -642,6 +704,166 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Config'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+    
+  /participants/{participantId}/pre-survey:
+    parameters:
+      - $ref: '#/components/parameters/ParticipantId'
+
+    post:
+      operationId: preSurveyCompleted
+      summary: 'Notify the server that the participant has completed the pre-intervention survey'
+      description: 'Notify the server that the participant has completed the pre-intervention survey and submit the responses. The request body should include the participant answers to the survey questions.'
+      tags: [Surveys]
+
+      # Must be Google Form or other Survey platforms (?)
+      security: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurveyResponses'
+      
+      responses:
+        '204':
+          description: "OK. Responses saved successfully."
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+    
+    get:
+      operationId: getPreSurveyResponses
+      summary: 'Retrieve pre-intervention survey responses'
+      description: 'Retrieve the responses to the pre-intervention survey for the specified participant. Must be an admin to access this endpoint.'
+      tags: [Surveys]
+
+      # Must be admin
+
+      responses:
+        '200':
+          description: "OK. Responses saved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyResponses'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+  
+  /participants/{participantId}/post-survey:
+    parameters:
+      - $ref: '#/components/parameters/ParticipantId'
+
+    post:
+      operationId: postSurveyCompleted
+      summary: 'Notify the server that the participant has completed the post-intervention survey'
+      description: 'Notify the server that the participant has completed the post-intervention survey and submit the responses. The request body should include the participant answers to the survey questions.'
+      tags: [Surveys]
+
+      # Must be Google Form or other Survey platforms (?)
+      security: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurveyResponses'
+      
+      responses:
+        '204':
+          description: "OK. Responses saved successfully."
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+    
+    get:
+      operationId: getPostSurveyResponses
+      summary: 'Retrieve post-intervention survey responses'
+      description: 'Retrieve the responses to the post-intervention survey for the specified participant. Must be an admin to access this endpoint.'
+      tags: [Surveys]
+
+      # Must be admin
+
+      responses:
+        '200':
+          description: "OK. Responses saved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SurveyResponses'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /participants/{participantId}/telemetry:
+    parameters:
+      - $ref: '#/components/parameters/ParticipantId'
+
+    post:
+      operationId: sendTelemetry
+      summary: 'Send telemetry data for a participant'
+      description: 'Submit telemetry events for the specified participant. The request body should include the telemetry data.'
+      tags: [Telemetry]
+
+      # This will be called by the exstension itself... so we do not need authentication (?)
+      security: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryBatch'
+
+      responses:
+        '204':
+          description: "OK. Telemetry events received successfully."
+        '400':
+          $ref: '#/components/responses/Error400'   
+        '401':
+          $ref: '#/components/responses/Error401'
+    
+    get:
+      operationId: getTelemetry
+      summary: 'Retrieves telemetry events for a participant'
+      description: 'Retrieves all telemetry events sent by the specified participant. Must be an admin of the experiment to access this endpoint.'
+      tags: [Telemetry]
+
+      # Must be admin
+
+      responses:
+        '200':
+          description: "OK. Telemetry events retrieved successfully."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryEvent'
+        
+        # nel caso della GET è moltooo meglio resituire direttamente un array di eventi anziche il TelemetryBatch. In questo modo evitiamo
+        # di fare parsing in seguito. Vedi il docx per la spiegazione dettagliata.
+
+        '400':
+          $ref: '#/components/responses/Error400'   
         '401':
           $ref: '#/components/responses/Error401'
         '404':
