@@ -1,0 +1,115 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="Pagina-1" id="Az24aUMMo54ITj2XDgTY">
+    <mxGraphModel dx="1226" dy="776" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="d51-731oM_2N_1kPe7h--1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#B266FF;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;strokeWidth=3;" value="" vertex="1">
+          <mxGeometry height="620" width="1130" x="260" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--21" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="" vertex="1">
+          <mxGeometry height="550" width="230" x="706" y="130.47" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--5" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="" vertex="1">
+          <mxGeometry height="550" width="230" x="1138" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--6" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="Salva risposte nel DB" vertex="1">
+          <mxGeometry height="50" width="190" x="1158" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--8" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Backend / API" vertex="1">
+          <mxGeometry height="25.37142857142857" width="96.45161290322581" x="1204.774193548387" y="104" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--11" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="" vertex="1">
+          <mxGeometry height="550" width="230" x="290" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--12" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" target="d51-731oM_2N_1kPe7h--15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--13" parent="1" style="whiteSpace=wrap;strokeWidth=2;fillColor=#080000;fontColor=#FFFFFF;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;fontSize=10;autosizeText=0;html=1;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Termine Esperimento&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 7px;&quot;&gt;(es. Scade il Timer OR l&#39;utente abbandona volutamente)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="310" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Estensione &lt;br&gt;(Utente)" vertex="1">
+          <mxGeometry height="30" width="145" x="332.5" y="96.47000000000003" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--41" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--15" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="d51-731oM_2N_1kPe7h--16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--15" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;fontSize=11;html=1;" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Disattivazione Estensione&lt;br&gt;&lt;/font&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;(stop al tracciamento e alla manipolazione)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="310" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--43" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--16" style="orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="d51-731oM_2N_1kPe7h--42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--44" connectable="0" parent="d51-731oM_2N_1kPe7h--43" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="POST .../telemetry&lt;div&gt;payload: eventi registrati&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="-0.8004" as="geometry">
+            <mxPoint x="29" y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--16" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="&lt;font&gt;Invio Telemetria&lt;br&gt;&lt;/font&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;(Flush del Buffer per salvare gli ultimi dati)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="310.5" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--48" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--17" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;rounded=0;curved=0;" target="d51-731oM_2N_1kPe7h--23">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="535" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--49" connectable="0" parent="d51-731oM_2N_1kPe7h--48" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Redirect" vertex="1">
+          <mxGeometry relative="1" x="0.5701" y="-1" as="geometry">
+            <mxPoint x="-18" y="-11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--17" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="Generazione Deep Link&lt;br&gt;per il Post-Survey&lt;br&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;(es. google.forms?uuid=1234)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="310" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--18" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="&lt;font style=&quot;&quot;&gt;Pulizia Memoria del Browser&lt;br&gt;&lt;/font&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;(UUID e config.json)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="311" y="607.5" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--22" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;labelBackgroundColor=none;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="&lt;span style=&quot;color: rgb(0, 0, 0); font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;Google Form&lt;/span&gt;" vertex="1">
+          <mxGeometry height="26.470588235294116" width="107.58064516129032" x="767.2096774193549" y="104" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--23" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="Raccoglie risposte Post-Survey" vertex="1">
+          <mxGeometry height="50" width="190" x="726" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--24" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" target="d51-731oM_2N_1kPe7h--18">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1165" y="633" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--25" connectable="0" parent="d51-731oM_2N_1kPe7h--24" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=1;points=[];movable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="200 OK" vertex="1">
+          <mxGeometry relative="1" x="-0.3145" y="2" as="geometry">
+            <mxPoint x="-30" y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--28" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--23" style="curved=1;startArrow=none;endArrow=block;exitX=1;exitY=0.5;entryX=0;entryY=0.5;rounded=0;entryDx=0;entryDy=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;exitDx=0;exitDy=0;" target="d51-731oM_2N_1kPe7h--6" value="POST &#xa;.../{partecipant_id}/post-survey/answers">
+          <mxGeometry relative="1" y="15" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+            <mxPoint x="916.5" y="506" as="sourcePoint" />
+            <mxPoint x="1166.5" y="503.9999999999998" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--46" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--38" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="d51-731oM_2N_1kPe7h--17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--47" connectable="0" parent="d51-731oM_2N_1kPe7h--46" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="200 OK" vertex="1">
+          <mxGeometry relative="1" x="0.2677" y="-1" as="geometry">
+            <mxPoint x="268" y="-7" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--38" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="Aggiorna stato Partecipante&lt;br&gt;&lt;font style=&quot;font-size: 9px;&quot;&gt;(es. COMPLETED or GIVED_UP)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="190" x="1158" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--45" edge="1" parent="1" source="d51-731oM_2N_1kPe7h--42" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="d51-731oM_2N_1kPe7h--38">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="d51-731oM_2N_1kPe7h--42" parent="1" style="whiteSpace=wrap;strokeWidth=2;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;" value="Salva Telemetria nel DB" vertex="1">
+          <mxGeometry height="50" width="190" x="1158.5" y="310" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
