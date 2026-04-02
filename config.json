@@ -25,13 +25,13 @@
 
                 {
                     "property": "search_query",
-                    "operator": "CONTAINS",
+                    "operator": "CONTAINS_ANY",
                     "value": ["epstein", "vaccini", "terra piatta", "5g"]
                 },
 
                 {
                     "property": "post_links",
-                    "operator": "NOT_CONTAINS",
+                    "operator": "NOT_CONTAINS_ANY",
                     "value": ["wikipedia.org"]
                 }
             ],
