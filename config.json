@@ -5,61 +5,64 @@
     },
 
     "telemetry_settings": {
-        "track_events": ["DOM_MUTATION", "USER_CLICK"],
+        "track_events": ["CLICK_ON_LINK", "SCROLL", "UPVOTE", "TIME_ON_PAGE", "SEARCH_SUBMITTED", "INTERVENTION_APPLIED"],
         "sync_interval_ms": 10000
     },
 
     "target": {
         "url_pattern": "*://*.reddit.com/*",
-        "selectors": "shreddit-post" 
+        "dependency": "adapters/reddit_adapter.js"
     },
     
     "triggers": [
         {
-            "name": "Text AND Link Checking",
-            "description": "This Trigger activates when...",
-            "event_source": "DOM_MUTATION",
-            "target_selector": "h1, h2, p, a",
+            "name": "Search Results Checking",
+            "description": "This Trigger activates when...", 
+            "id": "00001",
+            "event_source": "SEARCH_RESULTS_LOADED",
             "logical_operator": "AND",
             "conditions": [
 
                 {
-                    "property": "innerText",
+                    "property": "search_query",
                     "operator": "CONTAINS",
                     "value": ["epstein", "vaccini", "terra piatta", "5g"]
                 },
 
                 {
-                    "property": "href",
+                    "property": "post_links",
                     "operator": "NOT_CONTAINS",
                     "value": ["wikipedia.org"]
                 }
             ],
-            "apply_interventions": ["HIDE", "DEBUNKING"]
+            "apply_interventions": ["0002", "0003", "0004"]
         }
     ],
     
     "interventions": [
         {
-            "name": "HIDE",
-            "action_type": "APPLY_CSS",
+            "name": "Hide Post",
+            "description": "This Intervention hides the content of the post.",
+            "id": "00002",
+            "action_type": "HIDE_CONTENT",
+            "payload": {}
+        },
+        {
+            "name": "Inject Debunking",
+            "description": "This Intervention displays a warning banner for false information.",
+            "id": "00003",
+            "action_type": "SHOW_WARNING_BANNER",
             "payload": {
-                "css_text": "display: none !important; opacity: 0;"
+                "message": "⚠️ ATTENZIONE! Informazioni false."
             }
         },
         {
-            "name": "DEBUNKING",
-            "action_type": "INJECT_HTML",
+            "name": "Demote Post",
+            "description": "This Intervention moves the post to the bottom of the list.",
+            "id": "00004",
+            "action_type": "RERANKING",
             "payload": {
-                "position": "beforebegin",
-                "html_content": "<div style='background: red; color: white; padding: 5px;'>⚠️ Attenzione: Questo post contiene informazioni non verificate.</div>"
-            }
-        },
-        {
-            "name": "RERANKING",
-            "action_type": "DOM_MANIPULATION",
-            "payload": {
-                "operation": "move_to_bottom"
+                "new_position": "bottom"
             }
         }
     ]
