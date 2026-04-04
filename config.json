@@ -5,7 +5,14 @@
     },
 
     "telemetry_settings": {
-        "track_events": ["CLICK_ON_LINK", "SCROLL", "UPVOTE", "TIME_ON_PAGE", "SEARCH_SUBMITTED", "INTERVENTION_APPLIED"],
+        "track_events": [
+            "telemetry.events.ClickOnLinkEvent", 
+            "telemetry.events.ScrollEvent", 
+            "telemetry.events.UpvoteEvent", 
+            "telemetry.events.TimeOnPageEvent", 
+            "telemetry.events.SearchSubmittedEvent", 
+            "telemetry.events.InterventionAppliedEvent"
+        ],
         "sync_interval_ms": 10000
     },
 
@@ -18,8 +25,9 @@
         {
             "name": "Search Results Checking",
             "description": "This Trigger activates when...", 
+
             "id": "00001",
-            "event_source": "SEARCH_RESULTS_LOADED",
+            "event_source": "adapters.events.SearchResultsLoadedEvent",
             "logical_operator": "AND",
             "conditions": [
 
@@ -35,7 +43,12 @@
                     "value": ["wikipedia.org"]
                 }
             ],
-            "apply_interventions": ["0002", "0003", "0004"]
+
+            "apply_interventions": [
+                "interventions.hideContent", 
+                "interventions.showWarningBanner", 
+                "interventions.demotePost"
+            ]
         }
     ],
     
@@ -43,24 +56,23 @@
         {
             "name": "Hide Post",
             "description": "This Intervention hides the content of the post.",
-            "id": "00002",
-            "action_type": "HIDE_CONTENT",
+            "function_fqn": "interventions.hideContent",
             "payload": {}
         },
+
         {
             "name": "Inject Debunking",
             "description": "This Intervention displays a warning banner for false information.",
-            "id": "00003",
-            "action_type": "SHOW_WARNING_BANNER",
+            "function_fqn": "interventions.showWarningBanner",
             "payload": {
                 "message": "⚠️ ATTENZIONE! Informazioni false."
             }
         },
+
         {
             "name": "Demote Post",
             "description": "This Intervention moves the post to the bottom of the list.",
-            "id": "00004",
-            "action_type": "RERANKING",
+            "function_fqn": "interventions.demotePost",
             "payload": {
                 "new_position": "bottom"
             }
