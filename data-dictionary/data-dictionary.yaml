@@ -1,0 +1,54 @@
+# Data Dictionary
+# Questo file serve a spiegare quali sono i defaults forniti dalla nostra estensione,
+# che dovranno essere implementati e messi direttamente a disposizione dei ricercatori,
+# senza dover effettuare modifiche (es. cambiare l'adapter.js).
+
+event_source:
+  description: "Questi sono gli eventi asincroni che l'Adapter lancia per svegliare il Motore dell'estensione."
+  values:
+    PAGE_LOADED: "Appena la pagina viene caricata." 
+    SEARCH_RESULTS_LOADED: "Quando vengono caricati i risultati di ricerca." 
+    FEED_UPDATED: "Quando lo scroll infinito carica nuovi chunk del feed."
+    CLICK_ON_POST: "Quando l'utente clicca per aprire un post."
+    CLICK_ON_LINK: "Quando l'utente clicca su un link."
+    TIMER: "Quando termina un determinato periodo di tempo"
+
+property:
+  description: "Questa è l'astrazione pura del DOM. Il ricercatore sceglie cosa analizzare, l'Adapter saprà dove andarlo a pescare nell'HTML." 
+  values:
+    search_query: "Il testo che l'utente ha digitato nella barra di ricerca."
+    post_title: "Il titolo principale del contenuto visualizzato."
+    post_caption: "Il testo completo all'interno del post."
+    post_links: "Tutti gli URL (array) in uscita presenti nel post."
+    post_subreddit: "Il subreddit in cui è stato pubblicato il post."
+
+operator:
+  description: "L'operatore utilizzato per valutare una condizione"
+  values:
+    CONTAINS_ANY: "Vero se la property contiene almeno uno dei valori."
+    CONTAINS_ALL: "Vero se la property contiene tutti i valori."
+    NOT_CONTAINS_ANY: "Vero se la property non contiene nessuno dei valori."
+    EQUALS: "Vero se property e valore sono identici (Match esatto)."
+    NOT_EQUALS: "Vero se property e valore differiscono."
+    MATCHES_REGEX: "Vero se la property rispetta l'espressione regolare (Avanzato)."
+
+logical_operator:
+  description: |
+    Definisce come devono essere combinate le varie condizioni (conditions) all'interno di un trigger.
+    Ha valore solo se la lista di conditions di un trigger contiene più di 1 elemento (altrimenti viene ignorato)
+  values:
+    AND: "Il trigger scatta SE TUTTE le condizioni sono vere."
+    OR: "Il trigger scatta SE ALMENO UNA delle condizioni è vera."
+
+action_type:
+  description: "L'azione da eseguire quando scatta un trigger"
+  values:
+    HIDE_CONTENT:
+      description: "Nascondere visivamente il nodo dalla vista dell'utente."
+      payload: "{}"
+    SHOW_WARNING_BANNER:
+      description: "Iniettare un banner grafico sopra o sotto il contenuto."
+      payload: "{\"message\": ...}"
+    RERANK:
+      description: "Spostare fisicamente il contenuto in fondo alla pagina."
+      payload: "{\"target_position\": ...}"
