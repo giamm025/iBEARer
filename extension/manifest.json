@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Reddit Conspiracy Experiment",
+  "version": "1.0.0",
+  "description": "Estensione di ricerca per manipolazione DOM su Reddit.",
+  
+  "content_scripts": [
+    {
+      "matches": ["*://*.reddit.com/*"],
+      "js": [
+        "utils/logger.js",
+        "engine/interventions/index.js",
+        "engine/interventions/debug/applyRedBorder.js",        
+        "engine/core_engine.js",
+        "adapters/reddit_adapter.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}
