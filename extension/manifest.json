@@ -9,8 +9,16 @@
       "matches": ["*://*.reddit.com/*"],
       "js": [
         "utils/logger.js",
+
+        "engine/operators/index.js",
+        "engine/operators/CONTAINS_ANY.js",
+        "engine/operators/NOT_CONTAINS_ANY.js",
+        "engine/operators/EQUALS.js",
+
         "engine/interventions/index.js",
-        "engine/interventions/debug/applyRedBorder.js",        
+        "engine/interventions/debug/applyRedBorder.js",  
+        "engine/interventions/debug/applyGreenBorder.js",  
+
         "engine/core_engine.js",
         "adapters/reddit_adapter.js"
       ],
