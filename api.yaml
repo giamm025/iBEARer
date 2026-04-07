@@ -1,17 +1,18 @@
 openapi: 3.0.3
 
 info:
-  title: BEAR API
+  title: BEAR API (Browser Extension for Academic Research)
+  description: API RESTful per la gestione di audit studies, configurazione di esperimenti e raccolta telemetria.
   version: 1.0.0
 
 servers:
   - url: "http://localhost:3000"
 
 tags:
-  - name: login
+  - name: Login
     description: Endpoint for researcher login and registration.
 
-  - name: config
+  - name: Config
     description: Endpoints for managing experiment configurations.
 
   - name: Participants
@@ -20,24 +21,47 @@ tags:
   - name: Experiments
     description: Endpoints for creating, retrieving, updating, and deleting experiments.
 
-  - name: Surveys
-    description: Endpoints for handling pre and post surveys.
-
   - name: Telemetry
     description: Endpoints for submitting and retrieving telemetry data from participants.
 
-security:
-  - BearerAuth: []
+  - name: Admin
+    description: Administrative endpoints for managing the platform and monitoring experiments.
+
+  - name: Extension
+    description: Endpoints used by the browser extension for enrollment, configuration fetching, and telemetry submission.
+
+  - name: Webhook
+    description: Endpoint for receiving webhook calls from Google Forms to update participant status.
+
 
 components:
+
+  securitySchemes:
+    # 1) AdminBearerAuth: per autenticare i ricercatori tramite dashboard (JWT)
+    AdminBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Token JWT per l'autenticazione dei ricercatori (Dashboard)."
+    
+    # 2) WebhookSecret: per autenticare le richieste provenienti da Google Forms (API Key segreta condivisa)  
+    WebhookSecret:
+      type: apiKey
+      in: header
+      name: X-Webhook-Secret
+      description: "API Key segreta condivisa con Google Forms per l'aggiornamento sicuro dello stato."
+    # Quando scriveremo lo script di Google Form dobbiamo ricordarci di aggiungere questa chiave segereta nell'header
+    # cosi che il backend sia sicuro che l'aggiornamento dello stato sia stato fatto da Google Form e non da un qualcun altro.
+
+
   schemas:
 
     UUID:
-      description: A universally unique identifier (UUID).
+      description: A universally unique identifier.
       type: string
       format: uuid
       example: "123e4567-e89b-12d3-a456-426614174000"
-
+    
     ResearcherId:
       $ref: "#/components/schemas/UUID"
 
@@ -46,78 +70,75 @@ components:
     
     ExperimentId:
       $ref: "#/components/schemas/UUID"
-
-    ResearcherName:
-      description: "The researcher 'username' of the researcher. Must be between 3 and 50 characters"
+    
+    Link:
       type: string
-      pattern: '^.*?$'
-      minLength: 3
-      maxLength: 50
-
-    Participant:
-      required: [participantId]
-      properties:
-        participantId:
-          $ref: "#/components/schemas/ParticipantId"
-        group:
-          $ref: '#/components/schemas/Group'
+      format: uri
+      example: "https://docs.google.com/forms/...?uuid=123e4567..."
 
     Group:
       description: The assigned A/B testing group.
       type: string
-      enum: [CONTROL, TREATMENT]
+      enum: [CONTROL, TREATMENT, UNASSIGNED]
 
-    Researcher:
-      required: [researcherId, researcherName]
-      properties:
-        researcherId:
-          $ref: "#/components/schemas/ResearcherId"
-        researcherName:
-          $ref: "#/components/schemas/ResearcherName"
-    
-    Experiment:
-      required: [experimentId, creatorId, name]
-      properties:
-        experimentId:
-          $ref: "#/components/schemas/ExperimentId"
-        creatorId:
-          $ref: "#/components/schemas/ResearcherId"
-        name:
-          $ref: "#/components/schemas/ExperimentName"
-        admins:
-          type: array
-          items:
-            $ref: "#/components/schemas/ResearcherId"
-
-    ExperimentName:
+    ParticipantStatus:
+      description: The current phase of the participant in the experiment flow.
       type: string
-      pattern: '^.*?$'
-      minLength: 0
-      maxLength: 100
-      description: "The name of the experiment."
-      example: "reddit_cospiracy"
+      enum: [ENROLLED, PRE-SURVEY-NOT-COMPLETED, PRE-SURVEY-COMPLETED, EXPERIMENT, POST-SURVEY-NOT-COMPLETED, POST-SURVEY-COMPLETED, COMPLETED, GAVE_UP]
 
-    # Check if it is rigth and complete (?)
-    TelemetryEvent:
-      required: [type, timestamp]
+    Participant:
+      description: Representation of a study participant.
+      required: [participantId, status, group]
       properties:
-        type:
+        participantId:
+          $ref: "#/components/schemas/UUID"
+        status:
+          $ref: "#/components/schemas/ParticipantStatus"
+        group:
+          $ref: "#/components/schemas/Group"
+
+    EnrollmentResponse:
+      description: Data returned to the extension upon successful registration.
+      required: [participantId, pre_survey_link]
+      properties:
+        participantId:
+          $ref: "#/components/schemas/UUID"
+        pre_survey_link:
+          $ref: "#/components/schemas/Link"
+
+    StatusUpdatePayload:
+      description: Webhook payload from Google Forms.
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/ParticipantStatus"
+
+    StatusResponse:
+      description: Polling response for the extension.
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/ParticipantStatus"
+        group:
+          $ref: "#/components/schemas/Group"
+
+    TelemetryEvent:
+      description: A single interaction record.
+      required: [event_fqn, timestamp]
+      properties:
+        event_fqn:
           type: string
-          enum: [CLICK, SCROLL, VIEW, DOM_MUTATION, SURVEY_START, SURVEY_END]
-          description: "The type of recorded interaction."
+          description: FQN of the event.
+          example: "telemetry.events.ClickOnLinkEvent"
         timestamp:
           type: string
           format: date-time
-          description: "Exact moment of the event."
         metadata:
-          description: "Additional objects for specific data (e.g., CSS selector, scroll depth)."
+          description: Contextual data (e.g., CSS selector, URL, scroll depth).
           additionalProperties: true
-          example:
-            selector: "button#submit-comment"
-            url: "https://reddit.com/r/conspiracy"
-    
+
     TelemetryBatch:
-      description: "A batch of telemetry events sent by a participant for a specific experiment."
+      description: A batch of telemetry events.
       required: [events]
       properties:
         events:
@@ -125,9 +146,19 @@ components:
           items:
             $ref: "#/components/schemas/TelemetryEvent"
     
-    # MUST be kept in sync with the actual config.json structure used by the extension
+    Error:
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    # ----------------------------------------------------------
+    # CONFIG.JSON (Mirroring)
+    # ----------------------------------------------------------
     Config:
-      description: "The configuration schema for an experiment, downloaded by the extension."
+      description: The dynamic rules engine configuration.
       required: [experiment, telemetry_settings, target, triggers, interventions]
       properties:
 
@@ -143,166 +174,113 @@ components:
 
         telemetry_settings:
           properties:
-            track_events: 
+            track_events:
               type: array
               items:
                 type: string
             sync_interval_ms:
               type: integer
               example: 10000
-
+      
         target:
           properties:
             url_pattern:
               type: string
               example: "*://*.reddit.com/*"
-            selectors:
+            dependency:
               type: string
-              example: "shreddit-post"
+              example: "adapters/reddit_adapter.js"
 
         triggers:
-          description: "Array of triggers for applying interventions."
           type: array
           items:
             $ref: '#/components/schemas/Trigger'
 
         interventions:
-          description: "Array of interventions that can be applied when triggers are activated."
           type: array
           items:
             $ref: '#/components/schemas/Intervention'
 
     Trigger:
-      description: "Defines a rule that triggers interventions when certain conditions are met on target elements."
-      required: [name, event_source, target_selector, conditions, apply_interventions]
+      required: [id, name, event_source, conditions, apply_interventions]
       properties:
-        name: 
-          description: "A unique name for the trigger, used for identification and reference within the configuration."
-          type: string 
-          example: "Text AND Link Checking"
 
-        description: 
-          type: string 
+        id:
+          $ref: "#/components/schemas/UUID"
 
-        event_source: 
-          description: "The type of event that will trigger the evaluation of conditions. This could be:
-                        - DOM_MUTATION: Triggered when changes occur in the DOM, such as new elements being added or existing ones being modified.
-                        - PAGE_LOAD: Triggered when a page finishes loading.
-                        - USER_CLICK: Triggered when the user clicks on an element matching the target_selector.
-                        - TIMER: Triggered at regular intervals defined by the extension (e.g., every 5 seconds)."
+        name:
           type: string
-          enum: ['DOM_MUTATION', 'PAGE_LOAD', 'USER_CLICK', 'TIMER']
-        
-        target_selector:
-          description: "A CSS selector string that identifies the elements to which the trigger conditions will be applied." 
-          type: string 
-          example: "h1, h2, p, a" 
-          # NON conviene fare un array poiche le funzioni native di Javascript document.querySelectorAll() o element.matches()
-          # accettano stringhe di selettori CSS multiple separate da virgole... non array. Dunque conviene prenderlo gia in input
-          # cosi senza dover fare parsing poi.
 
-        logical_operator: 
-          description: "Logical operator to combine multiple conditions. Mandatory if there are multiple conditions."
-          type: string 
-          enum: ['AND', 'OR']
-          default: "OR"         # preferisco mettere OR perche piu permissivo (meglio tracciare di piu che meno)
-          example: "AND"
-        
+        description:
+          type: string
+
+        event_source:
+          type: string
+          example: "adapters.events.SearchResultsLoadedEvent"
+
+        logical_operator:
+          type: string
+          enum: [AND, OR]
+
         conditions:
-          description: "Array of conditions that trigger the intervention."
           type: array
           items:
             $ref: '#/components/schemas/Condition'
 
         apply_interventions:
-          description: "Array of intervention names to apply"
-          type: array
-          items: 
-            $ref: '#/components/schemas/InterventionName'
-
-    Condition:
-      description: "Defines a single condition to evaluate on a target element, used within TriggerRule.conditions."      
-      required: [property, operator, value]
-      properties:
-
-        property: 
-          description: "The specific property of the target element to evaluate."  
-          type: string
-          example: "innerText"
-
-        operator: 
-          description: "The logical operator to apply for the condition check."
-          type: string
-          enum: ['CONTAINS', 'NOT_CONTAINS', 'CONTAINS_ALL', 'EQUALS', 'NOT_EQUALS', 'GREATER_THAN', 'LESS_THAN']
-          example: "CONTAINS"
-
-        value:
-          description: "The value to compare against the target element's property, interpreted according to the operator."
           type: array
           items:
             type: string
-          example: ["epstein", "vaccini"]
+            description: Maps to the Intervention function_fqn.
 
-    InterventionName:
-      description: "The unique name of the intervention, used to reference it in TriggerRule.apply_interventions." 
-      type: string
-
-    Intervention:
-      description: "Defines a specific intervention that can be applied to target elements when triggered. The action_type determines how the payload will be executed by the extension."
-      required: [name, action_type, payload]
+    Condition:
+      required: [property, operator, value]
       properties:
-        name: 
-          $ref: '#/components/schemas/InterventionName'
 
-        action_type:
-          description: "The type of action to perform when the intervention is applied. This determines how the payload will be interpreted and executed by the extension." 
+        property:
           type: string
-          enum: [APPLY_CSS, INJECT_HTML, DOM_MANIPULATION]
-        
-        payload:
-          additionalProperties: true
-          description: "The specific instructions for executing the intervention, structured according to the action_type. 
-                        - APPLY_CSS, it might include a css_text property with the CSS rules to apply. 
-                        - INJECT_HTML, it could include properties like position (e.g., beforebegin, afterend) and html_content (the HTML string to inject). 
-                        - DOM_MANIPULATION, it might specify a JavaScript function or a set of DOM operations to perform."
-    
-    SurveyResponses:
-      description: 'A flexible collection of survey responses. It can contain any key-value pairs representing the participants answer'
-      additionalProperties: true
+          description: "The property to evaluate (e.g., search_query, post_title)"
+          example: "search_query"
 
-    Error:
-      required: [code, message]
-      description: "A generic error response schema."
-      properties:
-        code:
+        operator:
           type: string
-          pattern: '^.*?$'
-          minLength: 0
-          maxLength: 50
-          description: "A unique code identifying the error type."
-          example: "USERNAME_TAKEN"
-          
-        message:
-          type: string
-          pattern: '^.*?$'
-          minLength: 0
-          maxLength: 2000
-          description: "A human-readable description of the error."
-          example: "The username is already taken."
+          enum: [CONTAINS_ANY, NOT_CONTAINS_ANY, EQUALS]
+          example: "CONTAINS_ANY"
 
-    ExperimentCreationRequest:
-      description: "Schema for creating a new experiment."
-      required: [name]
-      properties:
-        name:
-          $ref: '#/components/schemas/ExperimentName'
-        admins:
-          description: "Optional array of additional researcher IDs to be added as admins of the experiment. Admins have the same permissions as the creator for managing the experiment."
+        value:
+          description: "The value(s) to compare against the property."
           type: array
           items:
-            $ref: '#/components/schemas/ResearcherId'
+            type: string
+          example: ["epstein", "vaccini", "terra piatta", "5g"]
 
-  responses: 
+    Intervention:
+      required: [name, function_fqn, payload]
+      properties:
+
+        name:
+          description: "The human-readable name for the intervention that will be displayed in the web dashboard."
+          type: string
+
+        description:
+          description: "The human-readable description for the intervention that will be displayed in the web dashboard."
+          type: string
+
+        function_fqn:
+          description: "The Fully Qualified Name of the intervention function to execute when this intervention is applied."
+          type: string
+          example: "interventions.showWarningBanner"
+
+        payload:
+          description: "The payload to pass to the intervention function. The structure depends on the specific function_fqn (see data-dictionary.yaml)."
+          additionalProperties: true
+          example:
+            message: "⚠️ ATTENZIONE! Informazioni false."
+
+  # ---------------------------------------------------------
+  # Custom Errors
+  # ---------------------------------------------------------
+  responses:
 
     Error400:
       description: "Bad Request. Invalid input."
@@ -318,15 +296,15 @@ components:
           schema: 
             $ref: "#/components/schemas/Error" 
 
-    Error404:
-      description: "Not Found. The requested resource does not exist."
+    Error403:
+      description: "Forbidden. The user is authenticated but does not have the necessary permissions to perform this specific action (e.g., delete a message that is not theirs)."
       content:
         application/json:
           schema: 
             $ref: "#/components/schemas/Error"
 
-    Error403:
-      description: "Forbidden. The user is authenticated but does not have the necessary permissions to perform this specific action (e.g., delete a message that is not theirs)."
+    Error404:
+      description: "Not Found. The requested resource does not exist."
       content:
         application/json:
           schema: 
@@ -347,6 +325,9 @@ components:
             $ref: "#/components/schemas/Error"
 
 
+  # ---------------------------------------------------------
+  # Reusable Parameters
+  # ---------------------------------------------------------
   parameters:
 
     ResearcherId:
@@ -371,319 +352,156 @@ components:
         $ref: "#/components/schemas/ParticipantId"
 
 
+# ---------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------
 paths:
 
-  # per ora preso paro paro da WASA ma dobbiamo stabilire come farlo realmente (?)
-  /login:
-      post:
-        tags: ["login"]
-        summary: Logs in the researcher
-        description: |
-          If the researcher does not exist, it will be created,
-          and an identifier is returned.
-          If the researcher exists, the researcher identifier is returned.
-        operationId: doLogin
-        security: [] 
-        
-        requestBody:
-          required: true
-          description: Researcher details
-          content:
-            application/json:
-              schema:
-                description: "Should include the researcher name."
-                required: [researcherName]
-                properties:
-                  researcherName:
-                    $ref: "#/components/schemas/ResearcherName"
-
-        responses:
-          '201':
-            description: Researcher log-in action successful
-            content:
-              application/json:
-                schema:
-                  description: "The logged-in researcher's identifier."
-                  properties:
-                    researcherId:
-                      $ref: "#/components/schemas/ResearcherId"
-
-  /researchers/{researcherId}/experiments:
-
-    parameters:
-      - $ref: '#/components/parameters/ResearcherId'
-
-    post:
-      operationId: createExperiment
-      summary: Create a new experiment
-      description: "Creates a new experiment associated with the specified researcher. The request body must include the name of the experiment. The experimentId is generated by the system and returned in the response. Must be logged in as a researcher to perform this action."
-
-      # Must be logged in as a researcher (that will be registered as creator)
-      
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExperimentCreationRequest'
-
-      responses:
-        '201':
-          description: "The experiment has been successfully created."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Experiment'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
-    
-    get:
-      operationId: listExperiments
-      summary: List all experiments for a researcher
-      description: "Retrieves a list of all experiments associated with the specified researcher."
-
-      responses:
-        '200':
-          description: "A list of experiments associated with the researcher."
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Experiment'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
-    
-  /experiments/{experimentId}:
-
-    parameters:
-      - $ref: '#/components/parameters/ResearcherId'
-      - $ref: '#/components/parameters/ExperimentId'
+  # =========================================
+  # PUBLIC ENDPOINTS
+  # =========================================
+  /config:
 
     get:
-      operationId: getExperiment
-      summary: Get experiment details
-      description: "Retrieves detailed information about a specific experiment, including its configuration and associated metadata. Must be admin of the experiment to access this endpoint."
-
-      # Must be admin of the experiment
-
-      responses:
-        '200':
-          description: "Detailed information about the specified experiment."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Experiment'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
-
-    put:
-      operationId: updateExperiment
-      summary: Update experiment details
-      description: "Updates the details of a specific experiment. The request body can include any updatable fields such as the experiment name. The experimentId and researcherId cannot be changed. Must be admin of the experiment to access this endpoint."
-
-      # Must be admin of the experiment
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExperimentCreationRequest'
+      tags: [Extension, Config]
+      operationId: getConfig
+      summary: Download experiment configuration
+      description: Fetched by the extension to apply DOM manipulations. No auth required for global config.
 
       responses:
         '200':
-          description: "The experiment has been successfully updated."
+          description: Configuration JSON.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Experiment'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: '#/components/schemas/Config'
 
-    delete:
-      operationId: deleteExperiment
-      summary: Delete an experiment
-      description: "Deletes the specified experiment. This action is irreversible and will remove all associated data, including participant enrollments and telemetry events. Must be THE creator of the experiment to access this endpoint."
 
-      # Must be the creator
+  /participants:
 
-      responses:
-        '204':
-          description: "Successfully deleted."
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
-
-  /experiments/{experimentId}/participants:
-    
-    parameters:
-      - $ref: '#/components/parameters/ExperimentId'
-    
     post:
+      tags: [Extension, Participants]
       operationId: enrollParticipant
-      summary: Register a new participant
-      description: "Registers a new participant for the specified experiment. The request body must include the participant's ID. The response will include the entire Participant object. Must be admin of the experiment to access this endpoint."
-      tags: [Participants]
+      summary: Create Participant (Enrollment)
+      description: Generates a new UUID and a deep link for the pre-survey.
 
-      # Must be admin of the experiment
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Participant'
-      
       responses:
         '201':
-          description: "Created. The participant has been successfully registered for this experiment."
+          description: Participant enrolled.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Participant'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '409':
-          $ref: '#/components/responses/Error409'
-        '500':
-          $ref: '#/components/responses/Error500'
-    
-    get:
-      operationId: listParticipants
-      summary: List all participants in an experiment
-      description: "Retrieves a list of all participants registered for the specified experiment. Must be admin of the experiment to access this endpoint."
-      tags: [Participants]
+                $ref: '#/components/schemas/EnrollmentResponse'
 
-      # Must be admin of the experiment
 
-      responses:
-        '200':
-          description: "OK. Returned the list of participants registered for the experiment."
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Participant'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
-
-  /participants/{participantId}:
+  /participants/{participantId}/status:
     parameters:
       - $ref: '#/components/parameters/ParticipantId'
-    
+          
     get:
-      tags: [Participants]
-      operationId: getParticipant
-      summary: Get participant details
-      description: "Retrieves detailed information about a specific participant Must be admin of the experiment to access this endpoint."
-
-      # Must be admin of the experiment
+      tags: [Extension, Participants]
+      operationId: getParticipantStatus
+      summary: Polling for Survey Status
+      description: Extension polls this endpoint to know when to start/stop the experiment.
 
       responses:
         '200':
-          description: "Detailed information about the specified participant."
+          description: Current status and group assignment.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Participant'
-        '400':
-          $ref: '#/components/responses/Error400'
+                $ref: '#/components/schemas/StatusResponse'
         '401':
           $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'     
-    
-    delete:
-      operationId: removeParticipant
-      summary: Unregister a participant
-      description: "Unregisters the participant specified in the url from the specified experiment. Must be admin of the experiment to access this endpoint."
-      tags: [Participants]
+          
+    put:
+      tags: [Webhook]
+      operationId: updateParticipantStatus
+      summary: Update Participant Status (Google Forms)
+      description: Webhook triggered by Google Forms upon survey completion.
 
-      # Must be admin of the experiment
-      
-      responses:
-        '204':
-          description: "OK. Successfully unregistered from the experiment."
-        '400':
-          $ref: '#/components/responses/Error400'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
+      security:
+        - WebhookSecret: []
 
-  /participants/{participantId}/group:
-
-    get:
-      tags: [Participants]
-      operationId: getParticipantGroup
-      summary: Retrieve the participant's group
-      description:  Retrieve the group assigned to a specific participant. 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusUpdatePayload'
 
       responses:
         '200':
-          description: "OK. Group retrieved successfully."
+          description: Status successfully updated.
+        '401':
+          $ref: '#/components/responses/Error401'
+
+
+  /participants/{participantId}/telemetry:
+
+    post:
+      tags: [Extension, Telemetry]
+      operationId: sendTelemetry
+      summary: Submit Telemetry Batch
+      description: Extension sends batched interaction data.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryBatch'
+
+      responses:
+        '201':
+          description: Batch saved successfully.
+        '401':
+          $ref: '#/components/responses/Error401'
+
+
+  # ==========================================
+  # ADMIN / RESEARCHER ENDPOINTS
+  # ==========================================
+  /admin/login:
+
+    post:
+      tags: [Admin, Login]
+      operationId: researcherLogin
+      summary: Researcher Login
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+
+      responses:
+        '200':
+          description: Returns JWT Token.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Group'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500' 
+                properties:
+                  token:
+                    type: string
 
 
-  /experiments/{experimentId}/config:
-    parameters:
-      - $ref: '#/components/parameters/ExperimentId'
+  /admin/config:
 
     put:
-      tags: [config]
+      tags: [Admin, Config]
       operationId: updateConfig
-      summary: "Create or update experiment configuration."
-      description: "Overwrite the config.json for the specified experiment."
+      summary: Update Experiment Configuration
 
-      # Must be admin of the experiment
+      security:
+        - AdminBearerAuth: []
 
       requestBody:
         required: true
@@ -694,190 +512,29 @@ paths:
 
       responses:
         '204':
-          description: "OK. Configuration saved or updated successfully."
-        '400':
-          $ref: '#/components/responses/Error400'
+          description: Config saved. Nothing returned.
         '401':
           $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-      
-    get:
-      tags: [config]
-      operationId: getConfig
-      summary: "Retrieve experiment configuration."
-      description: "Retrieve the configuration for the specified experiment. Must be logged in (either as a researcher or participant) to access this endpoint."
 
-      # Everyone logged in (both researchers and participants) can retrive the experiment configuration. 
+
+  /admin/participants:
+
+    get:
+      tags: [Admin, Participants]
+      operationId: listParticipants
+      summary: List all Participants
+
+      security:
+        - AdminBearerAuth: []
 
       responses:
         '200':
-          description: "Configuration retrieved successfully."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Config'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-    
-  /participants/{participantId}/pre-survey:
-    parameters:
-      - $ref: '#/components/parameters/ParticipantId'
-
-    post:
-      operationId: preSurveyCompleted
-      summary: 'Notify the server that the participant has completed the pre-intervention survey'
-      description: 'Notify the server that the participant has completed the pre-intervention survey and submit the responses. The request body should include the participant answers to the survey questions.'
-      tags: [Surveys]
-
-      # Must be Google Form or other Survey platforms (?)
-      security: []
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SurveyResponses'
-      
-      responses:
-        '204':
-          description: "OK. Responses saved successfully."
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-    
-    get:
-      operationId: getPreSurveyResponses
-      summary: 'Retrieve pre-intervention survey responses'
-      description: 'Retrieve the responses to the pre-intervention survey for the specified participant. Must be admin of the experiment to access this endpoint.'
-      tags: [Surveys]
-
-      # Must be admin of the experiment
-
-      responses:
-        '200':
-          description: "OK. Responses saved successfully."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SurveyResponses'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-  
-  /participants/{participantId}/post-survey:
-    parameters:
-      - $ref: '#/components/parameters/ParticipantId'
-
-    post:
-      operationId: postSurveyCompleted
-      summary: 'Notify the server that the participant has completed the post-intervention survey'
-      description: 'Notify the server that the participant has completed the post-intervention survey and submit the responses. The request body should include the participant answers to the survey questions.'
-      tags: [Surveys]
-
-      # Must be Google Form or other Survey platforms (?)
-      security: []
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SurveyResponses'
-      
-      responses:
-        '204':
-          description: "OK. Responses saved successfully."
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-    
-    get:
-      operationId: getPostSurveyResponses
-      summary: 'Retrieve post-intervention survey responses'
-      description: 'Retrieve the responses to the post-intervention survey for the specified participant. Must be admin of the experiment to access this endpoint.'
-      tags: [Surveys]
-
-      # Must be admin of the experiment
-
-      responses:
-        '200':
-          description: "OK. Responses saved successfully."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SurveyResponses'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
-
-  /participants/{participantId}/telemetry:
-    parameters:
-      - $ref: '#/components/parameters/ParticipantId'
-
-    post:
-      operationId: sendTelemetry
-      summary: 'Send telemetry data for a participant'
-      description: 'Submit telemetry events for the specified participant. The request body should include the telemetry data.'
-      tags: [Telemetry]
-
-      # This will be called by the exstension itself... so we do not need authentication (?)
-      security: []
-
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TelemetryBatch'
-
-      responses:
-        '204':
-          description: "OK. Telemetry events received successfully."
-        '400':
-          $ref: '#/components/responses/Error400'   
-        '401':
-          $ref: '#/components/responses/Error401'
-    
-    get:
-      operationId: getTelemetry
-      summary: 'Retrieves telemetry events for a participant'
-      description: 'Retrieves all telemetry events sent by the specified participant. Must be admin of the experiment to access this endpoint.'
-      tags: [Telemetry]
-
-      # Must be admin of the experiment
-
-      responses:
-        '200':
-          description: "OK. Telemetry events retrieved successfully."
+          description: Array of participants.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TelemetryEvent'
-        
-        # nel caso della GET è moltooo meglio resituire direttamente un array di eventi anziche il TelemetryBatch. In questo modo evitiamo
-        # di fare parsing in seguito. Vedi il docx per la spiegazione dettagliata.
-
-        '400':
-          $ref: '#/components/responses/Error400'   
+                  $ref: '#/components/schemas/Participant'
         '401':
           $ref: '#/components/responses/Error401'
-        '404':
-          $ref: '#/components/responses/Error404'
