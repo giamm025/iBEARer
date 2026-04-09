@@ -33,7 +33,7 @@ class Engine {
         // trova tutti i trigger che reagiscono a questo evento
         const activeTriggers = this.config.triggers.filter(t => t.event_source === eventName);
         
-        // per ogni trigger trovato => valuta se le condizioni sono soddisfatte => esegue gli interventi
+        // per ogni trigger => prende le condizioni => valuta se le condizioni sono soddisfatte => esegue gli interventi
         for (let trigger of activeTriggers) {
             const isMatch = this.evaluateTrigger(trigger, eventData);
             if (isMatch) {
@@ -100,7 +100,7 @@ class Engine {
         // per ogni intervento (fqn) da eseguire 
         for (let fqn of interventionFqns) {
 
-            // Cerchiamo l'intervento nel config.json per recuperare il payload 
+            // cerchiamo l'intervento nel config.json per recuperare il payload 
             const interventionConfig = this.config.interventions.find(i => i.function_fqn === fqn);
 
             // se troviamo la config dell'intervento e la funzione è registrata nel registro globale, allora eseguiamo 

@@ -5,7 +5,6 @@
 InterventionsRegistry["interventions.debug.applyRedBorder"] = function(payload) {
     Log.intervention("Bordo Rosso Applicato!");
     document.body.style.border = payload.border_style;
-    document.header.style.border = payload.border_style;
     document.body.style.boxSizing = "border-box"; 
 };
 

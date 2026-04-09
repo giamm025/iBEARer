@@ -9,6 +9,7 @@
       "matches": ["*://*.reddit.com/*"],
       "js": [
         "utils/logger.js",
+        "adapters/utils/SpaWatcher.js",
 
         "engine/operators/index.js",
         "engine/operators/CONTAINS_ANY.js",
@@ -20,6 +21,11 @@
         "engine/interventions/debug/applyGreenBorder.js",  
 
         "engine/core_engine.js",
+
+        "adapters/events/SearchResultsLoadedEvent.js",
+
+        "adapters/observers/SearchObserver.js",
+        
         "adapters/reddit_adapter.js"
       ],
       "run_at": "document_end"
