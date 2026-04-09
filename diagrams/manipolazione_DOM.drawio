@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
   <diagram name="Pagina-1" id="J3pE2eSQi-SPgB2F5LbX">
-    <mxGraphModel dx="-466" dy="-440" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+    <mxGraphModel dx="-428" dy="-393" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -139,7 +139,7 @@
         <mxCell id="bwp77uBHkQPjmOKM-mbB-25" edge="1" parent="1" source="bwp77uBHkQPjmOKM-mbB-22" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="bwp77uBHkQPjmOKM-mbB-23">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="bwp77uBHkQPjmOKM-mbB-22" parent="1" style="whiteSpace=wrap;strokeWidth=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="Debriefing + Post-Survey" vertex="1">
+        <mxCell id="bwp77uBHkQPjmOKM-mbB-22" parent="1" style="whiteSpace=wrap;strokeWidth=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;rounded=0;html=1;" value="Debriefing + Post-Survey&lt;div&gt;&lt;span style=&quot;color: rgb(179, 179, 179); font-size: 9px;&quot;&gt;(tramite Google Forms)&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="54" width="200" x="2651" y="2060" as="geometry" />
         </mxCell>
         <mxCell id="bwp77uBHkQPjmOKM-mbB-27" edge="1" parent="1" source="bwp77uBHkQPjmOKM-mbB-23" style="edgeStyle=orthogonalEdgeStyle;shape=connector;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=default;labelBackgroundColor=default;endArrow=none;endFill=0;" target="bwp77uBHkQPjmOKM-mbB-26">
