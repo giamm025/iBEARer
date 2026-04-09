@@ -94,24 +94,31 @@ class Engine {
     }
 
 
-    // metodo per eseguire una o più funzioni intervento (identificate dal fqn)
-    executeInterventions(interventionFqns) {
+    // metodo per eseguire una o più funzioni intervento
+    executeInterventions(interventionIds) {
 
-        // per ogni intervento (fqn) da eseguire 
-        for (let fqn of interventionFqns) {
+        // per ogni intervento ID
+        for (let interventionID of interventionIds) {
 
-            // cerchiamo l'intervento nel config.json per recuperare il payload 
-            const interventionConfig = this.config.interventions.find(i => i.function_fqn === fqn);
-
-            // se troviamo la config dell'intervento e la funzione è registrata nel registro globale, allora eseguiamo 
-            if (interventionConfig && InterventionsRegistry[fqn]) {
-                InterventionsRegistry[fqn](interventionConfig.payload);
+            // Recupera l'oggetto Intervention dal config.json ed estraiamo FQN e payload
+            const intervention = this.config.interventions.find(i => i.id === interventionID);
+            if (intervention) {
+                const fqn = intervention.function_fqn;      // estraiamo il Fully Qualified Name (FQN) 
+                const payload = intervention.payload;       // estraiamo il payload da passare alla funzione intervento
+                this.executeInterventionFQN(fqn, payload);  // eseguiamo la funzione 
             } else {
-                Log.error("Engine", `Funzione non trovata nel registro: ${fqn}`);
+                Log.error("Engine", `Istanza di intervento non trovata nel config.json: ${interventionID}`);
             }
 
         }
         Log.engine("Fine Interventi");
+    }
+
+    // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload
+    // scrive un log di errore se il FQN non è presente nel registro delle funzioni intervento
+    executeInterventionFQN(fqn, payload) {
+        if (InterventionsRegistry[fqn]) { InterventionsRegistry[fqn](payload); } 
+        else {Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); }
     }
 }
 
@@ -132,7 +139,7 @@ const config = {
                 }
             ],
             apply_interventions: [
-                "interventions.debug.applyRedBorder"
+                "apply_red_border"
             ]
         },
         
@@ -148,7 +155,7 @@ const config = {
                 }
             ],
             apply_interventions: [
-                "interventions.debug.applyGreenBorder"
+                "apply_green_border",
             ]
         }
 
@@ -157,14 +164,16 @@ const config = {
 
     interventions: [
         {
-            function_fqn: "interventions.debug.applyRedBorder",
+            id: "apply_red_border",
+            function_fqn: "interventions.debug.applyBorder",
             payload: {
                 border_style: "30px solid red"
             }
         },
 
         {
-            function_fqn: "interventions.debug.applyGreenBorder",
+            id: "apply_green_border",
+            function_fqn: "interventions.debug.applyBorder",
             payload: {
                 border_style: "30px solid green"
             }

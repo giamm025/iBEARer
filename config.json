@@ -26,7 +26,7 @@
             "name": "Search Results Checking",
             "description": "This Trigger activates when...", 
 
-            "id": "00001",
+            "id": "trigger_contains_conspiracy",
             "event_source": "adapters.events.SearchResultsLoadedEvent",
             "logical_operator": "AND",
             "conditions": [
@@ -45,9 +45,9 @@
             ],
 
             "apply_interventions": [
-                "interventions.hideContent", 
-                "interventions.showWarningBanner", 
-                "interventions.demotePost"
+                "hide_content",
+                "show_warning_banner",
+                "demote_post"
             ]
         }
     ],
@@ -56,6 +56,8 @@
         {
             "name": "Hide Post",
             "description": "This Intervention hides the content of the post.",
+
+            "id": "hide_content",
             "function_fqn": "interventions.hideContent",
             "payload": {}
         },
@@ -63,6 +65,8 @@
         {
             "name": "Inject Debunking",
             "description": "This Intervention displays a warning banner for false information.",
+
+            "id": "show_warning_banner",
             "function_fqn": "interventions.showWarningBanner",
             "payload": {
                 "message": "⚠️ ATTENZIONE! Informazioni false."
@@ -72,6 +76,8 @@
         {
             "name": "Demote Post",
             "description": "This Intervention moves the post to the bottom of the list.",
+
+            "id": "demote_post",
             "function_fqn": "interventions.demotePost",
             "payload": {
                 "new_position": "bottom"

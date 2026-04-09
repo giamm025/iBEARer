@@ -17,8 +17,7 @@
         "engine/operators/EQUALS.js",
 
         "engine/interventions/index.js",
-        "engine/interventions/debug/applyRedBorder.js",  
-        "engine/interventions/debug/applyGreenBorder.js",  
+        "engine/interventions/debug/applyBorder.js",  
 
         "engine/core_engine.js",
 
