@@ -14,14 +14,9 @@ Thumbs.db
 # =========================
 # MATERIALE UNIVERSITARIO & OFFICE
 # =========================
-# Ignora le cartelle di materiale pesante o protetto da copyright
 png/
-
-# Ignora tutti i file Word (vecchi e nuovi)
 *.doc
 *.docx
-
-# Ignora file temporanei di Office e di sistema
 ~$*
 *.tmp
 *.log
@@ -32,18 +27,28 @@ png/
 venv/
 env/
 .conda/
-
-# Ignora i file di cache invisibili che Python crea in automatico
 __pycache__/
 *.pyc
 *.pyo
-
-# Variabili d'ambiente e segreti (MAI caricare password o chiavi API su GitHub!)
 .env
-
-# Eseguibili
 *.exe
 *.out
 *.o
 *.class
 *.jar
+
+# =========================
+# DJANGO / BACKEND
+# =========================
+# Ignora il database locale di default (MAI caricare i dati reali!)
+db.sqlite3
+*.sqlite3
+
+# Ignora i file statici compilati (verranno generati sul server)
+staticfiles/
+
+# Ignora i media caricati dagli utenti (immagini, documenti finti di test)
+media/
+
+# Ignora eventuali log o database di test di Django
+test_db.sqlite3
