@@ -17,7 +17,8 @@
         "engine/operators/EQUALS.js",
 
         "engine/interventions/index.js",
-        "engine/interventions/debug/applyBorder.js",  
+        "engine/interventions/debug/applyBorder.js",
+        "engine/interventions/ui/showDebunkingBanner.js",  
 
         "engine/core_engine.js",
 

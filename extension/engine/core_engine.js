@@ -38,7 +38,7 @@ class Engine {
             const isMatch = this.evaluateTrigger(trigger, eventData);
             if (isMatch) {
                 Log.engine(`Trigger Attivato: ${trigger.id}`);
-                this.executeInterventions(trigger.apply_interventions);
+                this.executeInterventions(trigger.apply_interventions, eventData);  // passiamo anche eventData cosi le funzioni intervento possono usarlo se vogliono
             }
         }
     }
@@ -95,7 +95,7 @@ class Engine {
 
 
     // metodo per eseguire una o più funzioni intervento
-    executeInterventions(interventionIds) {
+    executeInterventions(interventionIds, eventData) {
 
         // per ogni intervento ID
         for (let interventionID of interventionIds) {
@@ -105,7 +105,7 @@ class Engine {
             if (intervention) {
                 const fqn = intervention.function_fqn;      // estraiamo il Fully Qualified Name (FQN) 
                 const payload = intervention.payload;       // estraiamo il payload da passare alla funzione intervento
-                this.executeInterventionFQN(fqn, payload);  // eseguiamo la funzione 
+                this.executeInterventionFQN(fqn, payload, eventData);  // eseguiamo la funzione intervento
             } else {
                 Log.error("Engine", `Istanza di intervento non trovata nel config.json: ${interventionID}`);
             }
@@ -116,8 +116,8 @@ class Engine {
 
     // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload
     // scrive un log di errore se il FQN non è presente nel registro delle funzioni intervento
-    executeInterventionFQN(fqn, payload) {
-        if (InterventionsRegistry[fqn]) { InterventionsRegistry[fqn](payload); } 
+    executeInterventionFQN(fqn, payload, eventData) {
+        if (InterventionsRegistry[fqn]) { InterventionsRegistry[fqn](payload, eventData); } 
         else {Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); }
     }
 }
@@ -139,7 +139,8 @@ const config = {
                 }
             ],
             apply_interventions: [
-                "apply_red_border"
+                "apply_red_border",
+                "inject_debunking"
             ]
         },
         
@@ -177,6 +178,12 @@ const config = {
             payload: {
                 border_style: "30px solid green"
             }
+        },
+
+        {
+            id: "inject_debunking",
+            function_fqn: "interventions.ui.showDebunkingBanner",
+            payload: {}
         }
     ]
 };

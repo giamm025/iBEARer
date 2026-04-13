@@ -39,7 +39,7 @@ const Log = {
     },
     
     // gli errori chiaramente non si spengono
-    error: (moduleName, ...args) => { console.error(`❌ [Error -> ${moduleName}]`, ...args); }
+    error: (moduleName, ...args) => { console.error(`❌ [${moduleName}]`, ...args); }
 };
 
 // se il logger è abilitato, scriviamo che il logger è stato inizializzato
