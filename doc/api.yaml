@@ -99,11 +99,11 @@ components:
 
     EnrollmentResponse:
       description: Data returned to the extension upon successful registration.
-      required: [participantId, pre_survey_link]
+      required: [participantId, preSurveyLink]
       properties:
         participantId:
           $ref: "#/components/schemas/UUID"
-        pre_survey_link:
+        preSurveyLink:
           $ref: "#/components/schemas/Link"
 
     StatusUpdatePayload:

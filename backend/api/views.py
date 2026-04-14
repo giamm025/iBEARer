@@ -30,7 +30,7 @@ def enroll_participant(request):
     # invio risposta
     return JsonResponse({
         "participantId": new_participant_id,
-        "pre_survey_link": pre_survey_link
+        "preSurveyLink": pre_survey_link
     }, status=201)
 
 
