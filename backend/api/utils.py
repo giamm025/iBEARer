@@ -12,9 +12,13 @@ API_ERRORS = {
 }
 
 # funzione helper che, dato il codice, crea in automatico la risposta JSON contenente l'Errore (code + message)
-def error_response(status_code):
+def error_response(status_code, custom_message=None):
     message = API_ERRORS.get(status_code, "Unknown Error. An unexpected issue occurred.")
+
+    if custom_message:
+        message += "\n\t" + custom_message
+        
     return JsonResponse({
         "code": str(status_code), 
-        "message": message
+        "message": message 
     }, status=status_code)
