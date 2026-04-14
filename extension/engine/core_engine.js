@@ -1,9 +1,40 @@
 
 class Engine {
     
-    constructor(config) {
-        this.config = config;
-        this.initListeners();
+    constructor() {
+        this.init();
+    }
+
+
+    // metodo per avviare il motore: 
+    //      - recupera la configurazione dal backend
+    //      - avvia i listeners per gli eventi 
+    //      - avvia il timer per la telemetria
+    async init() {
+
+        Log.engine("Avvio...");
+        
+        // avvia l'API manager (per permettere di effettuare le chiamatae HTTP al backend)
+        await ApiManager.init();
+
+        // GET config.json dal backend
+        const config = await ApiManager.getConfig();
+        if (config) {
+
+            // salva la configurazione
+            this.config = config;
+
+            // avvia i listeners per gli eventi
+            this.initListeners();
+
+            // avvia il timer per la telemetria
+            const syncTime = config.telemetry_settings?.sync_interval_ms || 10000;
+            ApiManager.startTelemetrySync(syncTime);
+
+        } else {
+            Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
+        }
+        Log.engine("Avvio Completato");
     }
 
 
@@ -28,6 +59,7 @@ class Engine {
 
     // metodo per gestire interamente la ricezione di un evento: controlla se scatena dei trigger e in caso esegue gli interventi associati
     handleEvent(eventName, eventData) {
+
         Log.engine(`Ricevuto evento: ${eventName}`, eventData);
 
         // trova tutti i trigger che reagiscono a questo evento
@@ -38,6 +70,12 @@ class Engine {
             const isMatch = this.evaluateTrigger(trigger, eventData);
             if (isMatch) {
                 Log.engine(`Trigger Attivato: ${trigger.id}`);
+                
+                ApiManager.addEventToQueue("telemetry.events.TriggerActivated", {
+                    trigger_id: trigger.id,
+                    event_source: eventName
+                });
+                
                 this.executeInterventions(trigger.apply_interventions, eventData);  // passiamo anche eventData cosi le funzioni intervento possono usarlo se vogliono
             }
         }
@@ -105,7 +143,15 @@ class Engine {
             if (intervention) {
                 const fqn = intervention.function_fqn;      // estraiamo il Fully Qualified Name (FQN) 
                 const payload = intervention.payload;       // estraiamo il payload da passare alla funzione intervento
+
                 this.executeInterventionFQN(fqn, payload, eventData);  // eseguiamo la funzione intervento
+
+                // registriamo che l'intervento è stato applicato
+                ApiManager.addEventToQueue("telemetry.events.InterventionAppliedEvent", {
+                    intervention_id: intervention.id,
+                    function_fqn: intervention.function_fqn
+                });
+
             } else {
                 Log.error("Engine", `Istanza di intervento non trovata nel config.json: ${interventionID}`);
             }
@@ -123,72 +169,5 @@ class Engine {
 }
 
 // ------------------------------------------------- AVVIO -------------------------------------------------
-// siccome ora non abbiamo backend/API chiaramente non posso chiedere al server il config.json ...
-// Quindi ci tocca Hardcodarlo qui sotto :D
-const config = {
-    triggers: [
-        {
-            id: "trigger_contains_conspiracy",
-            event_source: "adapters.events.SearchResultsLoadedEvent",
-            logical_operator: "AND",
-            conditions: [
-                {
-                    "property": "search_query",
-                    "operator": "CONTAINS_ANY",
-                    "value": ["epstein", "vaccini", "terra piatta", "5g"]
-                }
-            ],
-            apply_interventions: [
-                "apply_red_border",
-                "inject_debunking"
-            ]
-        },
-        
-        {
-            id: "trigger_NOT_contains_conspiracy",
-            event_source: "adapters.events.SearchResultsLoadedEvent",
-            logical_operator: "AND",
-            conditions: [
-                {
-                    "property": "search_query",
-                    "operator": "NOT_CONTAINS_ANY",
-                    "value": ["epstein", "vaccini", "terra piatta", "5g"]
-                }
-            ],
-            apply_interventions: [
-                "apply_green_border",
-            ]
-        }
 
-
-    ],
-
-    interventions: [
-        {
-            id: "apply_red_border",
-            function_fqn: "interventions.debug.applyBorder",
-            payload: {
-                border_style: "30px solid red"
-            }
-        },
-
-        {
-            id: "apply_green_border",
-            function_fqn: "interventions.debug.applyBorder",
-            payload: {
-                border_style: "30px solid green"
-            }
-        },
-
-        {
-            id: "inject_debunking",
-            function_fqn: "interventions.ui.showDebunkingBanner",
-            payload: {}
-        }
-    ]
-};
-Log.error("Engine", "CONFIG.JSON HARDCODED!!!!!!!!!!!!!!!!!!!!!!!!!");
-
-// const response = await ...
-// const config = await response.json();
-const myEngine = new Engine(config);
+const myEngine = new Engine();  
