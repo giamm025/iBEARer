@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: BEAR API (Browser Extension for Academic Research)
   description: API RESTful per la gestione di audit studies, configurazione di esperimenti e raccolta telemetria.
-  version: 1.0.0
+  version: 1.0.1
 
 servers:
   - url: "http://localhost:8000"
