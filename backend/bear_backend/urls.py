@@ -16,7 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from api import views
 
+# Qui associamo gli URL alle "Views" in senso lato. Non dobbiamo avere una schermata per ogni URL.
+# Come "View" possiamo anche e semplicemente attaccare una funzione che prende in input i parametri 
+# della richiesta HTTP (GET, POST, PUT, ...) e semplicemente invia il JSON di risposta (es. config.json)
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('config', views.get_config),
+    path('participants', views.enroll_participant),
+    path('participants/<str:participant_id>/telemetry', views.send_telemetry)
 ]
