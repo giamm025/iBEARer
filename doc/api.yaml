@@ -309,6 +309,13 @@ components:
         application/json:
           schema: 
             $ref: "#/components/schemas/Error"
+    
+    Error405:
+      description: "Method Not Allowed. The HTTP method is not supported for this endpoint."
+      content:
+        application/json:
+          schema: 
+            $ref: "#/components/schemas/Error"
 
     Error409:
       description: "Conflict. The request conflicts with the current state."
@@ -375,6 +382,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Config'
+        '405':
+          $ref: '#/components/responses/Error405'
 
 
   /participants:
@@ -392,7 +401,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EnrollmentResponse'
-
+        '405':
+          $ref: '#/components/responses/Error405'
 
   /participants/{participantId}/status:
     parameters:
@@ -413,6 +423,8 @@ paths:
                 $ref: '#/components/schemas/StatusResponse'
         '401':
           $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
           
     put:
       tags: [Webhook]
@@ -435,6 +447,8 @@ paths:
           description: Status successfully updated.
         '401':
           $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
 
 
   /participants/{participantId}/telemetry:
@@ -457,6 +471,8 @@ paths:
           description: Batch saved successfully.
         '401':
           $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
 
 
   # ==========================================
@@ -491,6 +507,8 @@ paths:
                 properties:
                   token:
                     type: string
+        '405':
+          $ref: '#/components/responses/Error405'
 
 
   /admin/config:
@@ -515,6 +533,8 @@ paths:
           description: Config saved. Nothing returned.
         '401':
           $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
 
 
   /admin/participants:
@@ -538,3 +558,5 @@ paths:
                   $ref: '#/components/schemas/Participant'
         '401':
           $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
