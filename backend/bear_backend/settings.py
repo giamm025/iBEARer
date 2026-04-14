@@ -37,9 +37,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # per abbattere i muri CORS aggiungiamo 'corsheaders' tra le app installate e il relativo middleware (vedi sotto)
+    # questo ci permette di accettare richieste da domini diversi (es. frontend in localhost:3000 e backend in localhost:8000)
+    # inoltre aggiungiamo la nostra app "api" che conterrà tutte le views e modelli
+    'corsheaders',
+    'api',         
 ]
 
 MIDDLEWARE = [
+
+    # Middleware per gestire i CORS (Cross-Origin Resource Sharing), necessario per permettere al frontend di comunicare 
+    # con il backend se sono su domini/porte diverse
+    'corsheaders.middleware.CorsMiddleware',
+
+    # questi sotto sono tutti quelli di default gia installati da Django
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -120,3 +132,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# DEBUG: Sblocca tutte le chiamate esterne (Solo per Sviluppo!)
+CORS_ALLOW_ALL_ORIGINS = True
