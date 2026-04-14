@@ -1,5 +1,11 @@
+// Per aggirare le limitazioni CORS questo ApiManager non si occupera piu di fare direttamente le chiamate (fetch) al backend
+// ma diventera una sorta di "controller" che ricieve le richieste dall'engine (es. dammi la configurazione) e le gira, sotto
+// forma di messaggi, al background.js, che si occupera di fare le fetch effettive. 
+
+// Questo funzione poiche i content script (es. ApiManager) non hanno i permessi per fare richieste cross-origin, mentre 
+// il background.js si, dal momento che è considerato parte dell'estensionen.
+
 const ApiManager = {
-    baseUrl: "http://localhost:8000",
     participantId: null,
     telemetryQueue: [],
     syncInterval: null,
@@ -25,23 +31,26 @@ const ApiManager = {
     async enrollParticipant() {
 
         try {
-            // chiamata al backend
-            const response = await fetch(`${this.baseUrl}/participants`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
+            
+            // NON facciamo piu la chiamata al backend. Ci limitiamo a mandare un messaggio al background.js, e ci pensera lui
+            const response = await chrome.runtime.sendMessage({ action: "ENROLL" });
 
-            // trasformiamo la risposta in JSON
-            const result = await response.json();
-
-            // salviamo l'ID del partecipante
-            this.participantId = result.id;
-            await chrome.storage.local.set({ participantId: result.id });
-
-            Log.adapter(`ApiManager: Nuovo Enrollment completato. ID: ${this.participantId}`);
+            // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
+            if (response && response.success) {
+                this.participantId = response.data.participantId;
+                await chrome.storage.local.set({ participantId: this.participantId });
+                
+                Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
+                return true;
+                
+            } else {
+                Log.error("ApiManager", "Errore enrollment dal Background", response?.error);
+                return false;
+            }
 
         } catch (error) {
             Log.error("ApiManager", "Errore durante l'enrollment", error);
+            return false;
         }
     },
 
@@ -50,15 +59,18 @@ const ApiManager = {
     async getConfig() {
 
         try {
-            // chiamata al backend
-            const response = await fetch(`${this.baseUrl}/config`);
+            // stessa cosa di prima, NON facciamo piu la chiamata al backend ma mandiamo un messaggio al background.js
+            const response = await chrome.runtime.sendMessage({ action: "GET_CONFIG" });
 
-            // se la risposta non è OK, lanciamo un errore. Altrimenti, trasformiamo in JSON 
-            if (!response.ok) throw new Error("Errore nel download del config");
-            const config = await response.json();
+            // se la risposta c'è ed ha avuto successo, restituisci i dati della configurazione
+            if (response && response.success) {
+                Log.adapter("ApiManager: Configurazione scaricata via Background.");
+                return response.data;
 
-            Log.adapter("ApiManager: Configurazione scaricata con successo.");
-            return config;
+            } else {
+                Log.error("ApiManager", "Impossibile scaricare configurazione", response?.error);
+                return null;
+            }
 
         } catch (error) {
             Log.error("ApiManager", "Impossibile scaricare il config.json", error);
@@ -77,7 +89,7 @@ const ApiManager = {
             metadata
         };
         this.telemetryQueue.push(telemetryEvent);
-        Log.adapter(`ApiManager: Evento in coda: ${event_fqn}`);
+        Log.adapter(`ApiManager: Evento aggiunto in coda: ${event_fqn}`);
     },
 
 
@@ -97,17 +109,20 @@ const ApiManager = {
             const payload = { events: [...this.telemetryQueue] };
             try {
 
-                // chiamata al backend
-                const response = await fetch(`${this.baseUrl}/participants/${this.participantId}/telemetry`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                // NON facciamo piu la chiamata al backend ma inviamo un messaggio al background.js
+                const response = await chrome.runtime.sendMessage({ 
+                    action: "SYNC_TELEMETRY", 
+                    participantId: this.participantId,
+                    payload: payload
                 });
 
-                // se l'invio è andato a buon fine svuota la coda
-                if (response.status === 201) {
-                    this.telemetryQueue = [];
-                    Log.adapter("ApiManager: Telemetria sincronizzata.");
+                // se l'invio è andato a buon fine svuota la coda, altrimenti lancia un errore
+                if (response && response.success) {
+                    this.telemetryQueue = []; 
+                    Log.adapter("ApiManager: Coda telemetria sincronizzata col server.");
+
+                } else {
+                    Log.error("ApiManager", "Sync rifiutato dal server.", response?.error);
                 }
 
             } catch (error) {
