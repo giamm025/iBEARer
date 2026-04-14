@@ -36,6 +36,7 @@
         "engine/core_engine.js",
 
         "adapters/events/SearchResultsLoadedEvent.js",
+        "adapters/events/EngineReadyEvent.js",
         "adapters/observers/SearchObserver.js",
         "adapters/reddit_adapter.js"
       ],

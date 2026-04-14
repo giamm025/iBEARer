@@ -6,10 +6,7 @@ class Engine {
     }
 
 
-    // metodo per avviare il motore: 
-    //      - recupera la configurazione dal backend
-    //      - avvia i listeners per gli eventi 
-    //      - avvia il timer per la telemetria
+    // metodo per avviare il motore: recupera configurazione + avvia listeners eventi + avvia timer telemetria
     async init() {
 
         Log.engine("Avvio...");
@@ -31,10 +28,12 @@ class Engine {
             const syncTime = config.telemetry_settings?.sync_interval_ms || 10000;
             ApiManager.startTelemetrySync(syncTime);
 
+            // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
+            document.dispatchEvent(new EngineReadyEvent());  
+            Log.engine("Avvio Completato");
         } else {
             Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
         }
-        Log.engine("Avvio Completato");
     }
 
 
