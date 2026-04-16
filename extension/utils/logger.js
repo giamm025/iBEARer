@@ -6,8 +6,13 @@ const LoggerConfig = {
     modules: {
         engine: true,
         adapter: true,
-        registry: true, 
-        intervention: true
+
+        registry: false,
+        intervention_registry: true,
+        operator_registry: true,
+        telemetry_registry: true,
+
+        intervention: true 
     }
 };
 
@@ -20,9 +25,21 @@ const Log = {
         }
     },
     
-    registry: (...args) => {
-        if (LoggerConfig.log_enable && LoggerConfig.modules.registry) {
+    intervention_registry: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.intervention_registry && LoggerConfig.modules.registry) {
             console.log("📋 [Registry]", ...args);
+        }
+    },
+
+    operator_registry: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.operator_registry && LoggerConfig.modules.registry) {
+            console.log("➕ [Registry]", ...args);
+        }
+    },
+
+    telemetry_registry: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.telemetry_registry && LoggerConfig.modules.registry) {
+            console.log("📊 [Registry]", ...args);
         }
     },
     

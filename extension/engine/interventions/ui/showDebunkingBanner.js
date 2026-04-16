@@ -109,4 +109,4 @@ InterventionsRegistry["interventions.ui.showDebunkingBanner"] = function(payload
     window._debunkBannerObserver.observe(document.body, { childList: true, subtree: true });
 };
 
-Log.registry("Modulo caricato: interventions.ui.showDebunkingBanner");
+Log.intervention_registry("Intervento caricato: interventions.ui.showDebunkingBanner");

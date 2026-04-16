@@ -24,20 +24,26 @@
         "adapters/utils/SpaWatcher.js",
         "services/ApiManager.js",
 
-        "engine/operators/index.js",
+        "engine/registries/interventions_registry.js",
+        "engine/registries/operators_registry.js",
+        "engine/registries/telemetry_registry.js",
+
         "engine/operators/CONTAINS_ANY.js",
         "engine/operators/NOT_CONTAINS_ANY.js",
         "engine/operators/EQUALS.js",
 
-        "engine/interventions/index.js",
         "engine/interventions/debug/applyBorder.js",
-        "engine/interventions/ui/showDebunkingBanner.js",  
-
+        "engine/interventions/ui/showDebunkingBanner.js", 
+        
         "engine/core_engine.js",
 
         "adapters/events/SearchResultsLoadedEvent.js",
         "adapters/events/EngineReadyEvent.js",
+
         "adapters/observers/SearchObserver.js",
+        "adapters/observers/ClickOnLinkObserver.js",
+        "adapters/observers/TimeOnPageObserver.js",
+
         "adapters/reddit_adapter.js"
       ],
       "run_at": "document_end"

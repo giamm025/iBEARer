@@ -21,10 +21,13 @@ class Engine {
             // salva la configurazione
             this.config = config;
 
-            // avvia i listeners per gli eventi
+            // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
             this.initListeners();
 
-            // avvia il timer per la telemetria
+            // avvia i listeners per la telemetria (es. clicca sul link => aggiungi telemetria in coda)
+            this.initTelemetryObservers();
+
+            // avvia il timer per la telemetria (ogni quanto svuotiamo la cosa per inviare la telemetria al DB)
             const syncTime = config.telemetry_settings?.sync_interval_ms || 10000;
             ApiManager.startTelemetrySync(syncTime);
 
@@ -53,6 +56,29 @@ class Engine {
         }
 
         Log.engine(`In ascolto su: ${Array.from(eventsToListen).join(', ')}`);
+    }
+
+    // metodo per attivare gli observer di telemetria basandosi sul config.json
+    initTelemetryObservers() {
+
+        // recuperiamo l'array degli eventi da tracciare (se non c'è, usiamo array vuoto)
+        const trackEvents = this.config.telemetry_settings?.track_events || [];
+        
+        Log.engine(`Inizializzazione Telemetria per: ${trackEvents.join(', ')}`);
+
+        // per ogni evento nel config (es. "telemetry.events.ClickOnLinkEvent")
+        for (let eventFqn of trackEvents) {
+            
+            // peschiamo l'Observer dal registro e ...
+            const observer = TelemetryRegistry[eventFqn];
+            if (observer) {
+                observer.start(ApiManager); 
+                Log.engine(`Observer telemetria attivato: ${eventFqn}`);
+
+            } else {
+                Log.error("Engine", `Observer di telemetria non trovato nel registro per: ${eventFqn}`);
+            }
+        }
     }
 
 

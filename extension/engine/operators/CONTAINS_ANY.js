@@ -11,4 +11,4 @@ OperatorsRegistry["CONTAINS_ANY"] = function(actualValue, targetValues) {
     );
 };
 
-Log.registry("Operatore caricato: operators.CONTAINS_ANY");
+Log.operator_registry("Operatore caricato: operators.CONTAINS_ANY");

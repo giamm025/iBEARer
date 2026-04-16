@@ -11,4 +11,4 @@ OperatorsRegistry["NOT_CONTAINS_ANY"] = function(actualValue, targetValues) {
     );
 };
 
-Log.registry("Operatore caricato: operators.NOT_CONTAINS_ANY");
+Log.operator_registry("Operatore caricato: operators.NOT_CONTAINS_ANY");

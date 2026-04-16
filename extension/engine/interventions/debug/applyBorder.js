@@ -8,4 +8,4 @@ InterventionsRegistry["interventions.debug.applyBorder"] = function(payload) {
     document.body.style.boxSizing = "border-box"; 
 };
 
-Log.registry("Modulo caricato: interventions.debug.applyBorder");
+Log.intervention_registry("Intervento caricato: interventions.debug.applyBorder");

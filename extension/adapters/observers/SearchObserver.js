@@ -17,3 +17,5 @@ const SearchObserver = {
         }
     }
 };
+
+Log.telemetry_registry("Observer caricato: SearchResultsLoadedEvent");

@@ -3,4 +3,4 @@ OperatorsRegistry["EQUALS"] = function(actualValue, targetValue) {
     return actualValue === targetValue; 
 };
 
-Log.registry("Operatore caricato: operators.EQUALS");
+Log.operator_registry("Operatore caricato: operators.EQUALS");
