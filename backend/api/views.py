@@ -1,38 +1,48 @@
-from django.shortcuts import render
+# --- VECCHI IMPROT ---
 import json
-import uuid
-from . import models
-from .utils import error_response
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+# --- NUOVI IMPORT DRF ---
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Participant
+from .serializers import EnrollmentResponseSerializer
+from .utils import error_response
+
 # POST /participants: enrollParticipant
-@csrf_exempt
+@api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
+@permission_classes([AllowAny]) # per ora ignoriamo l'autenticazione, AllowAny permette a chiunque di accedere a questa view anche se non autenticato
 def enroll_participant(request):
 
-    if request.method != 'POST':
-        return error_response(405)
+    try:
+        # creazione nuovo partecipante nel DB (l'id viene generato automaticamente nel costruttore)
+        participant = Participant.objects.create(
+            status=Participant.Status.ENROLLED,
+            group=Participant.Group.UNASSIGNED
+        )
+
+        # creazione Deep Link
+        # DEBUG: Per ora usiamo un link fittizio
+        base_form_url = "https://docs.google.com/forms/d/e/IL_TUO_ID_FORM_REALE/viewform"
+        pre_survey_link = f"{base_form_url}?usp=pp_url&entry.123456789={participant.id}"
+
+        # prepariamo i dati da mandare al serializer
+        response_data = {
+            'id': participant.id,
+            'preSurveyLink': pre_survey_link
+        }
+
+        # il serializer trasforma i dati in JSON secondo la specifica api.yaml e controlla che i dati siano corretti (es. che participant.id sia un UUID valido, che preSurveyLink sia una URL valida, ecc.)
+        serializer = EnrollmentResponseSerializer(response_data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-    # generazione UUID
-    new_participant_id = str(uuid.uuid4())
-    
-    # creazione Deep Link 
-    base_form_url = "https://docs.google.com/forms/d/e/IL_TUO_ID_FORM_REALE/viewform"
-    pre_survey_link = f"{base_form_url}?usp=pp_url&entry.123456789={new_participant_id}"
-
-    # aggiungiamo il nuovo partecipante al DB
-    '''new_participant = models.Participant.objects.create(
-        id=new_participant_id,
-        status="ENROLLED",
-        group="UNASSIGNED"
-    )'''
-
-    # invio risposta
-    return JsonResponse({
-        "participantId": new_participant_id,
-        "preSurveyLink": pre_survey_link
-    }, status=201)
-
+    # in caso di errore sul DB o problemi inaspettati
+    except Exception as e:
+        return error_response(500, str(e))
 
 # GET /config: getConfig
 @csrf_exempt

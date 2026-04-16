@@ -38,6 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # DRF (Django REST Framework)
+    'rest_framework',
+
     # per abbattere i muri CORS aggiungiamo 'corsheaders' tra le app installate e il relativo middleware (vedi sotto)
     # questo ci permette di accettare richieste da domini diversi (es. frontend in localhost:3000 e backend in localhost:8000)
     # inoltre aggiungiamo la nostra app "api" che conterrà tutte le views e modelli
