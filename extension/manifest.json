@@ -22,7 +22,7 @@
       "js": [
         "utils/logger.js",
         "adapters/utils/SpaWatcher.js",
-        "adapters/utils/ApiManager.js",
+        "services/ApiManager.js",
 
         "engine/operators/index.js",
         "engine/operators/CONTAINS_ANY.js",
