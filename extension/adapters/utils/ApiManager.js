@@ -27,7 +27,7 @@ const ApiManager = {
     },
 
 
-    // funzione per registrare un nuovo partecipante e ottenere un ID univoco
+// -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
     async enrollParticipant() {
 
         try {
@@ -55,7 +55,7 @@ const ApiManager = {
     },
 
 
-    // funzione per scaricare la configurazione dal backend
+// -------------------------------------------- GET /config: getConfig --------------------------------------------
     async getConfig() {
 
         try {
@@ -79,7 +79,7 @@ const ApiManager = {
     },
 
 
-    // funzione per inserire un Telemetryevent nella coda (TelemetryBatch)
+// -------------------------------------------- POST /telemetry: addEventToQueue --------------------------------------------
     addEventToQueue(event_fqn, metadata = {}) {
 
         // creiamo un oggetto di Telmetria (in accordo con l'API)

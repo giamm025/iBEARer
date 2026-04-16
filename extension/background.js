@@ -9,9 +9,9 @@ const BASE_URL = "http://localhost:8000";
 // quando ApiManager invia un messaggio, questo listener lo intercetta e legge l'azione richiesta
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
-    // se è stato richiesto un ENROLLMENT 
+// -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
     if (request.action === "ENROLL") {
-        fetch(`${BASE_URL}/participants`, { 
+        fetch(`${BASE_URL}/participants/`, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
@@ -22,9 +22,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // se è stato richiesta la CONFIGURAZIONE
+// -------------------------------------------- GET /config: getConfig --------------------------------------------
     if (request.action === "GET_CONFIG") {
-        fetch(`${BASE_URL}/config`)
+        fetch(`${BASE_URL}/config/`)
         .then(res => res.json())
         .then(data => sendResponse({ success: true, data: data }))
         .catch(err => sendResponse({ success: false, error: err.message }));
@@ -32,9 +32,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // se è stato richiesto di SINCRONIZZARE la TELEMETRIA
+// -------------------------------------------- POST /telemetry: addEventToQueue --------------------------------------------
     if (request.action === "SYNC_TELEMETRY") {
-        fetch(`${BASE_URL}/participants/${request.participantId}/telemetry`, {
+        fetch(`${BASE_URL}/participants/${request.participantId}/telemetry/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request.payload)

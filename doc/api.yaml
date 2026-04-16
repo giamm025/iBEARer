@@ -367,7 +367,7 @@ paths:
   # =========================================
   # PUBLIC ENDPOINTS
   # =========================================
-  /config:
+  /config/:
 
     get:
       tags: [Extension, Config]
@@ -386,7 +386,7 @@ paths:
           $ref: '#/components/responses/Error405'
 
 
-  /participants:
+  /participants/:
 
     post:
       tags: [Extension, Participants]
@@ -404,7 +404,7 @@ paths:
         '405':
           $ref: '#/components/responses/Error405'
 
-  /participants/{participantId}/status:
+  /participants/{participantId}/status/:
     parameters:
       - $ref: '#/components/parameters/ParticipantId'
           
@@ -451,7 +451,7 @@ paths:
           $ref: '#/components/responses/Error405'
 
 
-  /participants/{participantId}/telemetry:
+  /participants/{participantId}/telemetry/:
 
     post:
       tags: [Extension, Telemetry]
@@ -478,7 +478,7 @@ paths:
   # ==========================================
   # ADMIN / RESEARCHER ENDPOINTS
   # ==========================================
-  /admin/login:
+  /admin/login/:
 
     post:
       tags: [Admin, Login]
@@ -511,7 +511,7 @@ paths:
           $ref: '#/components/responses/Error405'
 
 
-  /admin/config:
+  /admin/config/:
 
     put:
       tags: [Admin, Config]
@@ -537,7 +537,7 @@ paths:
           $ref: '#/components/responses/Error405'
 
 
-  /admin/participants:
+  /admin/participants/:
 
     get:
       tags: [Admin, Participants]
