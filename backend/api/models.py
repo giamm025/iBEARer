@@ -27,4 +27,22 @@ class Participant(models.Model):
 
     def __str__(self):
         return str(self.id)
-    
+
+
+# creiamo una classe Config per memorizzare la struttura di config.json. Poiche vogliamo che ci sia UNA SOLA configurazione 
+# per ogni esperimento possiamo implementare un Singleton Pattern (come ho anche fatto per il Pokedex nell'esame di Java)
+class Config(models.Model):
+
+    # usiamo JSONField per memorizzare la struttura annidata senza creare decine di tabelle
+    data = models.JSONField(default=dict)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    # per implementare il Singleton Pattern dobbiamo sovrascrivere (in realta stiamo creando un wrapper per) il metodo save 
+    # e forzare l'ID della configurazionea ad 1. in questo modo se proviamo a creare una nuova Config sovrascriviamo sempre 
+    # la stessa riga del DB, invece di crearne una nuova 
+    def save(self, *args, **kwargs):
+        self.pk = 1                     # forza l'ID a 1        
+        super().save(*args, **kwargs)   # chiama il save originale
+
+    def __str__(self):
+        return f"Global Configuration (Last updated: {self.last_updated})"

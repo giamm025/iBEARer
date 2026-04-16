@@ -16,7 +16,7 @@ def error_response(status_code, custom_message=None):
     message = API_ERRORS.get(status_code, "Unknown Error. An unexpected issue occurred.")
 
     if custom_message:
-        message += "\n\t" + custom_message
+        message += " " + custom_message
         
     return JsonResponse({
         "code": str(status_code), 

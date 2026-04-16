@@ -9,11 +9,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Participant
-from .serializers import EnrollmentResponseSerializer
+from .models import Config, Participant
+from .serializers import ConfigSerializer, EnrollmentResponseSerializer
 from .utils import error_response
 
-# POST /participants: enrollParticipant
+# -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
 @permission_classes([AllowAny]) # per ora ignoriamo l'autenticazione, AllowAny permette a chiunque di accedere a questa view anche se non autenticato
 def enroll_participant(request):
@@ -44,78 +44,30 @@ def enroll_participant(request):
     except Exception as e:
         return error_response(500, str(e))
 
-# GET /config: getConfig
-@csrf_exempt
+# -------------------------------------------- GET /config: getConfig --------------------------------------------
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_config(request):
 
-    if request.method != 'GET':
-        return error_response(405)
+    try:
+        # recuperiamo la configurazione
+        config = Config.objects.filter(pk=1).first()
         
-    config = {
-        "triggers": [
-        {
-            "id": "trigger_contains_conspiracy",
-            "event_source": "adapters.events.SearchResultsLoadedEvent",
-            "logical_operator": "AND",
-            "conditions": [
-                {
-                    "property": "search_query",
-                    "operator": "CONTAINS_ANY",
-                    "value": ["epstein", "vaccini", "terra piatta", "5g"]
-                }
-            ],
-            "apply_interventions": [
-                "apply_red_border",
-                "inject_debunking"
-            ]
-        },
+        # se per puro caso non dovesse esistere => errore 
+        if not config or not config.data:
+            return error_response(404, "Configurazione non trovata. Il ricercatore deve prima salvarla dalla Dashboard.")
         
-        {
-            "id": "trigger_NOT_contains_conspiracy",
-            "event_source": "adapters.events.SearchResultsLoadedEvent",
-            "logical_operator": "AND",
-            "conditions": [
-                {
-                    "property": "search_query",
-                    "operator": "NOT_CONTAINS_ANY",
-                    "value": ["epstein", "vaccini", "terra piatta", "5g"]
-                }
-            ],
-            "apply_interventions": [
-                "apply_green_border",
-            ]
-        }
-        ],
-
-        "interventions": [
-            {
-                "id": "apply_red_border",
-                "function_fqn": "interventions.debug.applyBorder",
-                "payload": {
-                    "border_style": "30px solid red"
-                }
-            },
-
-            {
-                "id": "apply_green_border",
-                "function_fqn": "interventions.debug.applyBorder",
-                "payload": {
-                    "border_style": "30px solid green"
-                }
-            },
-
-            {
-                "id": "inject_debunking",
-                "function_fqn": "interventions.ui.showDebunkingBanner",
-                "payload": {}
-            }
-        ]
-    }
+        # validiamo il JSON con il serializer => se è valido mandiamo la risposta, altrimenti errore
+        serializer = ConfigSerializer(data=config.data)
+        if serializer.is_valid():
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        else:
+            return error_response(500, f"Errore interno di struttura configurazione: {serializer.errors}")
     
-    return JsonResponse(config, status=200)
+    except Exception as e:
+        return error_response(500, f"Errore imprevisto del server: {str(e)}")
 
-
-# POST /participants/{participantId}/telemetry: sendTelemetry
+# ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
 @csrf_exempt
 def send_telemetry(request, participant_id):
 
