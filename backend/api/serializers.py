@@ -25,19 +25,16 @@ class ConditionSerializer(serializers.Serializer):
     value = serializers.ListField(child=serializers.CharField())
 
 class TriggerSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    name = serializers.CharField()
-    description = serializers.CharField(required=False, allow_blank=True)
+    id = serializers.CharField() 
     event_source = serializers.CharField()
     logical_operator = serializers.ChoiceField(choices=["AND", "OR"])
     conditions = ConditionSerializer(many=True)
     apply_interventions = serializers.ListField(child=serializers.CharField())
 
 class InterventionSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    description = serializers.CharField(required=False, allow_blank=True)
+    id = serializers.CharField() 
     function_fqn = serializers.CharField()
-    payload = serializers.DictField(child=serializers.JSONField(), required=False)
+    payload = serializers.JSONField(required=False, default=dict)
 
 class ConfigSerializer(serializers.Serializer):
     """Mappa l'intero schema Config definito in api.yaml"""
