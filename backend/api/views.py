@@ -9,9 +9,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Config, Participant
-from .serializers import ConfigSerializer, EnrollmentResponseSerializer
-from .utils import error_response
+from . import models
+from . import serializers
+from . import utils
 
 # -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
@@ -20,9 +20,9 @@ def enroll_participant(request):
 
     try:
         # creazione nuovo partecipante nel DB (l'id viene generato automaticamente nel costruttore)
-        participant = Participant.objects.create(
-            status=Participant.Status.ENROLLED,
-            group=Participant.Group.UNASSIGNED
+        participant = models.Participant.objects.create(
+            status=models.Participant.Status.ENROLLED,
+            group=models.Participant.Group.UNASSIGNED
         )
 
         # creazione Deep Link
@@ -37,12 +37,12 @@ def enroll_participant(request):
         }
 
         # il serializer trasforma i dati in JSON secondo la specifica api.yaml e controlla che i dati siano corretti (es. che participant.id sia un UUID valido, che preSurveyLink sia una URL valida, ecc.)
-        serializer = EnrollmentResponseSerializer(response_data)
+        serializer = serializers.EnrollmentResponseSerializer(response_data)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
         
     # in caso di errore sul DB o problemi inaspettati
     except Exception as e:
-        return error_response(500, str(e))
+        return utils.error_response(500, str(e))
 
 # -------------------------------------------- GET /config: getConfig --------------------------------------------
 @api_view(['GET'])
@@ -51,28 +51,53 @@ def get_config(request):
 
     try:
         # recuperiamo la configurazione
-        config = Config.objects.filter(pk=1).first()
+        config = models.Config.objects.filter(pk=1).first()
         
         # se per puro caso non dovesse esistere => errore 
         if not config or not config.data:
-            return error_response(404, "Configurazione non trovata. Il ricercatore deve prima salvarla dalla Dashboard.")
+            return utils.error_response(404, "Configurazione non trovata. Il ricercatore deve prima salvarla dalla Dashboard.")
         
         # validiamo il JSON con il serializer => se è valido mandiamo la risposta, altrimenti errore
-        serializer = ConfigSerializer(data=config.data)
+        serializer = serializers.ConfigSerializer(data=config.data)
         if serializer.is_valid():
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
         else:
-            return error_response(500, f"Errore interno di struttura configurazione: {serializer.errors}")
+            return utils.error_response(500, f"Errore interno di struttura configurazione: {serializer.errors}")
     
     except Exception as e:
-        return error_response(500, f"Errore imprevisto del server: {str(e)}")
+        return utils.error_response(500, f"Errore imprevisto del server: {str(e)}")
+
+# ------------------------------------- PUT admin/config: updateConfig --------------------------------------
+@api_view(['PUT'])
+@permission_classes([AllowAny]) 
+def update_config(request):
+
+    try:
+        # DRF in automatico gia converte i JSOn in dizionari Python leggibili. Dunque ci basta leggere request.data
+        serializer = serializers.ConfigSerializer(data=request.data)
+        
+        # controlliamo che il JSON sia valido (usiamo lo stesso serializer di getConfig)
+        if serializer.is_valid():
+            
+            # aggiorniamo la configurazione nel DB
+            config_obj, created = models.Config.objects.update_or_create(
+                pk=1,
+                defaults={'data': serializer.data}
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+            
+        else:
+            return utils.error_response(400, f"JSON non valido: {serializer.errors}")
+            
+    except Exception as e:
+        return utils.error_response(500, f"Errore durante il salvataggio della configurazione: {str(e)}")
 
 # ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
 @csrf_exempt
 def send_telemetry(request, participant_id):
 
     if request.method != 'POST':
-        return error_response(405)
+        return utils.error_response(405)
         
     try:
         # Django riceve i dati grezzi in request.body, li trasformiamo in dizionario Python
@@ -88,6 +113,6 @@ def send_telemetry(request, participant_id):
         return JsonResponse({"message": "Batch saved successfully"}, status=201)
         
     except json.JSONDecodeError:
-        return error_response(400)
+        return utils.error_response(400)
     except Exception as e:
-        return error_response(500, str(e))
+        return utils.error_response(500, str(e))

@@ -1,0 +1,72 @@
+{
+  "experiment": {
+    "experiment_name": "reddit_cospiracy",
+    "experiment_duration_minutes": 30
+  },
+  "telemetry_settings": {
+    "track_events": ["telemetry.events.ClickOnLinkEvent"],
+    "sync_interval_ms": 10000
+  },
+  "target": {
+    "url_pattern": "*://*.reddit.com/*",
+    "dependency": "adapters/reddit_adapter.js"
+  },
+  "triggers": [
+    {
+      "id": "trigger_contains_conspiracy",
+      "event_source": "adapters.events.SearchResultsLoadedEvent",
+      "logical_operator": "AND",
+      "conditions": [
+        {
+          "property": "search_query",
+          "operator": "CONTAINS_ANY",
+          "value": ["epstein", "vaccini", "terra piatta", "5g"]
+        }
+      ],
+      "apply_interventions": [
+        "apply_red_border",
+        "inject_debunking"
+      ]
+    },
+    
+    {
+      "id": "trigger_NOT_contains_conspiracy",
+      "event_source": "adapters.events.SearchResultsLoadedEvent",
+      "logical_operator": "AND",
+      "conditions": [
+        {
+          "property": "search_query",
+          "operator": "NOT_CONTAINS_ANY",
+          "value": ["epstein", "vaccini", "terra piatta", "5g"]
+        }
+      ],
+      "apply_interventions": [
+          "apply_green_border"
+      ]
+    }
+  ],
+
+  "interventions": [
+    {
+      "id": "apply_red_border",
+      "function_fqn": "interventions.debug.applyBorder",
+      "payload": {
+          "border_style": "30px solid red"
+      }
+    },
+
+    {
+      "id": "apply_green_border",
+      "function_fqn": "interventions.debug.applyBorder",
+      "payload": {
+          "border_style": "30px solid green"
+      }
+    },
+
+    {
+      "id": "inject_debunking",
+      "function_fqn": "interventions.ui.showDebunkingBanner",
+      "payload": {}
+    }
+  ]
+}
