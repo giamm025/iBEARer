@@ -15,7 +15,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
-        .then(res => res.json())
+        
+        // se il backend risponde con un errore (404, 500, ecc...)
+        .then(async res => {
+            if (!res.ok) {
+                const errorData = await res.json(); 
+                throw new Error(errorData.message || `HTTP status: ${res.status}`);
+            }
+            return res.json();
+        })
+        // se invece è andato tutto bene (200-299)
         .then(data => sendResponse({ success: true, data: data }))
         .catch(err => sendResponse({ success: false, error: err.message }));
         
@@ -25,7 +34,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // -------------------------------------------- GET /config: getConfig --------------------------------------------
     if (request.action === "GET_CONFIG") {
         fetch(`${BASE_URL}/config/`)
-        .then(res => res.json())
+
+        // se il backend risponde con un errore (404, 500, ecc...)
+        .then(async res => {
+            if (!res.ok) {
+                const errorData = await res.json(); 
+                throw new Error(errorData.message || `HTTP status: ${res.status}`);
+            }
+            return res.json();
+        })
+        // se invece è andato tutto bene (200-299)
         .then(data => sendResponse({ success: true, data: data }))
         .catch(err => sendResponse({ success: false, error: err.message }));
         
@@ -39,7 +57,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request.payload)
         })
-        .then(res => sendResponse({ success: res.ok }))
+
+        // se il backend risponde con un errore (404, 500, ecc...)
+        .then(async res => {
+            if (!res.ok) {
+                const errorData = await res.json(); 
+                throw new Error(errorData.message || `HTTP status: ${res.status}`);
+            }
+            return res.json();
+        })
+        // se invece è andato tutto bene (200-299)
+        .then(data => sendResponse({ success: true }))
         .catch(err => sendResponse({ success: false, error: err.message }));
         return true;
     }
