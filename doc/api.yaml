@@ -202,17 +202,13 @@ components:
             $ref: '#/components/schemas/Intervention'
 
     Trigger:
-      required: [id, name, event_source, conditions, apply_interventions]
+      required: [id, event_source, logical_operator, conditions, apply_interventions]
       properties:
 
         id:
-          $ref: "#/components/schemas/UUID"
-
-        name:
+          description: "ID stringa univoco per il trigger."
           type: string
-
-        description:
-          type: string
+          example: "trigger_contains_conspiracy"
 
         event_source:
           type: string
@@ -231,7 +227,7 @@ components:
           type: array
           items:
             type: string
-            description: Maps to the Intervention function_fqn.
+            description: Maps to the Intervention IDs.
 
     Condition:
       required: [property, operator, value]
@@ -255,27 +251,24 @@ components:
           example: ["epstein", "vaccini", "terra piatta", "5g"]
 
     Intervention:
-      required: [name, function_fqn, payload]
+      required: [id, function_fqn, payload]
       properties:
 
-        name:
-          description: "The human-readable name for the intervention that will be displayed in the web dashboard."
+        id:
+          description: "A unique string identifier for the intervention, used for mapping in triggers."
           type: string
-
-        description:
-          description: "The human-readable description for the intervention that will be displayed in the web dashboard."
-          type: string
+          example: "apply_red_border"
 
         function_fqn:
-          description: "The Fully Qualified Name of the intervention function to execute when this intervention is applied."
+          description: "The Fully Qualified Name of the intervention function."
           type: string
-          example: "interventions.showWarningBanner"
+          example: "interventions.debug.applyBorder"
 
         payload:
-          description: "The payload to pass to the intervention function. The structure depends on the specific function_fqn (see data-dictionary.yaml)."
+          description: "The payload to pass to the intervention function."
           additionalProperties: true
           example:
-            message: "⚠️ ATTENZIONE! Informazioni false."
+            border_style: "30px solid red"
 
   # ---------------------------------------------------------
   # Custom Errors
