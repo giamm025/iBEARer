@@ -64,7 +64,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const errorData = await res.json(); 
                 throw new Error(errorData.message || `HTTP status: ${res.status}`);
             }
-            return res.json();
+            return null;    // null poiche in caso di successo ritorna 201 CREATED senza body. 
+                            // Se facessimo res.json() come negli altri endpoint otterremmo errore (Unexpected end of JSON input) 
+                            // in quanto non c'è nessun res da parare...
         })
         // se invece è andato tutto bene (200-299)
         .then(data => sendResponse({ success: true }))
