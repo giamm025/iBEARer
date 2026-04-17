@@ -21,8 +21,8 @@ def enroll_participant(request):
     try:
         # creazione nuovo partecipante nel DB (l'id viene generato automaticamente nel costruttore)
         participant = models.Participant.objects.create(
-            status=models.Participant.Status.ENROLLED,
-            group=models.Participant.Group.UNASSIGNED
+            status=models.Status.ENROLLED,
+            group=models.Group.UNASSIGNED
         )
 
         # creazione Deep Link
@@ -116,3 +116,48 @@ def send_telemetry(request, participant_id):
         return utils.error_response(400)
     except Exception as e:
         return utils.error_response(500, str(e))
+    
+# ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_telemetry(request, participant_id):
+
+    try:
+        # controlliamo che il partecipante esista => se non esiste errore
+        participant = models.Participant.objects.filter(id=participant_id).first()
+        if not participant:
+            return utils.error_response(404, "Partecipante non trovato. Impossibile salvare la telemetria.")
+
+        # validazione della Telemetry Batch (cioe la lista/coda di eventi)
+        serializer = serializers.TelemetryBatchSerializer(data=request.data)
+        
+        # se la Telemetry Batch è valida andiamo a validare i singoli Telemetry Event
+        if serializer.is_valid():
+            
+            events_data = serializer.validated_data.get('events', [])
+            telemetry_objects = [
+                models.TelemetryEvent(
+                    participant=participant,
+                    event_fqn=event['event_fqn'],
+                    timestamp=event['timestamp'],
+                    metadata=event.get('metadata', {})
+                )
+                for event in events_data
+            ]
+            models.TelemetryEvent.objects.bulk_create(telemetry_objects)
+        # NB. DRF ci permette di salvare TUTTI gli eventi in una sola query usando bulk_create. In alternativa dovremmo usare 
+        # .save() come facevamo prima... Ma in quel caso genereremmo una query per ogni Telemetry Event (chiaramente meno efficente) 
+
+            # DEBUG
+            print(f"\n🟢 [TELEMETRIA SALVATA per Participant: {participant_id}]")
+            print(f"Salvati con successo {len(telemetry_objects)} eventi.")
+            print("--------------------------------------------------\n")
+
+            # risposta al client
+            return Response(status=status.HTTP_201_CREATED)
+            
+        else:
+            return utils.error_response(400, f"Payload telemetria non valido: {serializer.errors}")
+            
+    except Exception as e:
+        return utils.error_response(500, f"Errore imprevisto durante il salvataggio della telemetria: {str(e)}")

@@ -43,3 +43,13 @@ class ConfigSerializer(serializers.Serializer):
     target = TargetSerializer()
     triggers = TriggerSerializer(many=True)
     interventions = InterventionSerializer(many=True)
+
+
+class TelemetryEventSerializer(serializers.Serializer):
+    event_fqn = serializers.CharField()
+    timestamp = serializers.DateTimeField()
+    metadata = serializers.JSONField(required=False, default=dict)
+
+class TelemetryBatchSerializer(serializers.Serializer):
+    # Validiamo l'intero array di eventi
+    events = TelemetryEventSerializer(many=True)

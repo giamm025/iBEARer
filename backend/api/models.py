@@ -46,3 +46,15 @@ class Config(models.Model):
 
     def __str__(self):
         return f"Global Configuration (Last updated: {self.last_updated})"
+    
+
+class TelemetryEvent(models.Model):
+
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='telemetry_events')    
+    event_fqn = models.CharField(max_length=255)
+    timestamp = models.DateTimeField()
+    metadata = models.JSONField(default=dict, blank=True)
+    # JSONField è perfetto per i "metadata" perché ogni evento potrebbe avere campi diversi (es. URL, coordinate mouse)
+
+    def __str__(self):
+        return f"{self.event_fqn} at {self.timestamp} (Participant: {self.participant.id})"
