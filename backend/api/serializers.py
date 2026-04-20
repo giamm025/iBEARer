@@ -53,3 +53,7 @@ class TelemetryEventSerializer(serializers.Serializer):
 class TelemetryBatchSerializer(serializers.Serializer):
     # Validiamo l'intero array di eventi
     events = TelemetryEventSerializer(many=True)
+
+class StatusResponseSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    group = serializers.CharField()

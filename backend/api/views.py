@@ -1,8 +1,3 @@
-# --- VECCHI IMPROT ---
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
 # --- NUOVI IMPORT DRF ---
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -91,31 +86,6 @@ def update_config(request):
             
     except Exception as e:
         return utils.error_response(500, f"Errore durante il salvataggio della configurazione: {str(e)}")
-
-# ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
-@csrf_exempt
-def send_telemetry(request, participant_id):
-
-    if request.method != 'POST':
-        return utils.error_response(405)
-        
-    try:
-        # Django riceve i dati grezzi in request.body, li trasformiamo in dizionario Python
-        body = json.loads(request.body)
-        
-        # DEBUG: Per semplicità, ora ci limitiamo a stampare la telemetria ricevuta nel terminale.
-        print(f"\n🟢 [TELEMETRIA RICEVUTA da Participant: {participant_id}]")
-        print(json.dumps(body, indent=2))
-        print("--------------------------------------------------\n")
-
-        # Salviamo la telemetria nel DB
-
-        return JsonResponse({"message": "Batch saved successfully"}, status=201)
-        
-    except json.JSONDecodeError:
-        return utils.error_response(400)
-    except Exception as e:
-        return utils.error_response(500, str(e))
     
 # ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
 @api_view(['POST'])
@@ -161,3 +131,43 @@ def send_telemetry(request, participant_id):
             
     except Exception as e:
         return utils.error_response(500, f"Errore imprevisto durante il salvataggio della telemetria: {str(e)}")
+    
+
+# ---------------------------- GET / PUT /participants/{participantId}/status -----------------------------
+@api_view(['GET', 'PUT'])
+@permission_classes([AllowAny]) # DEBUG: Prima o poi dovremo mettere l'API Key segreta condivisa con Google Forms
+def manage_participant_status(request, participant_id):
+
+    try:
+        # controllo che il partecipante esista => se non esiste errore
+        participant = models.Participant.objects.filter(id=participant_id).first()
+        if not participant:
+            return utils.error_response(404, "Partecipante non trovato.")
+
+        # se è una GET semplicemente ritorniamo lo stato
+        if request.method == 'GET':
+            serializer = serializers.StatusResponseSerializer(participant)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # se è una PUT allora aggiorniamo lo stato
+        elif request.method == 'PUT':
+
+            # chiaramente, non solo Google Forms ma chiunque chiami questo endpoint, deve passarci un payload
+            # JSON con un campo status (es. {status: PRE-SURVEY-COMPLETED} )
+            new_status = request.data.get('status')
+            
+            # aggiorniamo il Partecipante nel DB (e assegniamo il gruppo A/B)
+            participant.status = new_status
+            if (participant.status == 'PRE-SURVEY-COMPLETED' and participant.group == 'UNASSIGNED'):
+                participant.group = utils.assign_group()
+            
+            participant.save()
+
+            # mandiamo il messaggio all'estensione tramite WebSocket
+            utils.notify_status_update(participant)
+
+            return Response({"message": "Stato aggiornato e notifica inviata"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return utils.error_response(500, str(e))
+    

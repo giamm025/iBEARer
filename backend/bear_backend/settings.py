@@ -31,6 +31,10 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    
+    # Necessario per le WebSockets. è il server ASGI (Asincrono) usato da Django Channels le WebSocket.
+    'daphne',    
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,6 +49,10 @@ INSTALLED_APPS = [
     # questo ci permette di accettare richieste da domini diversi (es. frontend in localhost:3000 e backend in localhost:8000)
     # inoltre aggiungiamo la nostra app "api" che conterrà tutte le views e modelli
     'corsheaders',
+
+    # Necessario per le WebSockets. Serve a gestire i canali di comunicazione webSockets
+    'channels',
+
     'api',         
 ]
 
@@ -81,8 +89,18 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'bear_backend.wsgi.application'
+# EDIT: Commentiamo WSGI siccome è un Server SINCRONO e non supporta le WebSockets
+# Attiviamo invece ASGI che è un Server ASINCRONO e supporta le WebSockets (vedi asgi.py)
 
+#WSGI_APPLICATION = 'bear_backend.wsgi.application'
+ASGI_APPLICATION = 'bear_backend.asgi.application'
+
+# Configuriamo il Channel Layer 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

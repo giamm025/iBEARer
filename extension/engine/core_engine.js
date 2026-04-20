@@ -2,6 +2,8 @@
 class Engine {
     
     constructor() {
+        this.config = null;
+        this.group = null;
         this.init();
     }
 
@@ -16,29 +18,53 @@ class Engine {
 
         // GET config.json dal backend
         const config = await ApiManager.getConfig();
-        if (config) {
-
-            // salva la configurazione
-            this.config = config;
-
-            // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
-            this.initListeners();
-
-            // avvia i listeners per la telemetria (es. clicca sul link => aggiungi telemetria in coda)
-            this.initTelemetryObservers();
-
-            // avvia il timer per la telemetria (ogni quanto svuotiamo la cosa per inviare la telemetria al DB)
-            const syncTime = config.telemetry_settings?.sync_interval_ms || 10000;
-            ApiManager.startTelemetrySync(syncTime);
-
-            // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
-            document.dispatchEvent(new EngineReadyEvent());  
-            Log.engine("Avvio Completato");
-        } else {
+        if (!config) {
             Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
+            return;
+        }
+        this.config = config;
+
+        // Ci connettiamo con la Web Socket del Backend
+        await ApiManager.connectWebSocket();
+
+        // recuperiamo lo stato e il gruppo del partecipante
+        const currentStatus = await ApiManager.getStatus();
+        
+        // se lo stato è PRE-SURVEY-COMPLETED, possiamo iniziare l'esperimento
+        if (currentStatus && currentStatus.status === 'PRE-SURVEY-COMPLETED') {
+            this.startExperiment(currentStatus.group);
+            Log.engine("L'utente ha già completato il sondaggio. Gruppo assegnato: " + currentStatus.group);
+
+        } else {
+            Log.engine("In attesa del completamento del pre-survey da parte dell'utente...");
+            
+            // registriamo la callback nell'ApiManager per svegliarci quando arriva la WebSocket
+            ApiManager.onExperimentStartCallback = (assignedGroup) => {
+                this.startExperiment(assignedGroup);
+            };
         }
     }
 
+    // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
+    startExperiment(assignedGroup) {
+        
+        // salviamo il gruppo in una variabile, cosi che anche le altre funzioni (es. executeIntervention) possano usarlo
+        this.group = assignedGroup;
+
+        // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
+        this.initListeners();
+
+        // avvia i listeners per la telemetria (es. clicca sul link => aggiungi telemetria in coda)
+        this.initTelemetryObservers();
+
+        // avvia il timer per la telemetria (ogni quanto svuotiamo la coda per inviare la telemetria al DB)
+        const syncTime = this.config.telemetry_settings?.sync_interval_ms || 10000;
+        ApiManager.startTelemetrySync(syncTime);
+
+        // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
+        document.dispatchEvent(new EngineReadyEvent());  
+        Log.engine("Avvio Completato");
+    }
 
     // metodo per mettere in ascolto il motore su tutti gli event_source presenti nel config.json 
     initListeners() {
@@ -159,6 +185,12 @@ class Engine {
 
     // metodo per eseguire una o più funzioni intervento
     executeInterventions(interventionIds, eventData) {
+
+        // prima di tutto, se siamo in gruppo solo controllo non applichiamo nessun intervento
+        if (this.group === 'CONTROL') {
+            Log.engine("Utente in gruppo CONTROL: Interventi saltati (telemetria attiva).");
+            return; 
+        }
 
         // per ogni intervento ID
         for (let interventionID of interventionIds) {

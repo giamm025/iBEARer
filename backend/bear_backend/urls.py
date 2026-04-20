@@ -24,6 +24,7 @@ from api import views
 urlpatterns = [
 
     path('admin/config/', views.update_config),
+    path('participants/<str:participant_id>/status/', views.manage_participant_status),
     path('participants/<str:participant_id>/telemetry/', views.send_telemetry),
 
     path('admin/', admin.site.urls),

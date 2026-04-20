@@ -9,6 +9,7 @@ const ApiManager = {
     participantId: null,
     telemetryQueue: [],
     syncInterval: null,
+    onExperimentStartCallback: null,
 
     // funzione per inizializzare l'ApiManager (ovviamente da lanciare all'inizio dell'estensione)
     async init() {
@@ -78,8 +79,34 @@ const ApiManager = {
         }
     },
 
+// --------------------------------- GET participants/{participantId}/status: getStatus ---------------------------------
+    async getStatus() {
 
-// -------------------------------------------- POST /telemetry: addEventToQueue --------------------------------------------
+        try {
+            const response = await chrome.runtime.sendMessage({ 
+                action: "GET_STATUS", 
+                participantId: this.participantId 
+            });
+            
+            // AGGIUNGIAMO QUESTI LOG:
+            console.log("🔍 [ApiManager] Risposta grezza dal background:", response);
+
+            if (response && response.success) {
+                return response.data;
+
+            } else {
+                console.error("❌ [ApiManager] Il background ha restituito un errore:", response?.error);
+                return null;
+            }
+            
+        } catch (e) { 
+            console.error("❌ [ApiManager] Eccezione di rete o di Chrome:", e);
+            return null; 
+        }
+    },
+
+
+// ---------------------------------- POST participants/{participantId}/telemetry: sendTelemetry ----------------------------------
     addEventToQueue(event_fqn, metadata = {}) {
 
         // creiamo un oggetto di Telmetria (in accordo con l'API)
@@ -129,5 +156,38 @@ const ApiManager = {
                 Log.error("ApiManager", "Sync fallito. Dati mantenuti in coda.");
             }
         }, interval_ms);
+    },
+
+// ---------------------------------- GET participants/{participantId}/status: getStatus ----------------------------------
+    async getStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({ 
+                action: "GET_STATUS", 
+                participantId: this.participantId 
+            });
+            if (response && response.success) return response.data;
+            return null;
+        } catch (e) { return null; }
+    },
+
+// -------------------------------------------- WEBSOCKET CONNECT --------------------------------------------
+    async connectWebSocket() {
+        await chrome.runtime.sendMessage({ 
+            action: "CONNECT_WEBSOCKET", 
+            participantId: this.participantId 
+        });
     }
 };
+
+// --- ASCOLTATORE MESSAGGI DAL BACKGROUND ---
+// Quando il background riceve il segnale dal WebSocket, avvisa questa tab
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "START_EXPERIMENT") {
+        Log.adapter(`ApiManager: Ricevuto segnale di avvio esperimento! Gruppo: ${request.group}`);
+        
+        // Se l'Engine ha registrato la sua callback, chiamiamola!
+        if (ApiManager.onExperimentStartCallback) {
+            ApiManager.onExperimentStartCallback(request.group);
+        }
+    }
+});

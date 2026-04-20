@@ -12,7 +12,8 @@ const LoggerConfig = {
         operator_registry: true,
         telemetry_registry: true,
 
-        intervention: true 
+        intervention: true ,
+        web_socket: true
     }
 };
 
@@ -52,6 +53,12 @@ const Log = {
     intervention: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.intervention) {
             console.log("🚨 [Intervention]", ...args);
+        }
+    },
+
+    web_socket: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.web_socket) {
+            console.log("🌐 [WebSocket]", ...args);
         }
     },
     
