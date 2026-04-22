@@ -4,7 +4,11 @@
     "experiment_duration_minutes": 30
   },
   "telemetry_settings": {
-    "track_events": ["telemetry.events.ClickOnLinkEvent", "telemetry.events.TimeOnPageEvent"],
+    "track_events": [
+      "telemetry.events.ClickOnLinkEvent", 
+      "telemetry.events.TimeOnPageEvent",
+      "telemetry.events.SearchResultsScrapedEvent"
+    ],
     "sync_interval_ms": 10000
   },
   "target": {
