@@ -1,5 +1,5 @@
 # --- NUOVI IMPORT DRF ---
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +7,8 @@ from rest_framework import status
 from . import models
 from . import serializers
 from . import utils
+
+import json
 
 # -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
@@ -89,8 +91,21 @@ def update_config(request):
     
 # ------------------------------------- POST /participants/{participantId}/telemetry: sendTelemetry --------------------------------------
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def send_telemetry(request, participant_id):
+
+    print("-" * 50)
+    print("📦 PAYLOAD RICEVUTO (request.data):")
+    try:
+        # Usiamo json.dumps con indent=4 per stamparlo bello incolonnato
+        payload_formattato = json.dumps(request.data, indent=4, ensure_ascii=False)
+        print(payload_formattato)
+    except Exception:
+        # Se per qualche motivo DRF non è riuscito a parsarlo come JSON
+        print(request.data)
+        
+    print("="*50 + "\n")
 
     try:
         # controlliamo che il partecipante esista => se non esiste errore

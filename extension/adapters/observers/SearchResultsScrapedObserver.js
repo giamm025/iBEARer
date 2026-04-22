@@ -1,79 +1,108 @@
-// questo observer si occupa di capire quando Reddit ha caricato i risulati di una ricerca. Dopo di che estrae i dati principali 
-// (titolo, url, subreddit) ed emette l'evento "ResultsLoaded" per inviare i dati al backend
+// Questo observer si occupa di estrarre i risultati di ricerca.
+// Gestisce correttamente le transizioni SPA, resettando memoria e contatori ad ogni cambio pagina.
 
 TelemetryRegistry["telemetry.events.SearchResultsScrapedEvent"] = {
     
+    currentObserver: null,
+    initTimer: null,
+    scrapedUrls: new Set(), 
+    apiManagerRef: null,
+
+    // start() viene chiamato una sola volta da core_engine.js all'avvio
+    // in questo caso non facciamo nulla. Aspettiamo solo che l'url cambi (cioe che l'SpaWatcher ci chiami tramite check())
     start(apiManager) {
+        this.apiManagerRef = apiManager;
+        Log.telemetry_registry("Observer SearchResultsScrapedEvent in attesa di SpaWatcher...");
+    },
 
-        // ci mettiamo in attesa dell'evento "SearchResultsLoadedEvent" che viene emesso da SearchObserver quando intercetta una ricerca.
-        document.addEventListener('adapters.events.SearchResultsLoadedEvent', (e) => {
-            
-            // estraiamo la query di ricerca dall'evento (o dall'URL)
-            const query = (e.detail && e.detail.search_query) ? e.detail.search_query : new URLSearchParams(window.location.search).get('q');
-            if (!query) return;
+    // check() viene chiamato da SpaWatcher OGNI VOLTA che cambia l'URL
+    check() {
+        
+        // prendiamo l'url e i parametri di ricerca della pagina in cui ci troviamo
+        const urlParams = new URLSearchParams(window.location.search);
 
-            // funzione per estrarre i dati dei post
-            const tryScrape = () => {
+        // se non siamo in una ricerca (es. siamo tornati in Home), spegniamo tutto e puliamo la memoria
+        if (!window.location.pathname.includes('/search') || !urlParams.has('q')) {
+            this.stopAndClean();
+            return;
+        }
 
-                // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
-                const posts = document.querySelectorAll('shreddit-post');
+        // se invece siamo in una ricerca estraiamo la search_query
+        const query = urlParams.get('q');
 
-                // se abbiamo trovato almeno un post significa che i risultati sono stati renderizzati. 
-                if (posts.length > 0) {
+        // e resettiamo la memoria (necessario per far ripartire il contatore position da 1 ad ogni nuova ricerca)
+        this.stopAndClean();
 
-                    // estraiamo i dati del post
-                    const extractedResults = [];
-                    posts.forEach((post, index) => {
-                        extractedResults.push({
-                            position: index + 1,
-                            title: post.getAttribute('post-title') || '',
-                            url: post.getAttribute('permalink') || '',
-                            subreddit: post.getAttribute('subreddit-prefixed-name') || ''
-                        });
-                    });
+        // funzione per estrarre i dati dei post
+        const tryScrape = () => {
 
-                    // inviamo la telemetria al backend
-                    apiManager.addEventToQueue("telemetry.events.SearchResultsScrapedEvent", {
-                        search_query: query,
-                        extracted_count: extractedResults.length,
-                        scraped_posts: extractedResults
-                    });
+            // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
+            // EDIT: <shreddit-post> non funziona piu... quindi usiamo i link ai commenti. ogni post ne deve avere uno.
+            const links = document.querySelectorAll('a[href*="/comments/"]');
+            const newResults = [];
 
-                    // estrazione avvenuto con successo
-                    Log.adapter(`Telemetria: Estratti e messi in coda ${extractedResults.length} post per "${query}".`);
-                    return true; 
-                }
-                return false; // Nessun post trovato
-            };
+            // per ogni link (post) trovato estriamo i dati
+            links.forEach((link) => {
 
-            // --- 2. TENTATIVO IMMEDIATO (Contro la Race Condition) ---
-            if (tryScrape()) {
-                return; // se ha già trovato i post, abbiamo finito! Niente observer.
-            }
+                // prendiamo l'url del post
+                const url = link.href; 
 
-            // se react non ha ancora renderizzato i risultati, ci mettiamo in ascolto dei cambiamenti del DOM con un MutationObserver. 
-            // appena troviamo i post, estraiamo e stacchiamo l'observer.
-            let observerActive = true;
-            const observer = new MutationObserver((mutations, obs) => {
-                // ad ogni mutazione del DOM, proviamo a estrarre. Se ha successo, stacchiamo.
-                if (tryScrape()) {
-                    obs.disconnect(); 
-                    observerActive = false;
-                }
+                // se l'url è gia presente, saltiamo questo post. altrimenti lo aggiungiamo al Set
+                if (!url || this.scrapedUrls.has(url)) return; 
+                this.scrapedUrls.add(url);
+
+                // estraiamo il subreddit ed il titolo del post dall'url
+                const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
+                const subreddit = subMatch ? "r/" + subMatch[1] : "";
+                let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();
+
+                // aggiungiamo il post alla lista dei risultati da inviare al backend
+                newResults.push({
+                    position: this.scrapedUrls.size,
+                    title: title,
+                    url: url,
+                    subreddit: subreddit
+                });
             });
 
-            // inizia a osservare l'intero body in attesa dei cambiamenti di React
-            observer.observe(document.body, { childList: true, subtree: true });
+            // se abbiamo estratto nuovi post, inviamo tutto al backend
+            if (newResults.length > 0) {
+                this.apiManagerRef.addEventToQueue("telemetry.events.SearchResultsScrapedEvent", {
+                    search_query: query,
+                    extracted_count: newResults.length,
+                    scraped_posts: newResults
+                });
+                Log.adapter(`Telemetria: Estratti ${newResults.length} post per "${query}".`);
+            }
+        };
 
-            // FALLBACK: se la ricerca non produce risultati, uccidiamo l'observer dopo 10 secondi
-            setTimeout(() => {
-                if (observerActive) {
-                    observer.disconnect();
-                    Log.error("Telemetry", `Timeout Scraping per "${query}": Nessun risultato.`);
-                }
-            }, 10000);
-            
-        });
+        // AVVIAMO L'OBSERVER
+        // impostiamo un timer di 1 sec per evitare di lanciare l'observer troppo presto, prima che la pagina abbia caricato 
+        // (prima capitava che venissero inviati al backend anche i post della homepage siccome non davamo abbastanza tempo a react di caricare i veri risultati di ricerca)
+        this.initTimer = setTimeout(() => {
+            tryScrape(); 
+            this.currentObserver = new MutationObserver(() => { tryScrape(); });
+            this.currentObserver.observe(document.body, { childList: true, subtree: true });
+        }, 1000); 
+    },
+
+
+    // funzione helper per spegnere i motori e formattare il disco
+    stopAndClean() {
+
+        // se c'è un observer attivo, lo disconnettiamo
+        if (this.currentObserver) {
+            this.currentObserver.disconnect();
+            this.currentObserver = null;
+        }
+
+        // se c'è un timer di inizializzazione in corso, lo cancelliamo
+        if (this.initTimer) {
+            clearTimeout(this.initTimer);
+            this.initTimer = null;
+        }
+
+        // svuotiamo il Set. In questo modo il prossimo post estratto avrà position 1.
+        this.scrapedUrls.clear(); 
     }
 };
-Log.telemetry_registry("Observer caricato: SearchResultsScrapedEvent");
