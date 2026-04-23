@@ -25,10 +25,6 @@
         "adapters/utils/SpaWatcher.js",
         "services/ApiManager.js",
 
-        "engine/registries/interventions_registry.js",
-        "engine/registries/operators_registry.js",
-        "engine/registries/telemetry_registry.js",
-
         "engine/operators/CONTAINS_ANY.js",
         "engine/operators/NOT_CONTAINS_ANY.js",
         "engine/operators/EQUALS.js",
