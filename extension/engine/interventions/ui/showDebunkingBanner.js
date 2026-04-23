@@ -1,5 +1,5 @@
 
-InterventionsRegistry["interventions.ui.showDebunkingBanner"] = function(payload, eventData) {
+window["interventions.ui.showDebunkingBanner"] = function(payload, eventData) {
     
     // event_data contiene il CONTESTO di cui parlava il prof (in questo caso la query di ricerca)
     const searchedWord = eventData.search_query.toLowerCase();

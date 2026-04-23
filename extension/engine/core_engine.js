@@ -220,7 +220,7 @@ class Engine {
     // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload
     // scrive un log di errore se il FQN non è presente nel registro delle funzioni intervento
     executeInterventionFQN(fqn, payload, eventData) {
-        if (InterventionsRegistry[fqn]) { InterventionsRegistry[fqn](payload, eventData); } 
+        if (window[fqn]) { window[fqn](payload, eventData); } 
         else {Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); }
     }
 }
