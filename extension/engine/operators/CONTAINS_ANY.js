@@ -1,5 +1,5 @@
 // Aggiunge l'operatore CONTAINS_ANY al registro degli operatori (vedere data-dictionary.yaml per scoprire cosa fa ogni operatore)
-OperatorsRegistry["CONTAINS_ANY"] = function(actualValue, targetValues) {
+window["CONTAINS_ANY"] = function(actualValue, targetValues) {
 
     if (typeof actualValue !== "string" || !Array.isArray(targetValues)) {
         Log.error("OperatorsRegistry", `Operatore CONTAINS_ANY: tipi di dato non validi. Valore attuale: ${actualValue}, Valori target: ${targetValues}`);

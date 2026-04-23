@@ -147,7 +147,7 @@ class Engine {
             const propertyValue = eventData[condition.property];
 
             // recuperiamo il function operator da eseguire (es. CONTAINS_ANY)
-            const operatorFn = OperatorsRegistry[condition.operator];
+            const operatorFn = window[condition.operator];
 
             // eseguiamo l'operatore (definiti in engine/operators.js)
             let result = false;
