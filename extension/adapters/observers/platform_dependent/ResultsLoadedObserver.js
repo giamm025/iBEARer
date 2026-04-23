@@ -9,46 +9,52 @@ window.ResultsLoaded = {
     scrapedUrls: new Set(), 
 
     // check() viene chiamato da SpaWatcher OGNI VOLTA che cambia l'URL
-    // check() viene chiamato da SpaWatcher OGNI VOLTA che cambia l'URL
     check() {
-        // Controlliamo se siamo ancora in una pagina di ricerca
+
+        // controlliamo se dopo il cambio URL siamo ancora in una pagina di ricerca
         const urlParams = new URLSearchParams(window.location.search);
         const isSearchPage = window.location.pathname.includes('/search') && urlParams.has('q');
 
-        // Se l'utente è USCITO dalla ricerca (es. tornato alla Home), spegniamo l'observer zombie
+        // se non siamo in una ricerca (es. siamo tornati in Home), spegniamo tutto e puliamo la memoria
         if (!isSearchPage) {
             this.stopAndClean();
             Log.adapter("Utente uscito dalla ricerca. Observer ResultsLoaded spento.");
         }
-        
-        // Se invece siamo ancora in una pagina di ricerca, NON FACCIAMO NULLA.
-        // Aspettiamo che sia l'Intervento del core_engine a chiamare startScraping() e gestire tutto.
+        // se invece siamo ancora in una pagina di ricerca, aspettiamo che un trigger ci dica di accendere l'osservatore
     },
 
     // funzione per iniziare il tracciamento dei risultati. Verra chiamata dagli interventi quando scatta il trigger.
     startScraping(query) {
         
-        // 1. Prima di iniziare, puliamo la memoria da eventuali ricerche precedenti
-        // Mettendolo qui, evitiamo qualsiasi Race Condition con l'Adapter!
+        // puliamo la memoria da eventuali ricerche precedenti
         this.stopAndClean();
         
         Log.adapter(`ResultsLoadedObserver: Avvio scraping mirato per "${query}"...`);
 
-        // 2. funzione per estrarre i dati dei post
+        // funzione per estrarre i dati dei post
         const tryScrape = () => {
             
+            // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
+            // EDIT: <shreddit-post> non funziona piu... quindi usiamo i link ai commenti. ogni post ne deve avere uno.
             const links = document.querySelectorAll('a[href*="/comments/"]');
             const newResults = [];
 
+            // per ogni link (post) trovato estriamo i dati
             links.forEach((link) => {
+
+                // prendiamo l'url del post
                 const url = link.href; 
+
+                // se l'url è gia presente, saltiamo questo post. altrimenti lo aggiungiamo al Set
                 if (!url || this.scrapedUrls.has(url)) return; 
                 this.scrapedUrls.add(url);
 
+                // estraiamo il subreddit ed il titolo del post dall'url
                 const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
                 const subreddit = subMatch ? "r/" + subMatch[1] : "";
                 let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();
 
+                // aggiungiamo il post alla lista dei risultati da inviare al backend
                 newResults.push({
                     position: this.scrapedUrls.size,
                     title: title,
@@ -57,6 +63,7 @@ window.ResultsLoaded = {
                 });
             });
 
+            // se abbiamo estratto nuovi post, inviamo tutto al backend
             if (newResults.length > 0) {
                 ApiManager.addEventToQueue("telemetry.events.TargetedResultsLoadedEvent", {
                     search_query: query,
@@ -67,7 +74,9 @@ window.ResultsLoaded = {
             }
         };
 
-        // 3. AVVIAMO L'OBSERVER con il ritardo per schivare il Ghost DOM
+        // AVVIAMO L'OBSERVER
+        // impostiamo un timer di 1 sec per evitare di lanciare l'observer troppo presto, prima che la pagina abbia caricato 
+        // (prima capitava che venissero inviati al backend anche i post della homepage siccome non davamo abbastanza tempo a react di caricare i veri risultati di ricerca)
         this.initTimer = setTimeout(() => {
             tryScrape(); 
             this.currentObserver = new MutationObserver(() => { tryScrape(); });

@@ -41,7 +41,8 @@ window["interventions.ui.showDebunkingBanner"] = function(payload, eventData) {
         banner.id = "reddit-debunk-banner";
         
         // Stili CSS applicati direttamente all'elemento
-        banner.style.position = "relative"; 
+        banner.style.position = "sticky"; 
+        banner.style.top = "60px";
         banner.style.width = "100%";
         banner.style.backgroundColor = "#D32F2F"; 
         banner.style.color = "#FFFFFF";
@@ -100,12 +101,39 @@ window["interventions.ui.showDebunkingBanner"] = function(payload, eventData) {
 
     injectBanner();
 
+
     // aggiungiamo un MutationObserver che reiniettare il banner ogni volta che React ricarica il DOM (es. nuovo chunk di risultati)
     window._debunkBannerObserver = new MutationObserver(() => {
+        
+        // estraiamo l'URL e la query di ricerca
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentQuery = urlParams.get('q') ? urlParams.get('q').toLowerCase() : "";
+        
+        // il banner deve riapparire solo se siamo ancora sulla pagina di ricerca con la stessa query 
+        const isStillValidSearch = window.location.pathname.includes('/search') && currentQuery === searchedWord;
+
+        // se non siamo piu sulla pagina di ricerca iniziale (es. ha iniziato un'altra ricerca o è andato all'home page)
+        if (!isStillValidSearch) {
+            
+            // rimuoviamo il banner
+            const existingBanner = document.getElementById("reddit-debunk-banner");
+            if (existingBanner) existingBanner.remove();
+            
+            // rimuoviamo l'observer
+            window._debunkBannerObserver.disconnect();
+            window._debunkBannerObserver = null;
+            
+            Log.intervention(`Banner per "${searchedWord}" rimosso causa cambio pagina.`);
+            return;
+        }
+
+        // se siamo ancora sulla ricerca giusta e il banner non è stato chiuso volutamente
+        // significa che React ci ha cancellato il banner, e allora lo rimettiamo
         if (!isDismissed && !document.getElementById("reddit-debunk-banner")) {
             injectBanner();
         }
     });
+    
     window._debunkBannerObserver.observe(document.body, { childList: true, subtree: true });
 };
 
