@@ -18,7 +18,7 @@
   "triggers": [
     {
       "id": "trigger_contains_conspiracy",
-      "event_source": "adapters.events.SearchResultsLoadedEvent",
+      "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
       "conditions": [
         {
@@ -35,7 +35,7 @@
     
     {
       "id": "trigger_NOT_contains_conspiracy",
-      "event_source": "adapters.events.SearchResultsLoadedEvent",
+      "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
       "conditions": [
         {

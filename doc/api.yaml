@@ -212,7 +212,7 @@ components:
 
         event_source:
           type: string
-          example: "adapters.events.SearchResultsLoadedEvent"
+          example: "adapters.events.SearchSubmitted"
 
         logical_operator:
           type: string

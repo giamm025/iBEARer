@@ -1,4 +1,3 @@
-
 function runRedditAdapter() {
 
     // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
@@ -7,20 +6,18 @@ function runRedditAdapter() {
 
         Log.adapter("Avvio Reddit Adapter...");
 
-        // lista degli Observer da attivare
+        // lista degli Observer da attivare ad OGNI cambio URL
         const activeObservers = [
             window.SearchSubmitted,
             window.ResultsLoaded
         ];
 
         // definiamo la funzione che l'SpaWatcher drovrà eseguire ad ogni cambio di URL. 
-        // nel nostro caso questa funzione si occuperà di attivare tutti gli Observer registrati nella nostra lista.
+        // nel nostro caso questa funzione si occuperà solo di attivare gli Observer registrati nella lista sopra.
         SpaWatcher.watch(() => {
-
             for (const observer of activeObservers) {
                 observer.check();
             }
-
         });
     });
 }

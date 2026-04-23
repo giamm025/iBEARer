@@ -34,13 +34,14 @@
         
         "engine/core_engine.js",
 
-        "adapters/events/SearchResultsLoadedEvent.js",
+        "adapters/events/SearchSubmittedEvent.js",
         "adapters/events/EngineReadyEvent.js",
 
-        "adapters/observers/SearchSubmittedObserver.js",
-        "adapters/observers/ClickOnLinkObserver.js",
-        "adapters/observers/TimeOnPageObserver.js",
-        "adapters/observers/ResultsLoadedObserver.js",
+        "adapters/observers/platform_dependent/SearchSubmittedObserver.js",
+        "adapters/observers/platform_dependent/ResultsLoadedObserver.js",
+
+        "adapters/observers/platform_independent/ClickOnLinkObserver.js",
+        "adapters/observers/platform_independent/TimeOnPageObserver.js",
 
         "adapters/reddit_adapter.js"
       ],

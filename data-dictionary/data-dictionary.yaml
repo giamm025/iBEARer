@@ -7,7 +7,8 @@ event_source:
   description: "Questi sono gli eventi asincroni (Fully Qualified Names delle classi) che l'Adapter lancia per svegliare il Motore dell'estensione."
   values:
     adapters.events.PageLoadedEvent: "Appena la pagina viene caricata." 
-    adapters.events.SearchResultsLoadedEvent: "Quando vengono caricati i risultati di ricerca." 
+    adapters.events.SearchSubmittedEvent: "Quando l'utente invia una richiesta di ricerca." 
+    adapters.events.ResultsLoadedEvent: "Quando i risultati di una ricerca sono stati caricati e sono visibili all'utente."
     adapters.events.FeedUpdatedEvent: "Quando lo scroll infinito carica nuovi chunk del feed."
     adapters.events.ClickOnPostEvent: "Quando l'utente clicca per aprire un post."
     adapters.events.ClickOnLinkEvent: "Quando l'utente clicca su un link."
