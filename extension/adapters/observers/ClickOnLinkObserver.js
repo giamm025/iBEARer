@@ -1,4 +1,4 @@
-TelemetryRegistry["telemetry.events.ClickOnLinkEvent"] = {
+window.ClickOnLink = {
     
     // metodo per far partire l'osservazione. Serve un riferimento ad ApiManager per poter fare direttamente
     // la chiamata ad addEventToQueue (altrimenti dovremmo ritornare l'evento all'engine e poi chiama lui 

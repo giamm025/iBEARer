@@ -11,7 +11,7 @@
 // a google.com/search?q=terapie+vaccini). In questo modo possiamo inviare la telemetria ogni volta che l'utente cambia "pagina" 
 // anche se chrome non resetta completamente il DOM.
 
-TelemetryRegistry["telemetry.events.TimeOnPageEvent"] = {
+window.TimeOnPage = {
     
     start(apiManager) {
         let startTime = Date.now();

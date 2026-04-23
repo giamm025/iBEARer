@@ -1,7 +1,7 @@
 // creiamo un nuovo Observer che espone solo la funzione check(): responsabile di controllare se l'utente ha fatto una ricerca 
 // su Reddit e di emettere l'evento corrispondente (SearchResultsLoadedEvent)
 
-const SearchObserver = {
+window.SearchSubmitted = {
 
     check: function() {
 

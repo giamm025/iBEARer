@@ -1,7 +1,7 @@
 // Questo observer si occupa di estrarre i risultati di ricerca.
 // Gestisce correttamente le transizioni SPA, resettando memoria e contatori ad ogni cambio pagina.
 
-TelemetryRegistry["telemetry.events.SearchResultsScrapedEvent"] = {
+window.ResultsLoaded = {
     
     currentObserver: null,
     initTimer: null,
@@ -12,7 +12,7 @@ TelemetryRegistry["telemetry.events.SearchResultsScrapedEvent"] = {
     // in questo caso non facciamo nulla. Aspettiamo solo che l'url cambi (cioe che l'SpaWatcher ci chiami tramite check())
     start(apiManager) {
         this.apiManagerRef = apiManager;
-        Log.telemetry_registry("Observer SearchResultsScrapedEvent in attesa di SpaWatcher...");
+        Log.telemetry_registry("Observer ResultsLoadedEvent in attesa di SpaWatcher...");
     },
 
     // check() viene chiamato da SpaWatcher OGNI VOLTA che cambia l'URL
@@ -67,7 +67,7 @@ TelemetryRegistry["telemetry.events.SearchResultsScrapedEvent"] = {
 
             // se abbiamo estratto nuovi post, inviamo tutto al backend
             if (newResults.length > 0) {
-                this.apiManagerRef.addEventToQueue("telemetry.events.SearchResultsScrapedEvent", {
+                this.apiManagerRef.addEventToQueue("telemetry.events.ResultsLoadedEvent", {
                     search_query: query,
                     extracted_count: newResults.length,
                     scraped_posts: newResults

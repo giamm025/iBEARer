@@ -41,10 +41,10 @@
         "adapters/events/SearchResultsLoadedEvent.js",
         "adapters/events/EngineReadyEvent.js",
 
-        "adapters/observers/SearchObserver.js",
+        "adapters/observers/SearchSubmittedObserver.js",
         "adapters/observers/ClickOnLinkObserver.js",
         "adapters/observers/TimeOnPageObserver.js",
-        "adapters/observers/SearchResultsScrapedObserver.js",
+        "adapters/observers/ResultsLoadedObserver.js",
 
         "adapters/reddit_adapter.js"
       ],

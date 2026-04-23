@@ -93,16 +93,16 @@ class Engine {
         Log.engine(`Inizializzazione Telemetria per: ${trackEvents.join(', ')}`);
 
         // per ogni evento nel config (es. "telemetry.events.ClickOnLinkEvent")
-        for (let eventFqn of trackEvents) {
+        for (let eventName of trackEvents) {
             
             // peschiamo l'Observer dal registro e ...
-            const observer = TelemetryRegistry[eventFqn];
+            const observer = window[eventName];
             if (observer) {
                 observer.start(ApiManager); 
-                Log.engine(`Observer telemetria attivato: ${eventFqn}`);
+                Log.engine(`Observer telemetria attivato: ${eventName}`);
 
             } else {
-                Log.error("Engine", `Observer di telemetria non trovato nel registro per: ${eventFqn}`);
+                Log.error("Engine", `Observer di telemetria non trovato nel registro per: ${eventName}`);
             }
         }
     }
@@ -122,7 +122,7 @@ class Engine {
             if (isMatch) {
                 Log.engine(`Trigger Attivato: ${trigger.id}`);
                 
-                ApiManager.addEventToQueue("telemetry.events.TriggerActivated", {
+                ApiManager.addEventToQueue("TriggerActivated", {
                     trigger_id: trigger.id,
                     event_source: eventName
                 });

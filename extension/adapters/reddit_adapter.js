@@ -9,8 +9,8 @@ function runRedditAdapter() {
 
         // lista degli Observer da attivare
         const activeObservers = [
-            SearchObserver,
-            TelemetryRegistry["telemetry.events.SearchResultsScrapedEvent"] // <--- AGGIUNGI QUESTO ALLA LISTA
+            window.SearchSubmitted,
+            window.ResultsLoaded
         ];
 
         // definiamo la funzione che l'SpaWatcher drovrà eseguire ad ogni cambio di URL. 

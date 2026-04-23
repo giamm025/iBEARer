@@ -5,9 +5,9 @@
   },
   "telemetry_settings": {
     "track_events": [
-      "telemetry.events.ClickOnLinkEvent", 
-      "telemetry.events.TimeOnPageEvent",
-      "telemetry.events.SearchResultsScrapedEvent"
+      "ClickOnLink", 
+      "TimeOnPage",
+      "ResultsLoaded"
     ],
     "sync_interval_ms": 10000
   },
