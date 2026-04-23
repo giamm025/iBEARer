@@ -6,8 +6,7 @@
   "telemetry_settings": {
     "track_events": [
       "ClickOnLink", 
-      "TimeOnPage",
-      "ResultsLoaded"
+      "TimeOnPage"
     ],
     "sync_interval_ms": 10000
   },
@@ -29,7 +28,17 @@
       ],
       "apply_interventions": [
         "apply_red_border",
-        "inject_debunking"
+        "inject_debunking"      ]
+    },
+
+    {
+      "id": "every_search",
+      "event_source": "adapters.events.SearchSubmitted",
+      "logical_operator": "AND",
+      "conditions": [
+      ],
+      "apply_interventions": [
+          "track_results"
       ]
     },
     
@@ -70,6 +79,12 @@
     {
       "id": "inject_debunking",
       "function_fqn": "interventions.ui.showDebunkingBanner",
+      "payload": {}
+    },
+
+    {
+      "id": "track_results",
+      "function_fqn": "interventions.trackResults",
       "payload": {}
     }
   ]
