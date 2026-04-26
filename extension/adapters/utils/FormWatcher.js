@@ -9,7 +9,13 @@ if (window.location.href.includes("formResponse")) {
     
     // scriviamo un log e mandiamo il messaggio al background
     console.log("✅ [FormWatcher] Questionario completato! Avviso il background...");
-    chrome.runtime.sendMessage({ action: "SURVEY_COMPLETED" }, (response) => {
+
+    // QUI DOVREMO AGGIUNGERE LA LOGICA PER CAPIRE SE è STATO COMPLETATO IL PRE O IL POST SURVEY
+    // isPreSurvey = ...
+    // status = isPreSurvey ? "PRE-SURVEY-COMPLETED" : "POST-SURVEY-COMPLETED";
+    
+    const status = "PRE-SURVEY-COMPLETED";
+    chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: status }, (response) => {
         if (response && response.success) {
             console.log("✅ [FormWatcher] Backend aggiornato.");
             window.close(); 

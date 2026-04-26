@@ -98,6 +98,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+// ------------------------------------ PUT participants/{participantId}/status: updateStatus ------------------------------------
+    if (request.action === "UPDATE_STATUS") {
+        
+        // recuperiamo il participantId
+        chrome.storage.local.get(['participantId'], (data) => {
+            
+            if (!data.participantId) {
+                sendResponse({ success: false, error: "ID mancante" });
+                return;
+            }
+            const participantId = data.participantId;
+            
+            // facciamo la chiamata al backend per aggiornare lo stato el partecipante
+            fetch(`${BASE_URL}/participants/${participantId}/status/`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: request.status })
+            })
+
+            // controlliamo la risposta del backend: se c'è un errore (404, 500, ecc...) restituiamo un messaggio di errore altrimenti tutto ok
+            .then(async res => {
+                if (!res.ok) throw new Error(`HTTP status: ${res.status}`);
+                return res.json();
+            })
+
+            // se tutto ok diciamo al FormWatcher di chiudere la tab con il questionario
+            .then(djangoData => {
+                sendResponse({ success: true, data: djangoData });
+            })
+
+            .catch(err => {
+                console.error("Errore salvataggio stato:", err);
+                sendResponse({ success: false, error: err.message });
+            });
+        });
+        
+        return true;
+    }
+
 // -------------------------------------------- WEBSOCKET CONNECT --------------------------------------------
     if (request.action === "CONNECT_WEBSOCKET") {
         webSocketManager.connect(request.participantId);
@@ -105,6 +144,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false;
     }
 
+// ------------------------------------------- HEARTBEAT PING PONG -------------------------------------------
     if (request.action === "PING") {
         sendResponse({ success: true, message: "PONG" });
         return true;
@@ -117,33 +157,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-// -------------------------------------------- SURVEY COMPLETED --------------------------------------------
-    if (request.action === "SURVEY_COMPLETED") {
-        
-        // recuperiamo il participantId
-        chrome.storage.local.get(['participantId'], (data) => {
-            
-            if (!data.participantId) return;
-            const participantId = data.participantId;
-            
-            // facciamo la chiamata PUT al backend (updateStatus)
-            fetch(`${BASE_URL}/participants/${participantId}/status/`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: "PRE-SURVEY-COMPLETED" })
-            })
-            .then(res => res.json())
-
-            // se tutto è andato bene diciamo al FormWatcher di chiudere la tab con il questionario
-            .then(djangoData => {
-                sendResponse({ success: true });
-            })
-
-            .catch(err => {
-                console.error("Errore salvataggio stato:", err);
-                sendResponse({ success: false });
-            });
-        });
-        return true;
-    }
 });

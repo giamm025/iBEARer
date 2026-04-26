@@ -7,13 +7,14 @@ const LoggerConfig = {
         engine: true,
         adapter: true,
 
-        registry: true,
+        registry: false,
         intervention_registry: true,
         operator_registry: true,
         telemetry_registry: true,
 
         intervention: true ,
-        web_socket: true
+        web_socket: true,
+        heart_beat: true
     }
 };
 
@@ -61,7 +62,13 @@ const Log = {
             console.log("🌐 [WebSocket]", ...args);
         }
     },
-    
+
+    heart_beat: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.heart_beat) {
+            console.log("💓 [ApiManager]", ...args);
+        }
+    },
+
     // gli errori chiaramente non si spengono
     error: (moduleName, ...args) => { console.error(`❌ [${moduleName}]`, ...args); }
 };

@@ -7,8 +7,7 @@ class Engine {
         this.init();
     }
 
-
-    // metodo per avviare il motore: recupera configurazione + avvia listeners eventi + avvia timer telemetria
+    // metodo per avviare il motore
     async init() {
         Log.engine("Avvio...");
 
@@ -26,32 +25,51 @@ class Engine {
         // ci connettiamo con la Web Socket del Backend
         await ApiManager.connectWebSocket();
 
+        // controlliamo lo stato dell'utente per capire se mostrare il pre-survey o se possiamo iniziare
+        await this.handleParticipantStatus();
+    }
+
+    // metodo per gestire l'esperimento sulla base dello stato del partecipante (ENROLLED, PRE-SURVEY-COMPLETED, POST-SURVEY-COMPLETED)
+    async handleParticipantStatus() {
+
         // recuperiamo lo stato e il gruppo del partecipante
         let statusData = await ApiManager.getStatus();
+        if (!statusData || !statusData.status) {
+            Log.error("Engine", "Errore critico: Impossibile recuperare lo stato.");
+            return;
+        }
 
-        // se lo stato attuale è ENROLLED => deve ancora completare il pre-survey => aspettiamo 
-        if (statusData && statusData.status === "ENROLLED") {
+        switch (statusData.status) {
             
-            // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) da ApiManager
-            // che conferma il completamento del form. 
-            Log.engine("In attesa del completamento del pre-survey...");
-            const waitContext = new Promise((resolve) => {
-                ApiManager.onExperimentStartCallback = (group) => {
-                    Log.engine(`Segnale WebSocket ricevuto! Assegnato al gruppo: ${group}`);
-                    resolve(group);
-                };
-            });
+            // se lo stato attuale è ENROLLED => deve ancora completare il pre-survey => aspettiamo 
+            case "ENROLLED":
+                Log.engine("In attesa del completamento del pre-survey...");
+                
+                // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) da ApiManager che conferma il completamento del form. 
+                const assignedGroup = await new Promise((resolve) => {
+                    ApiManager.onExperimentStartCallback = (group) => {
+                        Log.engine(`Segnale WebSocket ricevuto!`);
+                        resolve(group);
+                    };
+                });
+                // quando la promise si risolve avviamo l'esperimento, passando il gruppo a cui è stato assegnato l'utente
+                this.startExperiment(assignedGroup);
+                break;
 
-            // restiamo bloccati finche la promessa non si completa
-            await waitContext;  
+            // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento
+            case "PRE-SURVEY-COMPLETED":
+                Log.engine("L'utente ha GIA' completato il pre-survey.");
+                this.startExperiment(statusData.group);
+                break;
 
-        // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento 
-ì        } else if (statusData && statusData.status === 'PRE-SURVEY-COMPLETED') {
-            this.startExperiment(statusData.group);
-            Log.engine("L'utente ha COMPLETATO il pre-survey. Avvio trigger e telemetria.");
+            case "POST-SURVEY-COMPLETED":
+                Log.engine("L'utente ha COMPLETATO il post-survey.");
+                Log.error("Engine", "Ancora nessuna implementazione per POST-SURVEY-COMPLETED.");
+                break;
 
-        } else {
-            Log.error("Engine", "Errore critico: Impossibile avviare, stato invalido.");
+            default:
+                Log.error("Engine", `Stato sconosciuto o non gestito: ${statusData.status}`);
+                break;
         }
     }
     

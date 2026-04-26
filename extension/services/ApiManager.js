@@ -114,7 +114,6 @@ const ApiManager = {
                 participantId: this.participantId 
             });
             
-            // AGGIUNGIAMO QUESTI LOG:
             console.log("🔍 [ApiManager] Risposta grezza dal background:", response);
 
             if (response && response.success) {
@@ -131,6 +130,9 @@ const ApiManager = {
         }
     },
 
+// ------------------------------------ PUT participants/{participantId}/status: updateStatus ------------------------------------
+
+    // DELEGATO A adapters/utils/FormWatcher.js !!!!!!!!!!!!!!!!!!!!!!
 
 // ---------------------------------- POST participants/{participantId}/telemetry: sendTelemetry ----------------------------------
     addEventToQueue(event_fqn, metadata = {}) {
@@ -184,18 +186,6 @@ const ApiManager = {
         }, interval_ms);
     },
 
-// ---------------------------------- GET participants/{participantId}/status: getStatus ----------------------------------
-    async getStatus() {
-        try {
-            const response = await chrome.runtime.sendMessage({ 
-                action: "GET_STATUS", 
-                participantId: this.participantId 
-            });
-            if (response && response.success) return response.data;
-            return null;
-        } catch (e) { return null; }
-    },
-
 // -------------------------------------------- WEBSOCKET CONNECT --------------------------------------------
     async connectWebSocket() {
         await chrome.runtime.sendMessage({ 
@@ -203,11 +193,12 @@ const ApiManager = {
             participantId: this.participantId 
         });
 
+        // ------------------------------------ HEARTBEAT PING PONG ------------------------------------
         // EDIT: inseriamo un hearbeat costante ogni 20sec per evitare che Chrome mi uccida l'estensione :,)
         if (this.awakeInterval) clearInterval(this.awakeInterval);
         this.awakeInterval = setInterval(() => {
             chrome.runtime.sendMessage({ action: "PING" });
-            console.log("💓 [ApiManager] Ping inviato per tenere sveglio il Background.");
+            Log.heart_beat("Ping inviato per tenere sveglio il Background.");
         }, 20000);
     }
 };
