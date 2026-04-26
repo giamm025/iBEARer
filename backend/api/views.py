@@ -12,6 +12,7 @@ import json
 
 # -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
+@authentication_classes([])     # dice a DRF di non applicare nessuna autenticazione (es. token, session, ecc.) a questa view
 @permission_classes([AllowAny]) # per ora ignoriamo l'autenticazione, AllowAny permette a chiunque di accedere a questa view anche se non autenticato
 def enroll_participant(request):
 
@@ -23,9 +24,8 @@ def enroll_participant(request):
         )
 
         # creazione Deep Link
-        # DEBUG: Per ora usiamo un link fittizio
-        base_form_url = "https://docs.google.com/forms/d/e/IL_TUO_ID_FORM_REALE/viewform"
-        pre_survey_link = f"{base_form_url}?usp=pp_url&entry.123456789={participant.id}"
+        base_form_url = "https://docs.google.com/forms/d/e/1FAIpQLScUOjPZviDKFnx0Ml1d3sBAtTkjHFFx7YnEuC2J-ZCvnTxJVA/viewform"
+        pre_survey_link = f"{base_form_url}?entry.2119809368={participant.id}"
 
         # prepariamo i dati da mandare al serializer
         response_data = {
@@ -43,6 +43,7 @@ def enroll_participant(request):
 
 # -------------------------------------------- GET /config: getConfig --------------------------------------------
 @api_view(['GET'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def get_config(request):
 
@@ -66,6 +67,7 @@ def get_config(request):
 
 # ------------------------------------- PUT admin/config: updateConfig --------------------------------------
 @api_view(['PUT'])
+@authentication_classes([])
 @permission_classes([AllowAny]) 
 def update_config(request):
 
@@ -150,6 +152,7 @@ def send_telemetry(request, participant_id):
 
 # ---------------------------- GET / PUT /participants/{participantId}/status -----------------------------
 @api_view(['GET', 'PUT'])
+@authentication_classes([])
 @permission_classes([AllowAny]) # DEBUG: Prima o poi dovremo mettere l'API Key segreta condivisa con Google Forms
 def manage_participant_status(request, participant_id):
 

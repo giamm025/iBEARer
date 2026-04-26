@@ -10,13 +10,10 @@ class Engine {
 
     // metodo per avviare il motore: recupera configurazione + avvia listeners eventi + avvia timer telemetria
     async init() {
-
         Log.engine("Avvio...");
-        
-        // avvia l'API manager (per permettere di effettuare le chiamatae HTTP al backend)
         await ApiManager.init();
 
-        // GET config.json dal backend
+        // 1. SCARICA IL CONFIG SUBITO
         const config = await ApiManager.getConfig();
         if (!config) {
             Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
@@ -24,27 +21,40 @@ class Engine {
         }
         this.config = config;
 
-        // Ci connettiamo con la Web Socket del Backend
+        // 2. ACCENDI LA RADIO (WebSocket) PRIMA DI BLOCCARTI!
+        // Così, se il segnale arriva mentre aspettiamo, lo sentiamo.
         await ApiManager.connectWebSocket();
 
-        // recuperiamo lo stato e il gruppo del partecipante
-        const currentStatus = await ApiManager.getStatus();
-        
-        // se lo stato è PRE-SURVEY-COMPLETED, possiamo iniziare l'esperimento
-        if (currentStatus && currentStatus.status === 'PRE-SURVEY-COMPLETED') {
-            this.startExperiment(currentStatus.group);
-            Log.engine("L'utente ha già completato il sondaggio. Gruppo assegnato: " + currentStatus.group);
+        // 3. Controlliamo lo stato attuale
+        let statusData = await ApiManager.getStatus();
 
-        } else {
-            Log.engine("In attesa del completamento del pre-survey da parte dell'utente...");
+        if (statusData && statusData.status === "ENROLLED") {
+            Log.engine("In attesa del completamento del pre-survey...");
             
-            // registriamo la callback nell'ApiManager per svegliarci quando arriva la WebSocket
-            ApiManager.onExperimentStartCallback = (assignedGroup) => {
-                this.startExperiment(assignedGroup);
-            };
+            // 4. CREIAMO LA PROMESSA: Il motore si "ferma" qui, ma la radio è accesa!
+            const waitContext = new Promise((resolve) => {
+                ApiManager.onExperimentStartCallback = (group) => {
+                    Log.engine(`Segnale WebSocket ricevuto! Assegnato al gruppo: ${group}`);
+                    resolve(group);
+                };
+            });
+
+            // Restiamo bloccati qui finché la promessa non risolve
+            await waitContext;
+        }
+
+        // 5. Se arriviamo qui, il questionario è finito (o lo era già da prima)
+        // Rileggiamo lo stato aggiornato dal database per sicurezza
+        statusData = await ApiManager.getStatus(); 
+        
+        if (statusData && statusData.status === 'PRE-SURVEY-COMPLETED') {
+            this.startExperiment(statusData.group);
+            Log.engine("L'utente ha completato il sondaggio. Avvio trigger e telemetria.");
+        } else {
+            Log.error("Engine", "Errore critico: Impossibile avviare, stato invalido.");
         }
     }
-
+    
     // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
     startExperiment(assignedGroup) {
         

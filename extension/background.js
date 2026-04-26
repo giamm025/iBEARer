@@ -81,7 +81,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // ---------------------------------- GET participants/{participantId}/status: getStatus ----------------------------------
     if (request.action === "GET_STATUS") {
-        fetch(`${BASE_URL}/participants/${request.participantId}/status/`)
+        fetch(`${BASE_URL}/participants/${request.participantId}/status/`, {
+        method: 'GET',
+        headers: {
+            'Cache-Control': 'no-cache', 
+            'Pragma': 'no-cache'
+            }
+        })
         .then(async res => {
             if (!res.ok) throw new Error(`HTTP status: ${res.status}`);
             return res.json();
@@ -97,5 +103,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         webSocketManager.connect(request.participantId);
         sendResponse({ success: true });
         return false;
+    }
+
+    if (request.action === "PING") {
+        sendResponse({ success: true, message: "PONG" });
+        return true;
+    }
+
+// -------------------------------------------- OPEN SURVEY TAB --------------------------------------------
+    if (request.action === "OPEN_TAB") {
+        chrome.tabs.create({ url: request.url, active: true });
+        sendResponse({ success: true });
+        return true;
     }
 });

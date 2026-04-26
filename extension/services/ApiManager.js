@@ -14,13 +14,30 @@ const ApiManager = {
     // funzione per inizializzare l'ApiManager (ovviamente da lanciare all'inizio dell'estensione)
     async init() {
 
-        // prova a recuperare l'ID del partecipante dallo storage locale
-        const data = await chrome.storage.local.get(['participantId']);
+        // prova a recuperare l'ID ed il link al pre survey dal local storage
+        const data = await chrome.storage.local.get(['participantId', 'preSurveyLink']);
 
         // se esiste, usalo; altrimenti, registra un nuovo partecipante
         if (data.participantId) {
             this.participantId = data.participantId;
             Log.adapter(`ApiManager: ParticipantID recuperato: ${this.participantId}`);
+
+            // recupera lo stato dell'utente dal backend per capire se è già compilato il questionario
+            const statusData = await this.getStatus();
+
+            // se lo stato dell'utente è ENROLLED significa che non ha ancora compilato il questionario
+            if (statusData && statusData.status === "ENROLLED") {
+                Log.adapter("ApiManager: Utente in stato ENROLLED. Apertura pre-survey.");
+                if (data.preSurveyLink) {
+                    chrome.runtime.sendMessage({ action: "OPEN_TAB", url: data.preSurveyLink });
+                }
+                else {
+                    Log.error("ApiManager", "Link del pre-survey non trovato nello storage locale.");
+                }
+
+            } else {
+                Log.adapter(`ApiManager: Stato utente confermato: ${statusData?.status}`);
+            }
 
         } else {
             await this.enrollParticipant();
@@ -35,13 +52,22 @@ const ApiManager = {
             
             // NON facciamo piu la chiamata al backend. Ci limitiamo a mandare un messaggio al background.js, e ci pensera lui
             const response = await chrome.runtime.sendMessage({ action: "ENROLL" });
-
+            
             // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
             if (response && response.success) {
                 this.participantId = response.data.participantId;
-                await chrome.storage.local.set({ participantId: this.participantId });
-                
+                const surveyLink = response.data.preSurveyLink;
+
+                // aggiorniamo l'id ed il link del questionario nella memoria del browser
+                await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: surveyLink });
                 Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
+
+                // diciamo al background.js di aprire un'altra tab con il questionario
+                if (surveyLink) {
+                    chrome.runtime.sendMessage({ action: "OPEN_TAB", url: surveyLink });
+                    Log.adapter("ApiManager: Richiesta apertura questionario inviata al background.");
+                }
+
                 return true;
                 
             } else {
@@ -176,6 +202,13 @@ const ApiManager = {
             action: "CONNECT_WEBSOCKET", 
             participantId: this.participantId 
         });
+
+        // EDIT: inseriamo un hearbeat costante ogni 20sec per evitare che Chrome mi uccida l'estensione :,)
+        if (this.awakeInterval) clearInterval(this.awakeInterval);
+        this.awakeInterval = setInterval(() => {
+            chrome.runtime.sendMessage({ action: "PING" });
+            console.log("💓 [ApiManager] Ping inviato per tenere sveglio il Background.");
+        }, 20000);
     }
 };
 
