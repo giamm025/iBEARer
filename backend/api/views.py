@@ -29,7 +29,7 @@ def enroll_participant(request):
 
         # prepariamo i dati da mandare al serializer
         response_data = {
-            'id': participant.id,
+            'participantId': participant.id,
             'preSurveyLink': pre_survey_link
         }
 

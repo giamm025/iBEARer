@@ -11,6 +11,29 @@ const ApiManager = {
     syncInterval: null,
     onExperimentStartCallback: null,
 
+    // funzione helper per inviare messaggi al background e gestire le risposte in modo centralizzato 
+    // la useremo in TUTTE le altre singole funzioni per non ripetere il codice
+    async _sendMessage(payload, contextMessage) {
+        try {
+            // invia al background.js il messaggio passato come parametro
+            const response = await chrome.runtime.sendMessage(payload);
+            
+            // se la risposta c'è ed ha avuto successo, restituisci i dati
+            if (response && response.success) {
+                return response.data !== undefined ? response.data : true;
+            
+            // altrimenti, logga l'errore e restituisci null
+            } else {
+                Log.error("ApiManager", `Errore dal Background (${contextMessage})`, response?.error);
+                return null;
+            }
+         
+        } catch (error) {
+            Log.error("ApiManager", `Eccezione di Chrome/Rete (${contextMessage})`, error);
+            return null;
+        }
+    },
+
     // funzione per inizializzare l'ApiManager (ovviamente da lanciare all'inizio dell'estensione)
     async init() {
 
@@ -44,90 +67,53 @@ const ApiManager = {
         }
     },
 
-
 // -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
     async enrollParticipant() {
+        
+        // NON facciamo piu la chiamata al backend. Ci limitiamo a mandare un messaggio al background.js, e ci pensera lui
+        const data = await this._sendMessage({ action: "ENROLL" }, "Enrollment");
+        
+        // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
+        if (data && data.participantId) {
+            this.participantId = data.participantId;
+            const surveyLink = data.preSurveyLink;
 
-        try {
-            
-            // NON facciamo piu la chiamata al backend. Ci limitiamo a mandare un messaggio al background.js, e ci pensera lui
-            const response = await chrome.runtime.sendMessage({ action: "ENROLL" });
-            
-            // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
-            if (response && response.success) {
-                this.participantId = response.data.participantId;
-                const surveyLink = response.data.preSurveyLink;
+            // aggiorniamo l'id ed il link del questionario nella memoria del browser
+            await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: surveyLink });
+            Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
 
-                // aggiorniamo l'id ed il link del questionario nella memoria del browser
-                await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: surveyLink });
-                Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
-
-                // diciamo al background.js di aprire un'altra tab con il questionario
-                if (surveyLink) {
-                    chrome.runtime.sendMessage({ action: "OPEN_TAB", url: surveyLink });
-                    Log.adapter("ApiManager: Richiesta apertura questionario inviata al background.");
-                }
-
-                return true;
-                
-            } else {
-                Log.error("ApiManager", "Errore enrollment dal Background", response?.error);
-                return false;
+            // diciamo al background.js di aprire un'altra tab con il questionario
+            if (surveyLink) {
+                chrome.runtime.sendMessage({ action: "OPEN_TAB", url: surveyLink });
+                Log.adapter("ApiManager: Richiesta apertura questionario inviata al background.");
             }
 
-        } catch (error) {
-            Log.error("ApiManager", "Errore durante l'enrollment", error);
-            return false;
+            return true;
         }
+        
+        Log.error("ApiManager", "Enrollment fallito: Dati mancanti dal server.");
+        return false;
     },
-
 
 // -------------------------------------------- GET /config: getConfig --------------------------------------------
     async getConfig() {
-
-        try {
-            // stessa cosa di prima, NON facciamo piu la chiamata al backend ma mandiamo un messaggio al background.js
-            const response = await chrome.runtime.sendMessage({ action: "GET_CONFIG" });
-
-            // se la risposta c'è ed ha avuto successo, restituisci i dati della configurazione
-            if (response && response.success) {
-                Log.adapter("ApiManager: Configurazione scaricata via Background.");
-                return response.data;
-
-            } else {
-                Log.error("ApiManager", "Impossibile scaricare configurazione", response?.error);
-                return null;
-            }
-
-        } catch (error) {
-            Log.error("ApiManager", "Impossibile scaricare il config.json", error);
-            return null;
+        // stessa cosa di prima, NON facciamo piu la chiamata al backend ma mandiamo un messaggio al background.js
+        const data = await this._sendMessage({ action: "GET_CONFIG" }, "Scarico Configurazione");
+        
+        // se la risposta c'è ed ha avuto successo, restituisci i dati della configurazione
+        if (data) {
+            Log.adapter("ApiManager: Configurazione scaricata via Background.");
         }
+        
+        return data;
     },
 
 // --------------------------------- GET participants/{participantId}/status: getStatus ---------------------------------
     async getStatus() {
-
-        try {
-            const response = await chrome.runtime.sendMessage({ 
-                action: "GET_STATUS", 
-                participantId: this.participantId 
-            });
-            
-            console.log("🔍 [ApiManager] Risposta grezza dal background:", response);
-
-            if (response && response.success) {
-                return response.data;
-
-            } else {
-                console.error("❌ [ApiManager] Il background ha restituito un errore:", response?.error);
-                return null;
-            }
-            
-        } catch (e) { 
-            console.error("❌ [ApiManager] Eccezione di rete o di Chrome:", e);
-            return null; 
-        }
+        return await this._sendMessage({ 
+            action: "GET_STATUS", 
+            participantId: this.participantId 
+        }, "Recupero Stato");
     },
 
 // ------------------------------------ PUT participants/{participantId}/status: updateStatus ------------------------------------
@@ -147,7 +133,6 @@ const ApiManager = {
         Log.adapter(`ApiManager: Evento aggiunto in coda: ${event_fqn}`);
     },
 
-
     // funzione per sincronizzare la coda di telemetria con il backend a intervalli regolari
     startTelemetrySync(interval_ms = 10000) {
 
@@ -160,28 +145,25 @@ const ApiManager = {
             // se la coda è vuota o non abbiamo un participantId (all'avvio), usciamo subito dalla funzione (non facciamo nulla). 
             if (this.telemetryQueue.length === 0 || !this.participantId) return;
 
-            // altrimenti, creiamo il payload da inviare al backend (contiene tutti gli eventi attualmente in coda)
-            const payload = { events: [...this.telemetryQueue] };
-            try {
+            // altrimenti, creiamo il payload da inviare al backend (contiene tutti gli eventi attualmente in coda) e svuotiamo la coda
+            const eventsToSend = [...this.telemetryQueue];
+            this.telemetryQueue = []; 
 
-                // NON facciamo piu la chiamata al backend ma inviamo un messaggio al background.js
-                const response = await chrome.runtime.sendMessage({ 
-                    action: "SYNC_TELEMETRY", 
-                    participantId: this.participantId,
-                    payload: payload
-                });
+            // NON facciamo piu la chiamata al backend ma inviamo un messaggio al background.js
+            const success = await this._sendMessage({ 
+                action: "SYNC_TELEMETRY", 
+                participantId: this.participantId,
+                payload: { events: eventsToSend }
+            }, "Sync Telemetria");
 
-                // se l'invio è andato a buon fine svuota la coda, altrimenti lancia un errore
-                if (response && response.success) {
-                    this.telemetryQueue = []; 
-                    Log.adapter("ApiManager: Coda telemetria sincronizzata col server.");
-
-                } else {
-                    Log.error("ApiManager", "Sync rifiutato dal server.", response?.error);
-                }
-
-            } catch (error) {
-                Log.error("ApiManager", "Sync fallito. Dati mantenuti in coda.");
+            // se l'invio è andato a buon fine logghiamo il successo
+            if (success) {
+                Log.adapter(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
+            
+            // altrimenti lancia un errore e reinserisce gli eventi falliti in coda (PER NON PERDERLI!)
+            } else {
+                Log.error("ApiManager", "Sync fallito. Reinserimento dati in coda.");
+                this.telemetryQueue = [...eventsToSend, ...this.telemetryQueue];
             }
         }, interval_ms);
     },

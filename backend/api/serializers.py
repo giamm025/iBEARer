@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 class EnrollmentResponseSerializer(serializers.Serializer):
-    participantId = serializers.UUIDField(source='id')
+    participantId = serializers.UUIDField()
     preSurveyLink = serializers.URLField()
 
 
