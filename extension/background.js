@@ -84,7 +84,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         fetch(`${BASE_URL}/participants/${request.participantId}/status/`, {
         method: 'GET',
         headers: {
-            'Cache-Control': 'no-cache', 
+            'Cache-Control': 'no-cache',    
             'Pragma': 'no-cache'
             }
         })
@@ -114,6 +114,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "OPEN_TAB") {
         chrome.tabs.create({ url: request.url, active: true });
         sendResponse({ success: true });
+        return true;
+    }
+
+// -------------------------------------------- SURVEY COMPLETED --------------------------------------------
+    if (request.action === "SURVEY_COMPLETED") {
+        
+        // recuperiamo il participantId
+        chrome.storage.local.get(['participantId'], (data) => {
+            
+            if (!data.participantId) return;
+            const participantId = data.participantId;
+            
+            // facciamo la chiamata PUT al backend (updateStatus)
+            fetch(`${BASE_URL}/participants/${participantId}/status/`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: "PRE-SURVEY-COMPLETED" })
+            })
+            .then(res => res.json())
+
+            // se tutto è andato bene diciamo al FormWatcher di chiudere la tab con il questionario
+            .then(djangoData => {
+                sendResponse({ success: true });
+            })
+
+            .catch(err => {
+                console.error("Errore salvataggio stato:", err);
+                sendResponse({ success: false });
+            });
+        });
         return true;
     }
 });

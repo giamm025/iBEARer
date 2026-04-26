@@ -47,6 +47,10 @@
         "adapters/reddit_adapter.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://docs.google.com/forms/*"],
+      "js": ["adapters/utils/FormWatcher.js"]
     }
   ]
 }

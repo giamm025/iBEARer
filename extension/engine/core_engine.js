@@ -11,9 +11,11 @@ class Engine {
     // metodo per avviare il motore: recupera configurazione + avvia listeners eventi + avvia timer telemetria
     async init() {
         Log.engine("Avvio...");
+
+        // avvia l'API manager (per permettere di effettuare le chiamatae HTTP al backend)
         await ApiManager.init();
 
-        // 1. SCARICA IL CONFIG SUBITO
+        // GET config.json dal backend
         const config = await ApiManager.getConfig();
         if (!config) {
             Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
@@ -21,17 +23,18 @@ class Engine {
         }
         this.config = config;
 
-        // 2. ACCENDI LA RADIO (WebSocket) PRIMA DI BLOCCARTI!
-        // Così, se il segnale arriva mentre aspettiamo, lo sentiamo.
+        // ci connettiamo con la Web Socket del Backend
         await ApiManager.connectWebSocket();
 
-        // 3. Controlliamo lo stato attuale
+        // recuperiamo lo stato e il gruppo del partecipante
         let statusData = await ApiManager.getStatus();
 
+        // se lo stato attuale è ENROLLED => deve ancora completare il pre-survey => aspettiamo 
         if (statusData && statusData.status === "ENROLLED") {
-            Log.engine("In attesa del completamento del pre-survey...");
             
-            // 4. CREIAMO LA PROMESSA: Il motore si "ferma" qui, ma la radio è accesa!
+            // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) da ApiManager
+            // che conferma il completamento del form. 
+            Log.engine("In attesa del completamento del pre-survey...");
             const waitContext = new Promise((resolve) => {
                 ApiManager.onExperimentStartCallback = (group) => {
                     Log.engine(`Segnale WebSocket ricevuto! Assegnato al gruppo: ${group}`);
@@ -39,17 +42,14 @@ class Engine {
                 };
             });
 
-            // Restiamo bloccati qui finché la promessa non risolve
-            await waitContext;
-        }
+            // restiamo bloccati finche la promessa non si completa
+            await waitContext;  
 
-        // 5. Se arriviamo qui, il questionario è finito (o lo era già da prima)
-        // Rileggiamo lo stato aggiornato dal database per sicurezza
-        statusData = await ApiManager.getStatus(); 
-        
-        if (statusData && statusData.status === 'PRE-SURVEY-COMPLETED') {
+        // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento 
+ì        } else if (statusData && statusData.status === 'PRE-SURVEY-COMPLETED') {
             this.startExperiment(statusData.group);
-            Log.engine("L'utente ha completato il sondaggio. Avvio trigger e telemetria.");
+            Log.engine("L'utente ha COMPLETATO il pre-survey. Avvio trigger e telemetria.");
+
         } else {
             Log.error("Engine", "Errore critico: Impossibile avviare, stato invalido.");
         }
