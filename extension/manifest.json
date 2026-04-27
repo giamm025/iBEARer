@@ -40,6 +40,7 @@
 
         "adapters/observers/platform_dependent/SearchSubmittedObserver.js",
         "adapters/observers/platform_dependent/ResultsLoadedObserver.js",
+        "adapters/observers/platform_dependent/ClickOnResultObserver.js",
 
         "adapters/observers/platform_independent/ClickOnLinkObserver.js",
         "adapters/observers/platform_independent/TimeOnPageObserver.js",

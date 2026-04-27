@@ -156,3 +156,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # DEBUG: Sblocca tutte le chiamate esterne (Solo per Sviluppo!)
 CORS_ALLOW_ALL_ORIGINS = True
+
+# DEBUG: Sblocca tutte le richieste da qualsiasi host 
+ALLOWED_HOSTS = ['*']
