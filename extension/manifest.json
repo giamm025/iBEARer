@@ -31,7 +31,10 @@
 
         "engine/interventions/debug/applyBorder.js",
         "engine/interventions/ui/showDebunkingBanner.js", 
+
+        "engine/interventions/ui/formatPost.js", 
         "engine/interventions/ui/injectFakePost.js", 
+        "engine/interventions/ui/removePost.js", 
         "engine/interventions/trackResults.js", 
         
         "engine/core_engine.js",
