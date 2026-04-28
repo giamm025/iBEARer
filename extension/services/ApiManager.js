@@ -130,7 +130,7 @@ const ApiManager = {
             metadata
         };
         this.telemetryQueue.push(telemetryEvent);
-        Log.adapter(`ApiManager: Evento aggiunto in coda: ${event_fqn}`);
+        Log.adapter(`ApiManager: Evento aggiunto in coda: ${event_fqn}`, metadata);
     },
 
     // funzione per sincronizzare la coda di telemetria con il backend a intervalli regolari

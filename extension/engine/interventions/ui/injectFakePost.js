@@ -18,6 +18,7 @@ window.injectFakePost = function(payload, eventData) {
     const f_date = payload.date || null;
     const f_votes = payload.votes || null;
     const f_comments = payload.comments || null;
+    const f_new_position = payload.new_position || 1;
     
     // come abbiamo gia visto in altri casi 8es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
     // a caricare. Impostiamo quindi un setInterval per ritardare l'operazione
@@ -58,10 +59,23 @@ window.injectFakePost = function(payload, eventData) {
             divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
             mainFeedContainer.insertBefore(divider, originalPostWrapper);
             
-            Log.intervention("Fake Post inserito con successo (100% Camuffato)!");
-
+            // --- 6. TELEMETRIA: INVIAMO I DATI AL BACKEND ---
+            const search_query = new URLSearchParams(window.location.search).get('q') || "";
+            sendInjectedPostToBackend(search_query, f_new_position, f_title, f_subreddit, f_link);
         }
     }, 150); 
 };
 
 Log.intervention_registry("Intervento caricato: injectFakePost");
+
+
+function sendInjectedPostToBackend(searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
+    ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
+        action_type: "INJECTED",
+        search_query: searchQuery,
+        target_position: targetPosition,
+        original_title: originalTitle,
+        original_subreddit: originalSubreddit,
+        original_url: originalUrl
+    });
+}

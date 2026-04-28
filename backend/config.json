@@ -35,6 +35,22 @@
     },
 
     {
+      "id": "trigger_contains_roast_me",
+      "event_source": "adapters.events.SearchSubmitted",
+      "logical_operator": "AND",
+      "conditions": [
+        {
+          "property": "search_query",
+          "operator": "CONTAINS_ANY",
+          "value": ["roast me"]
+        }
+      ],
+      "apply_interventions": [
+        "hide_post"
+      ]
+    },
+
+    {
       "id": "every_search",
       "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
@@ -94,15 +110,15 @@
       "id": "hide_post",
       "function_fqn": "removePost",
       "payload": {
-          "target_keywords": ["baby"],
-          "target_positions": [1, 3, 4, 5, 6, 7, 8, 9, 12]
+        "target_keywords": ["52M"],
+        "target_positions": [1, 2, 3, 4, 5]
       }
     },
     {
       "id": "modify_post",
       "function_fqn": "modifyPost",
       "payload": {
-          "target_keywords": ["baby"],
+          "target_keywords": ["Thailandia"],
           "target_positions": [2],
           "content_text": "⚠️ INFORMAZIONI NON VERIFICATE! Apri il post per saperne di piu..."
       }

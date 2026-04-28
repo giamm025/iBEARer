@@ -47,6 +47,7 @@ window.modifyPost = function(payload, eventData) {
                     }
 
                     if (wrapper && !wrapper.dataset.bearModified) {
+                        sendModifiedPostToBackend(wrapper, titleLink, currentPos, initialQuery);
                         const innerBox = wrapper.querySelector('div[data-testid="search-post-with-content-preview"]') || wrapper.querySelector('div[data-testid="search-post-unit"]') || wrapper.firstElementChild;
                         if (innerBox) {
                             innerBox.style.backgroundColor = payload.highlight_color || "rgba(244, 67, 54, 0.05)";
@@ -89,3 +90,23 @@ window.modifyPost = function(payload, eventData) {
 };
 
 Log.intervention_registry("Intervento caricato: modifyPost");
+
+function sendModifiedPostToBackend(wrapper, titleLink, currentPos, initialQuery) {
+
+    // --- 1. ESTRAZIONE DATI ORIGINALI ---
+    const originalTitle = titleLink.innerText.trim();
+    const originalUrl = titleLink.href;
+    const subLink = wrapper.querySelector('a[href*="/r/"]');
+    const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
+    const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
+
+    // --- 2. INVIO AL BACKEND ---
+    ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
+        action_type: "MODIFIED",
+        search_query: initialQuery,
+        target_position: currentPos,
+        original_title: originalTitle,
+        original_subreddit: originalSubreddit,
+        original_url: originalUrl
+    });
+}

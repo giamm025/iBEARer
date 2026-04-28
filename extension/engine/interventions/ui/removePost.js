@@ -49,6 +49,7 @@ window.removePost = function(payload, eventData) {
                     }
 
                     if (wrapper && !wrapper.dataset.bearRemoved) {
+                        sendRemovedPostToBackend(wrapper, titleLink, currentPos, initialQuery);
                         wrapper.style.display = 'none';
                         wrapper.dataset.bearRemoved = "true";
                         
@@ -89,3 +90,23 @@ window.removePost = function(payload, eventData) {
 };
 
 Log.intervention_registry("Intervento caricato: removePost");
+
+function sendRemovedPostToBackend(wrapper, titleLink, currentPos, initialQuery) {
+
+    // --- 1. ESTRAZIONE DATI ORIGINALI ---
+    const originalTitle = titleLink.innerText.trim();
+    const originalUrl = titleLink.href;
+    const subLink = wrapper.querySelector('a[href*="/r/"]');
+    const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
+    const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
+
+    // --- 2. INVIO AL BACKEND ---
+    ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
+        action_type: "REMOVED",
+        search_query: initialQuery,
+        target_position: currentPos,
+        original_title: originalTitle,
+        original_subreddit: originalSubreddit,
+        original_url: originalUrl
+    });
+}
