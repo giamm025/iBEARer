@@ -3,8 +3,8 @@ window.removePost = function(payload, eventData) {
     Log.intervention("Avvio rimozione post (Multi-Target)...");
 
     // estriamo posizione/keywords dal config.json
-    const keywords = payload.target_keywords.map(k => k.toLowerCase());
-    const positions = payload.target_positions.map(Number);
+    const keywords = payload.target_keywords ? payload.target_keywords.map(k => k.toLowerCase()) : [];
+    const positions = payload.target_positions ? payload.target_positions.map(Number) : [];
 
     // se non è specificata nessuna keyword o posizione, non facciamo nulla
     if (keywords.length === 0 && positions.length === 0) {
@@ -12,8 +12,17 @@ window.removePost = function(payload, eventData) {
         return;
     }
 
+    // salviamo la query di ricerca iniziale per sapere quando l'utente cambia pagina (per fermare l'observer)
+    // (senza di questo prima succedeva che l'intervento rimaneva applicato ai container dei post anche per 
+    // ricerche che non centravano nulla)
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+
     // funzione che processa i post visibili e nasconde quelli che corrispondono ai target
     const processPosts = () => {
+
+        // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
+        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        if (currentQuery !== initialQuery) return;
 
         // prendiamo tutti i titoli dei post
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
@@ -55,9 +64,21 @@ window.removePost = function(payload, eventData) {
         });
     };
 
+    // controlliamo se ce un observer attivo e, prima di creare uno nuovo (es. una nuova ricerca), disattiviamo quello vecchio
+    if (window._bearRemovePostObserver) {
+        window._bearRemovePostObserver.disconnect();
+    }
+
     processPosts();
 
     const observer = new MutationObserver((mutations) => {
+
+        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        if (currentQuery !== initialQuery) {
+            observer.disconnect();
+            return;
+        }
+
         if (mutations.some(m => m.addedNodes.length > 0)) {
             processPosts();
         }

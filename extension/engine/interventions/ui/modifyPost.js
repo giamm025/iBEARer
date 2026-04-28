@@ -2,8 +2,8 @@
 window.modifyPost = function(payload, eventData) {
 
     // estriamo posizione/keywords dal config.json
-    const keywords =  payload.target_keywords.map(k => k.toLowerCase());
-    const positions = payload.target_positions.map(Number);
+    const keywords =  payload.target_keywords ? payload.target_keywords.map(k => k.toLowerCase()) : [];
+    const positions = payload.target_positions ? payload.target_positions.map(Number) : [];
 
     // se non è specificata nessuna keyword o posizione, non facciamo nulla
     if (keywords.length === 0 && positions.length === 0) {
@@ -11,8 +11,17 @@ window.modifyPost = function(payload, eventData) {
         return;
     }   
 
+    // salviamo la query di ricerca iniziale per sapere quando l'utente cambia pagina (per fermare l'observer)
+    // (senza di questo prima succedeva che l'intervento rimaneva applicato ai container dei post anche per 
+    // ricerche che non centravano nulla)
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+
     // funzione che processa i post visibili e modifica quelli che corrispondono ai target
     const processModifications = () => {
+
+        // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
+        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        if (currentQuery !== initialQuery) return;
 
         // prendiamo tutti i titoli dei post
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
@@ -44,32 +53,32 @@ window.modifyPost = function(payload, eventData) {
                             innerBox.style.borderLeft = `4px solid ${payload.border_color || "#F44336"}`;
                         }
 
-                        // Applichiamo la formattazione usando la funzione helper globale
-                        if (typeof window.formatPost === "function") {
-                            window.formatPost(
-                                wrapper, 
-                                payload.title, 
-                                payload.subreddit, 
-                                payload.subreddit_icon_url, 
-                                payload.content_text, 
-                                payload.image_url, 
-                                payload.target_url,
-                                payload.date,
-                                payload.votes,
-                                payload.comments
-                            );
-                            wrapper.dataset.bearModified = "true";
-                            Log.intervention(`Post modificato! (Pos: ${currentPos})`);
-                        }
+
+                        // modifichiamo il post
+                        window.formatPost(wrapper, payload.title, payload.subreddit, payload.subreddit_icon_url, payload.content_text, payload.image_url, payload.target_url, payload.date, payload.votes, payload.comments);
+                        wrapper.dataset.bearModified = "true";
+                        Log.intervention(`Post modificato! (Pos: ${currentPos})`);
                     }
                 }
             }
         });
     };
 
+    // controlliamo se ce un observer attivo e, prima di creare uno nuovo (es. una nuova ricerca), disattiviamo quello vecchio
+    if (window._bearModifyPostObserver) {
+        window._bearModifyPostObserver.disconnect();
+    }
+
     processModifications();
 
     const observer = new MutationObserver((mutations) => {
+
+        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        if (currentQuery !== initialQuery) {
+            observer.disconnect();
+            return;
+        }
+
         if (mutations.some(m => m.addedNodes.length > 0)) {
             processModifications();
         }

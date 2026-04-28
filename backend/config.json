@@ -28,7 +28,6 @@
         }
       ],
       "apply_interventions": [
-        "apply_red_border",
         "inject_debunking",
         "inject_fake_post_vaccines" ,
         "modify_post"
@@ -43,22 +42,6 @@
       ],
       "apply_interventions": [
           "track_results"
-      ]
-    },
-    
-    {
-      "id": "trigger_NOT_contains_conspiracy",
-      "event_source": "adapters.events.SearchSubmitted",
-      "logical_operator": "AND",
-      "conditions": [
-        {
-          "property": "search_query",
-          "operator": "NOT_CONTAINS_ANY",
-          "value": ["epstein", "vaccini", "terra piatta", "5g"]
-        }
-      ],
-      "apply_interventions": [
-          "apply_green_border"
       ]
     }
   ],
