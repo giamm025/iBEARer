@@ -15,6 +15,9 @@ window.injectFakePost = function(payload, eventData) {
     const f_content = payload.content_text || "Questo è un messaggio di debunking inserito dall'estensione.";
     const f_image = payload.image_url || null;
     const f_link = payload.target_url || "#";
+    const f_date = payload.date || null;
+    const f_votes = payload.votes || null;
+    const f_comments = payload.comments || null;
     
     // come abbiamo gia visto in altri casi 8es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
     // a caricare. Impostiamo quindi un setInterval per ritardare l'operazione
@@ -46,7 +49,7 @@ window.injectFakePost = function(payload, eventData) {
             fakePost.id = "bear-fake-post";
 
             // 4. MODIFICA DEL DOM CLONATO (funzione helper)
-            window.formatPost(fakePost, f_title, f_subreddit, f_avatar, f_content, f_image, f_link);
+            window.formatPost(fakePost, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments);
 
             // 5. INSERIMENTO NELLA PAGINA
             mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
@@ -61,4 +64,4 @@ window.injectFakePost = function(payload, eventData) {
     }, 150); 
 };
 
-Log.intervention("Intervento caricato: injectFakePost");
+Log.intervention_registry("Intervento caricato: injectFakePost");
