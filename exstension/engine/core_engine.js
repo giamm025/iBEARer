@@ -45,10 +45,11 @@ class Engine {
             case "ENROLLED":
                 Log.engine("In attesa del completamento del pre-survey...");
                 
-                // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) da ApiManager che conferma il completamento del form. 
+                // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) 
+                // da ApiManager che conferma il completamento del form. 
                 const assignedGroup = await new Promise((resolve) => {
                     ApiManager.onExperimentStartCallback = (group) => {
-                        Log.engine(`Segnale WebSocket ricevuto!`);
+                        Log.engine(`Callback ricevuta da ApiManager. Gruppo assegnato: ${group}`);
                         resolve(group);
                     };
                 });

@@ -189,7 +189,7 @@ const ApiManager = {
 // Quando il background riceve il segnale dal WebSocket, avvisa questa tab
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "START_EXPERIMENT") {
-        Log.adapter(`ApiManager: Ricevuto segnale di avvio esperimento! Gruppo: ${request.group}`);
+        Log.adapter(`ApiManager: Ricevuto segnale START_EXPERIMENT! Gruppo: ${request.group}`);
         
         // Se l'Engine ha registrato la sua callback, chiamiamola!
         if (ApiManager.onExperimentStartCallback) {

@@ -1,16 +1,20 @@
+/**
+ * definiamo come DEVE essere fatto il payload di SearchSubmittedEvent (nel nostro caso ci basta la search_query)
+ * @typedef {Object} SearchSubmittedPayload
+ * @property {string} search_query - Il testo che l'utente ha digitato nella barra di ricerca.
+ */
+ 
 class SearchSubmitted extends BaseEvent {
 
     /**
-     * @param {string} query
+     * @param {SearchSubmittedPayload} payload
      */
-    constructor(query) {
+    constructor(payload) {
 
         // check di consistenza: query deve essere una stringa non vuota
-        if (!query || typeof query !== 'string') { throw new TypeError(`[SearchSubmittedEvent] Attesa una stringa per 'query', ricevuto: ${typeof query}`); }
+        if (!payload.search_query || typeof payload.search_query !== 'string') { throw new TypeError(`[SearchSubmittedEvent] Attesa una stringa per 'search_query', ricevuto: ${typeof payload.search_query}`); }
 
         // chiamiamo il costruttore
-        super("adapters.events.SearchSubmitted", {
-            search_query: query
-        });
+        super("adapters.events.SearchSubmitted", payload);
     }
 }

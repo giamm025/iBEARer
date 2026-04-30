@@ -1,15 +1,13 @@
 /**
- * @typedef {Object} EventPayload
- *      @property {string} [search_query]
- *      @property {string} [post_title] 
- *      @property {string} [post_subreddit] 
+ * @typedef {Object} GenericPayload
+ * @description Un payload generico. Le sottoclassi DEVOLO specializzare questo tipo.
  */
 
 class BaseEvent extends CustomEvent {
     
     /**
-     * @param {string} eventFqn
-     * @param {EventPayload} payload
+     * @param {string} eventFqn - Il Fully Qualified Name dell'evento (es. "adapters.events.SearchSubmittedEvent")
+     * @param {GenericPayload} payload - Il contesto dell'evento.
      */
     constructor(eventFqn, payload = {}) {
         

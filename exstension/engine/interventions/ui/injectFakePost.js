@@ -46,7 +46,7 @@ class InjectFakePostIntervention extends BaseIntervention {
         const f_comments = payload.comments || null;
         const f_new_position = payload.new_position || 1;
         
-        // come abbiamo gia visto in altri casi 8es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
+        // come abbiamo gia visto in altri casi (es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
         // a caricare. Impostiamo quindi un setInterval per ritardare l'operazione
         const finder = setInterval(() => {
             
