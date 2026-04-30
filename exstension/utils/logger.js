@@ -6,6 +6,8 @@ const LoggerConfig = {
     modules: {
         engine: true,
         adapter: true,
+        telemetry: true,
+        telemetry_flush: true,
 
         registry: false,
         intervention_registry: true,
@@ -50,7 +52,19 @@ const Log = {
             console.log("🕵️ [Adapter]", ...args);
         }
     },
-    
+
+    telemetry: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.telemetry) {
+            console.log("📊 [Telemetry]", ...args);
+        }
+    },
+
+    telemetry_flush: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.telemetry_flush) {
+            console.log("🔄 [Telemetry Flush]", ...args);
+        }
+    },
+
     intervention: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.intervention) {
             console.log("🚨 [Intervention]", ...args);

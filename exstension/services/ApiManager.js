@@ -130,7 +130,7 @@ const ApiManager = {
             metadata
         };
         this.telemetryQueue.push(telemetryEvent);
-        Log.adapter(`ApiManager: Evento aggiunto in coda: ${event_fqn}\n`, metadata);
+        Log.telemetry(`ApiManager: Evento aggiunto in coda: ${event_fqn}\n`, metadata);
     },
 
     // funzione per sincronizzare la coda di telemetria con il backend a intervalli regolari
@@ -158,7 +158,7 @@ const ApiManager = {
 
             // se l'invio è andato a buon fine logghiamo il successo
             if (success) {
-                Log.adapter(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
+                Log.telemetry_flush(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
             
             // altrimenti lancia un errore e reinserisce gli eventi falliti in coda (PER NON PERDERLI!)
             } else {
