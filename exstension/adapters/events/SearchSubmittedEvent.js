@@ -1,11 +1,16 @@
+class SearchSubmitted extends BaseEvent {
 
-class SearchSubmitted extends CustomEvent {
-
+    /**
+     * @param {string} query
+     */
     constructor(query) {
+
+        // check di consistenza: query deve essere una stringa non vuota
+        if (!query || typeof query !== 'string') { throw new TypeError(`[SearchSubmittedEvent] Attesa una stringa per 'query', ricevuto: ${typeof query}`); }
+
+        // chiamiamo il costruttore
         super("adapters.events.SearchSubmitted", {
-            detail: {
-                search_query: query
-            }
+            search_query: query
         });
     }
 }

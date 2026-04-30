@@ -41,6 +41,7 @@
         
         "engine/core_engine.js",
 
+        "adapters/events/BaseEvent.js",
         "adapters/events/SearchSubmittedEvent.js",
         "adapters/events/EngineReadyEvent.js",
 
