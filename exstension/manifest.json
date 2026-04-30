@@ -29,15 +29,14 @@
         "engine/operators/NOT_CONTAINS_ANY.js",
         "engine/operators/EQUALS.js",
 
+        "engine/interventions/BaseIntervantion.js",
         "engine/interventions/debug/applyBorder.js",
         "engine/interventions/ui/showDebunkingBanner.js", 
-
         "engine/interventions/ui/formatPost.js", 
         "engine/interventions/ui/injectFakePost.js", 
         "engine/interventions/ui/removePost.js", 
         "engine/interventions/ui/modifyPost.js",
-
-        "engine/interventions/trackResults.js", 
+        "engine/interventions/tracking/trackResults.js", 
         
         "engine/core_engine.js",
 

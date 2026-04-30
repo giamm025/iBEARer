@@ -1,81 +1,107 @@
 // EDIT: piuttosto che impazzire creando un vero e proprio post con i tag di reddit e tutto quanto (che se un domani cambiano 
 // nemmeno funzionerebbe piu), conviene CLONARE un post già esistente (es. prendiamo il primo post, lo cloniamo e cambiamo gli attriobuti)
 
-window.injectFakePost = function(payload, eventData) {
-    
-    // come abbiamo gia fatto per il debunking banner:
-    // se c'è gia un post fake (abbiamo gia applicato l'intervento) non facciamo nulla
-    if (document.getElementById("bear-fake-post")) return;
 
-    // estraiamo i dati dal config.json (se alcuni valori mancano usiamo dei Default)
-    const f_title = payload.title || "Attenzione: Informazione Scientifica";
-    const f_subreddit = payload.subreddit || "r/SanitaPubblica";
-    const f_avatar = payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png";
-    const f_author = payload.author || "MinisteroDellaVerita";
-    const f_content = payload.content_text || "Questo è un messaggio di debunking inserito dall'estensione.";
-    const f_image = payload.image_url || null;
-    const f_link = payload.target_url || "#";
-    const f_date = payload.date || null;
-    const f_votes = payload.votes || null;
-    const f_comments = payload.comments || null;
-    const f_new_position = payload.new_position || 1;
+/**
+ * @typedef {Object} InjectFakePostPayload
+ * @property {string} [title]
+ * @property {string} [subreddit]
+ * @property {string} [subreddit_icon_url]
+ * @property {string} [author]
+ * @property {string} [content_text]
+ * @property {string} [image_url]
+ * @property {string} [target_url]
+ * @property {string} [date]
+ * @property {string} [votes]
+ * @property {string} [comments]
+ * @property {number} [new_position]
+ */
+class InjectFakePostIntervention extends BaseIntervention {
     
-    // come abbiamo gia visto in altri casi 8es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
-    // a caricare. Impostiamo quindi un setInterval per ritardare l'operazione
-    const finder = setInterval(() => {
+    constructor() {
+        // Usa il FQN esatto che scriverai nel config.json
+        super("injectFakePost"); 
+    }
+
+    /**
+     * @param {InjectFakePostPayload} payload 
+     * @param {Object} eventData 
+     */
+    execute(payload, eventData) {
+    
+        // come abbiamo gia fatto per il debunking banner:
+        // se c'è gia un post fake (abbiamo gia applicato l'intervento) non facciamo nulla
+        if (document.getElementById("bear-fake-post")) return;
+
+        // estraiamo i dati dal config.json (se alcuni valori mancano usiamo dei Default)
+        const f_title = payload.title || "Attenzione: Informazione Scientifica";
+        const f_subreddit = payload.subreddit || "r/SanitaPubblica";
+        const f_avatar = payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png";
+        const f_author = payload.author || "MinisteroDellaVerita";
+        const f_content = payload.content_text || "Questo è un messaggio di debunking inserito dall'estensione.";
+        const f_image = payload.image_url || null;
+        const f_link = payload.target_url || "#";
+        const f_date = payload.date || null;
+        const f_votes = payload.votes || null;
+        const f_comments = payload.comments || null;
+        const f_new_position = payload.new_position || 1;
         
-        // cerchiamo il primo link di un post. In particolare cerchiamo il link del titolo, perché è quello che 
-        // ci serve per costruire il nostro post fake
-        const firstTitleLink = document.querySelector('a[data-testid="post-title"]');
-        if (firstTitleLink) {
-
-            // appena troviamo un post originale, fermiamo il setInterval (ma proseguiamo con la costruzione del post fake)
-            clearInterval(finder); 
-
-            // 1. TROVIAMO LA COLONNA CENTRALE DI REDDIT
-            const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
-            if (!mainFeedContainer) {
-                Log.error("Intervention", "Impossibile trovare la colonna principale dei risultati.");
-                return;
-            }
-
-            // 2. RISALIAMO FINO AL FIGLIO DIRETTO DELLA COLONNA
-            let originalPostWrapper = firstTitleLink;
-            while (originalPostWrapper.parentElement && originalPostWrapper.parentElement !== mainFeedContainer) {
-                originalPostWrapper = originalPostWrapper.parentElement;
-            }
-
-            // 3. CLONAZIONE DEL WRAPPER COMPLETO
-            const fakePost = originalPostWrapper.cloneNode(true);
-            fakePost.id = "bear-fake-post";
-
-            // 4. MODIFICA DEL DOM CLONATO (funzione helper)
-            window.formatPost(fakePost, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments);
-
-            // 5. INSERIMENTO NELLA PAGINA
-            mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
+        // come abbiamo gia visto in altri casi 8es. Observers) i risultati veri di Reddit potrebbero metterci 1-2 secondi 
+        // a caricare. Impostiamo quindi un setInterval per ritardare l'operazione
+        const finder = setInterval(() => {
             
-            const divider = document.createElement("hr");
-            divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
-            mainFeedContainer.insertBefore(divider, originalPostWrapper);
-            
-            // --- 6. TELEMETRIA: INVIAMO I DATI AL BACKEND ---
-            const search_query = new URLSearchParams(window.location.search).get('q') || "";
-            sendInjectedPostToBackend(search_query, f_new_position, f_title, f_subreddit, f_link);
-        }
-    }, 150); 
-};
+            // cerchiamo il primo link di un post. In particolare cerchiamo il link del titolo, perché è quello che 
+            // ci serve per costruire il nostro post fake
+            const firstTitleLink = document.querySelector('a[data-testid="post-title"]');
+            if (firstTitleLink) {
 
-Log.intervention_registry("Intervento caricato: injectFakePost");
+                // appena troviamo un post originale, fermiamo il setInterval (ma proseguiamo con la costruzione del post fake)
+                clearInterval(finder); 
 
+                // 1. TROVIAMO LA COLONNA CENTRALE DI REDDIT
+                const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
+                if (!mainFeedContainer) {
+                    Log.error("Intervention", "Impossibile trovare la colonna principale dei risultati.");
+                    return;
+                }
 
-function sendInjectedPostToBackend(searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
-    ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
-        action_type: "INJECTED",
-        search_query: searchQuery,
-        target_position: targetPosition,
-        original_title: originalTitle,
-        original_subreddit: originalSubreddit,
-        original_url: originalUrl
-    });
+                // 2. RISALIAMO FINO AL FIGLIO DIRETTO DELLA COLONNA
+                let originalPostWrapper = firstTitleLink;
+                while (originalPostWrapper.parentElement && originalPostWrapper.parentElement !== mainFeedContainer) {
+                    originalPostWrapper = originalPostWrapper.parentElement;
+                }
+
+                // 3. CLONAZIONE DEL WRAPPER COMPLETO
+                const fakePost = originalPostWrapper.cloneNode(true);
+                fakePost.id = "bear-fake-post";
+
+                // 4. MODIFICA DEL DOM CLONATO (funzione helper)
+                window.formatPost(fakePost, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments);
+
+                // 5. INSERIMENTO NELLA PAGINA
+                mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
+                
+                const divider = document.createElement("hr");
+                divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
+                mainFeedContainer.insertBefore(divider, originalPostWrapper);
+                
+                // --- 6. TELEMETRIA: INVIAMO I DATI AL BACKEND ---
+                const search_query = new URLSearchParams(window.location.search).get('q') || "";
+                this.sendInjectedPostToBackend(search_query, f_new_position, f_title, f_subreddit, f_link);
+            }
+        }, 150); 
+    }
+
+    sendInjectedPostToBackend(searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
+        ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
+            action_type: "INJECTED",
+            search_query: searchQuery,
+            target_position: targetPosition,
+            original_title: originalTitle,
+            original_subreddit: originalSubreddit,
+            original_url: originalUrl
+        });
+    }
 }
+
+new InjectFakePostIntervention();

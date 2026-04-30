@@ -1,8 +1,8 @@
 /**
  * @typedef {Object} EventPayload
- * @property {string} [search_query]
- * @property {string} [post_title] 
- * @property {string} [post_subreddit] 
+ *      @property {string} [search_query]
+ *      @property {string} [post_title] 
+ *      @property {string} [post_subreddit] 
  */
 
 class BaseEvent extends CustomEvent {

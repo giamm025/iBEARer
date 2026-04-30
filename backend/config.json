@@ -28,6 +28,7 @@
         }
       ],
       "apply_interventions": [
+        "apply_red_border",
         "inject_debunking",
         "inject_fake_post_vaccines" ,
         "modify_post"
