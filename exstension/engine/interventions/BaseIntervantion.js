@@ -31,4 +31,25 @@ class BaseIntervention {
     execute(payload, eventData) {
         throw new Error(`[Architecture Violation] L'intervento '${this.fqn}' NON ha implementato il metodo execute().`);
     }
+
+    /**
+     * @param {string} actionType - "INJECTED", "MODIFIED", o "REMOVED"
+     * @param {string} searchQuery - La query di ricerca corrente
+     * @param {number} targetPosition - La posizione del post alterato
+     * @param {string} originalTitle - Titolo originale (o finto se iniettato)
+     * @param {string} originalSubreddit - Subreddit originale
+     * @param {string} originalUrl - URL originale
+     */
+    sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
+       
+        // semplicemente chiamiamo l'ApiManager per inserire i dati inc oda verso il backend
+        ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
+            action_type: actionType,
+            search_query: searchQuery,
+            target_position: targetPosition,
+            original_title: originalTitle,
+            original_subreddit: originalSubreddit,
+            original_url: originalUrl
+        });
+    }
 }

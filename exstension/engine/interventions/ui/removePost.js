@@ -115,14 +115,7 @@ class RemovePostIntervention extends BaseIntervention {
         const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
 
         // --- 2. INVIO AL BACKEND ---
-        ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
-            action_type: "REMOVED",
-            search_query: initialQuery,
-            target_position: currentPos,
-            original_title: originalTitle,
-            original_subreddit: originalSubreddit,
-            original_url: originalUrl
-        });
+        this.sendPostToBackend("REMOVED", initialQuery, currentPos, originalTitle, originalSubreddit, originalUrl);
     }
 }
 

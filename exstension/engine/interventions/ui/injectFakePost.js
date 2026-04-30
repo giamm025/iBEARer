@@ -87,20 +87,9 @@ class InjectFakePostIntervention extends BaseIntervention {
                 
                 // --- 6. TELEMETRIA: INVIAMO I DATI AL BACKEND ---
                 const search_query = new URLSearchParams(window.location.search).get('q') || "";
-                this.sendInjectedPostToBackend(search_query, f_new_position, f_title, f_subreddit, f_link);
+                this.sendPostToBackend("INJECTED", search_query, f_new_position, f_title, f_subreddit, f_link);
             }
         }, 150); 
-    }
-
-    sendInjectedPostToBackend(searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
-        ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
-            action_type: "INJECTED",
-            search_query: searchQuery,
-            target_position: targetPosition,
-            original_title: originalTitle,
-            original_subreddit: originalSubreddit,
-            original_url: originalUrl
-        });
     }
 }
 
