@@ -18,7 +18,6 @@ window.ResultsLoaded = {
         // se non siamo in una ricerca (es. siamo tornati in Home), spegniamo tutto e puliamo la memoria
         if (!isSearchPage) {
             this.stopAndClean();
-            Log.adapter("Utente uscito dalla ricerca. Observer ResultsLoaded spento.");
         }
         // se invece siamo ancora in una pagina di ricerca, aspettiamo che un trigger ci dica di accendere l'osservatore
     },
@@ -29,8 +28,6 @@ window.ResultsLoaded = {
         // puliamo la memoria da eventuali ricerche precedenti
         this.stopAndClean();
         
-        Log.adapter(`ResultsLoadedObserver: Avvio scraping mirato per "${query}"...`);
-
         // funzione per estrarre i dati dei post
         const tryScrape = () => {
             

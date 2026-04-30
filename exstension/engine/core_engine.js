@@ -58,12 +58,10 @@ class Engine {
 
             // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento
             case "PRE-SURVEY-COMPLETED":
-                Log.engine("L'utente ha GIA' completato il pre-survey.");
                 this.startExperiment(statusData.group);
                 break;
 
             case "POST-SURVEY-COMPLETED":
-                Log.engine("L'utente ha COMPLETATO il post-survey.");
                 Log.error("Engine", "Ancora nessuna implementazione per POST-SURVEY-COMPLETED.");
                 break;
 
@@ -118,8 +116,6 @@ class Engine {
         // recuperiamo l'array degli eventi da tracciare (se non c'è, usiamo array vuoto)
         const trackEvents = this.config.telemetry_settings?.track_events || [];
         
-        Log.engine(`Inizializzazione Telemetria per: ${trackEvents.join(', ')}`);
-
         // per ogni evento nel config (es. "telemetry.events.ClickOnLinkEvent")
         for (let eventName of trackEvents) {
             
@@ -139,7 +135,7 @@ class Engine {
     // metodo per gestire interamente la ricezione di un evento: controlla se scatena dei trigger e in caso esegue gli interventi associati
     handleEvent(eventName, eventData) {
 
-        Log.engine(`Ricevuto evento: ${eventName}`, eventData);
+        Log.engine(`Ricevuto evento: ${eventName}\n`, eventData);
 
         // trova tutti i trigger che reagiscono a questo evento
         const activeTriggers = this.config.triggers.filter(t => t.event_source === eventName);
@@ -148,7 +144,6 @@ class Engine {
         for (let trigger of activeTriggers) {
             const isMatch = this.evaluateTrigger(trigger, eventData);
             if (isMatch) {
-                Log.engine(`Trigger Attivato: ${trigger.id}`);
                 
                 ApiManager.addEventToQueue("TriggerActivated", {
                     trigger_id: trigger.id,
@@ -242,7 +237,6 @@ class Engine {
             }
 
         }
-        Log.engine("Fine Interventi");
     }
 
     // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload

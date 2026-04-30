@@ -12,9 +12,9 @@ const LoggerConfig = {
         operator_registry: true,
         telemetry_registry: true,
 
-        intervention: true ,
+        intervention: false,
         web_socket: true,
-        heart_beat: true
+        heart_beat: false
     }
 };
 

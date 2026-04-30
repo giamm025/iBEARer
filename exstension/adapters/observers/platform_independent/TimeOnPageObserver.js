@@ -45,7 +45,7 @@ window.TimeOnPage = {
                     duration_seconds: timeSpentSeconds,
                     url_pagina: urlToLog
                 });
-                Log.adapter(`Telemetria: TimeOnPage inviato per ${urlToLog} (${timeSpentSeconds}s)`);
+                // Log.adapter(`Telemetria: TimeOnPage inviato per ${urlToLog} (${timeSpentSeconds}s)`);
             }
         };
     }

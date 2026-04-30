@@ -21,7 +21,5 @@ class BaseEvent extends CustomEvent {
             cancelable: true    // permette agli ascoltatori di chiamare event.preventDefault() per impedire l'azione predefinita associata all'evento
         });
         this.payload = payload;
-        
-        Log.adapter(`[Event Instantiated] ${eventFqn}`, payload);
     }
 }
