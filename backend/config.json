@@ -1,7 +1,8 @@
 {
   "experiment": {
     "experiment_name": "reddit_cospiracy",
-    "experiment_duration_minutes": 30
+    "experiment_duration_minutes": 30,
+    "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },
 
   "telemetry_settings": {

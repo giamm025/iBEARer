@@ -33,8 +33,16 @@ def error_response(status_code, custom_message=None):
 # funzione per assegnare un gruppo al partecipante (per ora facciamo una scelta random 50 e 50)
 def assign_group():
     
-    # definiamo esattamente i gruppi (devono coincidere col tuo config.json!)
-    available_groups = ["TREATMENT1", "TREATMENT2"] # DEBUG: Per ora ho tolto CONTROL per testare più facilmente
+    # prendiamo la lista dei gruppi disponibili dal config.json
+    # se i gruppi non sono specificati nel config.json assumiamo che sia un semplice A/B Test con solo TREATMENT e CONTROL
+    available_groups = ["TREATMENT", "CONTROL"] 
+    config = models.Config.objects.filter(pk=1).first()
+    if config and config.data:
+        experiment_settings = config.data.get('experiment', {})
+        available_groups = experiment_settings.get('groups', available_groups)
+    
+    # DEBUG: Per ora ho tolto CONTROL per testare più facilmente
+    if "CONTROL" in available_groups:  available_groups.remove("CONTROL")
     
     # Contiamo quanti partecipanti hanno GIA' un gruppo assegnato
     assigned_count = models.Participant.objects.exclude(group='UNASSIGNED').count()

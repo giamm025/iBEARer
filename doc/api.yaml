@@ -271,6 +271,11 @@ components:
           type: string
         experiment_duration_minutes:
           type: integer
+        groups:
+          type: array
+          items:
+            type: string
+          example: ["CONTROL", "TREATMENT1", "TREATMENT2"]
           
     TelemetrySettings:
       properties:
