@@ -3,6 +3,7 @@
     "experiment_name": "reddit_cospiracy",
     "experiment_duration_minutes": 30
   },
+
   "telemetry_settings": {
     "track_events": [
       "ClickOnLink", 
@@ -11,13 +12,26 @@
     ],
     "sync_interval_ms": 10000
   },
+
   "target": {
     "url_pattern": "*://*.reddit.com/*",
     "dependency": "adapters/reddit_adapter.js"
   },
+
   "triggers": [
     {
+      "id": "every_search",
+      "target_groups": ["TREATMENT1", "TREATMENT2"],
+      "event_source": "adapters.events.SearchSubmitted",
+      "logical_operator": "AND",
+      "conditions": [],
+      "apply_interventions": {
+          "track_results": ["CONTROL", "TREATMENT1", "TREATMENT2"]
+      }
+    },
+    {
       "id": "trigger_contains_conspiracy",
+      "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
       "conditions": [
@@ -27,16 +41,16 @@
           "value": ["epstein", "vaccini", "terra piatta", "5g"]
         }
       ],
-      "apply_interventions": [
-        "apply_red_border",
-        "inject_debunking",
-        "inject_fake_post_vaccines" ,
-        "modify_post"
-      ]
+      "apply_interventions": {
+        "apply_red_border": [ "TREATMENT1"],
+        "inject_debunking": ["TREATMENT1"],
+        "inject_fake_post_vaccines": ["TREATMENT2"],
+        "modify_post": ["TREATMENT1", "TREATMENT2"]
+      }
     },
-
     {
       "id": "trigger_contains_roast_me",
+      "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
       "conditions": [
@@ -46,20 +60,9 @@
           "value": ["roast me"]
         }
       ],
-      "apply_interventions": [
-        "hide_post"
-      ]
-    },
-
-    {
-      "id": "every_search",
-      "event_source": "adapters.events.SearchSubmitted",
-      "logical_operator": "AND",
-      "conditions": [
-      ],
-      "apply_interventions": [
-          "track_results"
-      ]
+      "apply_interventions": {
+        "hide_post": ["TREATMENT1", "TREATMENT2"]
+      }
     }
   ],
 

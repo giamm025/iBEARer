@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+import copy
 
 from . import models
 from . import serializers
@@ -41,37 +42,88 @@ def enroll_participant(request):
     except Exception as e:
         return utils.error_response(500, str(e))
 
-# -------------------------------------------- GET /config: getConfig --------------------------------------------
+# -------------------------------------------- GET /participants/{participantId}/config: getConfig --------------------------------------------
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
-def get_config(request):
+def get_config(request, participant_id):
 
     try:
-        # recuperiamo la configurazione
+        # recuperiamo il partecipante => se non esiste errore
+        participant = models.Participant.objects.filter(id=participant_id).first()
+        if not participant:
+            return utils.error_response(404, "Partecipante non trovato.")
+        
+        # recuperiamo la configurazione => se non esiste errore
         config = models.Config.objects.filter(pk=1).first()
-        
-        # se per puro caso non dovesse esistere => errore 
         if not config or not config.data:
-            return utils.error_response(404, "Configurazione non trovata. Il ricercatore deve prima salvarla dalla Dashboard.")
+            return utils.error_response(404, "Configurazione non trovata.")
         
-        # validiamo il JSON con il serializer => se è valido mandiamo la risposta, altrimenti errore
-        serializer = serializers.ConfigSerializer(data=config.data)
-        if serializer.is_valid():
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        else:
-            return utils.error_response(500, f"Errore interno di struttura configurazione: {serializer.errors}")
+        # filtriamo la configurazione per restituire solo i trigger relativi per il gruppo del partecipante
+        filtered_config = filter_config(config, participant.group)
+        
+        return Response(filtered_config, status=status.HTTP_200_OK)
     
     except Exception as e:
         return utils.error_response(500, f"Errore imprevisto del server: {str(e)}")
 
+def filter_config(config, user_group):
+
+    # creiamo una copia per sicureazza
+    filtered_config = copy.deepcopy(config.data)
+    
+    # creiamo una lista che conterrà solo i trigger relativi al gruppo dell'utente
+    filtered_triggers = []
+    
+    # iteriamo sui trigger originali
+    for trigger in  filtered_config.get('triggers', []):
+        
+        # se il trigger è destinato al gruppo dell'utente
+        if user_group in trigger.get('target_groups', []):
+
+            # filtriamo gli interventi
+            filtered_interventions = filter_interventions(trigger, user_group)
+            trigger['apply_interventions'] = filtered_interventions
+            
+            # cancelliamo il campo 'target_groups' che all'estensione non serve
+            trigger.pop('target_groups', None)
+            filtered_triggers.append(trigger)
+            
+    # sostituiamo i trigger originali con la nostra lista filtrata
+    filtered_config['triggers'] = filtered_triggers
+    
+    return filtered_config
+
+def filter_interventions(trigger, user_group):
+
+    # prendiamo tutti gli interventi
+    interventions = trigger.get('apply_interventions', {})
+
+    # prendiamo solo gli intervention_id che hanno il gruppo dell'utente in target_groups
+    filtered_interventions = []
+    for intervention_id, groups in interventions.items():
+        if user_group in groups:
+            filtered_interventions.append(intervention_id)
+    
+    return filtered_interventions
+
+# ------------------------------------- GET admin/config: getMasterConfig --------------------------------------
 # ------------------------------------- PUT admin/config: updateConfig --------------------------------------
-@api_view(['PUT'])
+@api_view(['GET', 'PUT'])
 @authentication_classes([])
 @permission_classes([AllowAny]) 
-def update_config(request):
+def manage_admin_config(request):
 
     try:
+
+        # se è una GET => resituiamo la configurazione completa (non filtrata) al Master Admin
+        if request.method == 'GET':
+            config = models.Config.objects.filter(pk=1).first()
+            if not config or not config.data:
+                return utils.error_response(404, "Configurazione Master non trovata.")
+            
+            return Response(config.data, status=status.HTTP_200_OK)
+        
         # DRF in automatico gia converte i JSOn in dizionari Python leggibili. Dunque ci basta leggere request.data
         serializer = serializers.ConfigSerializer(data=request.data)
         

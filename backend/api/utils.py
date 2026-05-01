@@ -32,9 +32,19 @@ def error_response(status_code, custom_message=None):
 
 # funzione per assegnare un gruppo al partecipante (per ora facciamo una scelta random 50 e 50)
 def assign_group():
-    # scelta = random.choice([models.Group.CONTROL, models.Group.TREATMENT])
-    # return scelta
-    return models.Group.TREATMENT   # DEBUG per ora assegbiamo sempre gruppo trattamento cosi posso vedere se gli interventi funzionano
+    
+    # definiamo esattamente i gruppi (devono coincidere col tuo config.json!)
+    available_groups = ["TREATMENT1", "TREATMENT2"] # DEBUG: Per ora ho tolto CONTROL per testare più facilmente
+    
+    # Contiamo quanti partecipanti hanno GIA' un gruppo assegnato
+    assigned_count = models.Participant.objects.exclude(group='UNASSIGNED').count()
+    
+    # assegniamo il prossimo gruppo in modo ciclico (round-robin) per garantire una distribuzione equilibrata tra i gruppi
+    next_group_index = assigned_count % len(available_groups)
+    assigned_group = available_groups[next_group_index]
+    
+    print(f"🎲 [Assegnazione Gruppo] Utente numero {assigned_count + 1} assegnato a: {assigned_group}")
+    return assigned_group
 
 # funzione helper per inviare un messaggio di aggiornamento dello stato del partecipante alla WebSocket
 def notify_status_update(participant):

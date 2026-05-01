@@ -23,9 +23,10 @@ from api import views
 # della richiesta HTTP (GET, POST, PUT, ...) e semplicemente invia il JSON di risposta (es. config.json)
 urlpatterns = [
 
-    path('admin/config/', views.update_config),
+    path('admin/config/', views.manage_admin_config),
     path('participants/<str:participant_id>/status/', views.manage_participant_status),
     path('participants/<str:participant_id>/telemetry/', views.send_telemetry),
+    path('participants/<str:participant_id>/config/', views.get_config),
 
     path('admin/', admin.site.urls),
     path('config/', views.get_config),

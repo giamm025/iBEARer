@@ -157,77 +157,136 @@ components:
     # ----------------------------------------------------------
     # CONFIG.JSON (Mirroring)
     # ----------------------------------------------------------
+
+    # ------------------------------------ Configurazione lato BACKEND (Ricercatore) ------------------------------------
+
+    # inviata dal RICERCATORE tramite PUT /admin/config contiene TUTTI i campi permettendo al ricercatore di specificare 
+    # i gruppi e quali interventi/triggers si applicano a ciascun gruppo
+
     Config:
-      description: The dynamic rules engine configuration.
+      description: The raw, unfiltered rules engine configuration uploaded by the researcher.
       required: [experiment, telemetry_settings, target, triggers, interventions]
       properties:
-
         experiment:
-          required: [experiment_name, experiment_duration_minutes]
-          properties:
-            experiment_name:
-              type: string
-              example: "reddit_cospiracy"
-            experiment_duration_minutes:
-              type: integer
-              example: 30
-
+          $ref: '#/components/schemas/ExperimentSettings'
         telemetry_settings:
-          properties:
-            track_events:
-              type: array
-              items:
-                type: string
-            sync_interval_ms:
-              type: integer
-              example: 10000
-      
+          $ref: '#/components/schemas/TelemetrySettings'
         target:
-          properties:
-            url_pattern:
-              type: string
-              example: "*://*.reddit.com/*"
-            dependency:
-              type: string
-              example: "adapters/reddit_adapter.js"
-
+          $ref: '#/components/schemas/TargetSettings'
         triggers:
           type: array
           items:
             $ref: '#/components/schemas/Trigger'
-
         interventions:
           type: array
           items:
             $ref: '#/components/schemas/Intervention'
 
     Trigger:
-      required: [id, event_source, logical_operator, conditions, apply_interventions]
+      description: A trigger containing mapping logic for multiple A/B groups.
+      required: [id, target_groups, event_source, logical_operator, conditions, apply_interventions]
       properties:
-
         id:
-          description: "ID stringa univoco per il trigger."
           type: string
           example: "trigger_contains_conspiracy"
-
+        target_groups:
+          description: "List of groups this trigger applies to."
+          type: array
+          items:
+            type: string
+          example: ["TREATMENT_A", "TREATMENT_AGGRESSIVE"]
         event_source:
           type: string
-          example: "adapters.events.SearchSubmitted"
-
         logical_operator:
           type: string
           enum: [AND, OR]
-
         conditions:
           type: array
           items:
             $ref: '#/components/schemas/Condition'
-
         apply_interventions:
+          description: "Maps intervention IDs to the specific groups that should receive them."
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            apply_red_border: ["TREATMENT_A", "TREATMENT_AGGRESSIVE"]
+            inject_debunking: ["TREATMENT_AGGRESSIVE"]
+
+
+    # ------------------------------------ FILTERED CONFIG (Partecipante) ------------------------------------
+    
+    # inviata su richiesta all'ESTENSIONE tramite GET /participant/{participant_id}/config contiene SOLO  alcuni campi.
+    # in particolare è stata filtrata per includere SOLO i trigger e interventi rilevanti per il gruppo del partecipante
+
+    FilteredConfig:
+      description: The filtered configuration delivered to the browser extension (contains no group mappings).
+      required: [experiment, telemetry_settings, target, triggers, interventions]
+      properties:
+        experiment:
+          $ref: '#/components/schemas/ExperimentSettings'
+        telemetry_settings:
+          $ref: '#/components/schemas/TelemetrySettings'
+        target:
+          $ref: '#/components/schemas/TargetSettings'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilteredTrigger'
+        interventions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Intervention'
+
+    FilteredTrigger:
+      description: A flat trigger ready to be executed by the extension.
+      required: [id, event_source, logical_operator, conditions, apply_interventions]
+      properties:
+        id:
+          type: string
+        event_source:
+          type: string
+        logical_operator:
+          type: string
+          enum: [AND, OR]
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        apply_interventions:
+          description: "A simple list of intervention IDs to execute."
           type: array
           items:
             type: string
-            description: Maps to the Intervention IDs.
+          example: ["apply_red_border", "inject_debunking"]
+
+
+    # ------------------------------------ COMPONENTI CONDIVISI ------------------------------------
+    ExperimentSettings:
+      required: [experiment_name, experiment_duration_minutes]
+      properties:
+        experiment_name:
+          type: string
+        experiment_duration_minutes:
+          type: integer
+          
+    TelemetrySettings:
+      properties:
+        track_events:
+          type: array
+          items:
+            type: string
+        sync_interval_ms:
+          type: integer
+          
+    TargetSettings:
+      properties:
+        url_pattern:
+          type: string
+        dependency:
+          type: string
 
     Condition:
       required: [property, operator, value]
@@ -360,13 +419,16 @@ paths:
   # =========================================
   # PUBLIC ENDPOINTS
   # =========================================
-  /config/:
+  /participants/{participantId}/config:
+
+    parameters:
+      - $ref: '#/components/parameters/ParticipantId'
 
     get:
       tags: [Extension, Config]
       operationId: getConfig
       summary: Download experiment configuration
-      description: Fetched by the extension to apply DOM manipulations. No auth required for global config.
+      description: Retrieves the filtered configuration for the specified participant. ("Filtered" means that the configuration contains only the triggers and interventions relevant for the participant's assigned group)
 
       responses:
         '200':
@@ -374,7 +436,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Config'
+                $ref: '#/components/schemas/FilteredConfig'
         '405':
           $ref: '#/components/responses/Error405'
 
@@ -505,6 +567,27 @@ paths:
 
 
   /admin/config/:
+
+    get:
+      tags: [Admin, Config]
+      operationId: getMasterConfig
+      summary: Get Full Experiment Configuration
+      description: Retrieves the unfiltered Master Configuration for the researcher dashboard.
+
+      security:
+        - AdminBearerAuth: []
+
+      responses:
+        '200':
+          description: The full Master Config JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config' 
+        '401':
+          $ref: '#/components/responses/Error401'
+        '405':
+          $ref: '#/components/responses/Error405'
 
     put:
       tags: [Admin, Config]

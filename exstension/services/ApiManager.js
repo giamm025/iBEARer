@@ -98,7 +98,10 @@ const ApiManager = {
 // -------------------------------------------- GET /config: getConfig --------------------------------------------
     async getConfig() {
         // stessa cosa di prima, NON facciamo piu la chiamata al backend ma mandiamo un messaggio al background.js
-        const data = await this._sendMessage({ action: "GET_CONFIG" }, "Scarico Configurazione");
+        const data = await this._sendMessage({ 
+            action: "GET_CONFIG",
+            participantId: this.participantId
+        }, "Scarico Configurazione");
         
         // se la risposta c'è ed ha avuto successo, restituisci i dati della configurazione
         if (data) {

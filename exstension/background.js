@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // -------------------------------------------- GET /config: getConfig --------------------------------------------
     if (request.action === "GET_CONFIG") {
-        fetch(`${BASE_URL}/config/`)
+        fetch(`${BASE_URL}/participants/${request.participantId}/config/`)
 
         // se il backend risponde con un errore (404, 500, ecc...)
         .then(async res => {
