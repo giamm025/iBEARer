@@ -18,7 +18,7 @@ if (window.location.href.includes("formResponse")) {
     chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: status }, (response) => {
         if (response && response.success) {
             console.log("✅ [FormWatcher] Backend aggiornato.");
-            window.close(); 
+            chrome.runtime.sendMessage({ action: "CLOSE_CURRENT_TAB" });        
         }
     });
 }

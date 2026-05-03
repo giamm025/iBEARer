@@ -150,11 +150,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-// -------------------------------------------- OPEN SURVEY TAB --------------------------------------------
+// -------------------------------------------- OPEN TAB --------------------------------------------
     if (request.action === "OPEN_TAB") {
         chrome.tabs.create({ url: request.url, active: true });
         sendResponse({ success: true });
         return true;
+    }
+
+// -------------------------------------------- CLOSE CURRENT TAB --------------------------------------------
+    if (request.action === "CLOSE_CURRENT_TAB") {
+        
+        if (sender.tab && sender.tab.id) {
+            chrome.tabs.remove(sender.tab.id, () => {
+                if (chrome.runtime.lastError) {
+                    console.error("Errore chiusura tab:", chrome.runtime.lastError.message);
+                }
+            });
+        }
+
+        sendResponse({ success: true });
+        return false;
     }
 
 });
