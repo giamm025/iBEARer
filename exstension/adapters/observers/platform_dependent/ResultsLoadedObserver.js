@@ -2,14 +2,24 @@
 // transizioni SPA, i continui caricamenti di chunk dell'infinite scroll, resettando memoria e contatori ad ogni cambio pagina.
 // EDIT: Si attiva solo quando viene scatenato un trigger con conseguente intervento "trackResults"
 
-window.ResultsLoaded = {
+class ResultsLoadedObserver extends BaseObserver {
     
-    currentObserver: null,
-    initTimer: null,
-    scrapedUrls: new Set(), 
+    constructor() {
+        super("ResultsLoaded");
+        this.currentObserver = null;
+        this.initTimer = null;
+        this.scrapedUrls = new Set();
+    }
+
+    start() {
+        this.isActive = true;
+    }
 
     // check() viene chiamato da SpaWatcher OGNI VOLTA che cambia l'URL
     check() {
+
+        // se l'observer è spento, non facciamo nulla
+        if (!this.isActive) return;
 
         // controlliamo se dopo il cambio URL siamo ancora in una pagina di ricerca
         const urlParams = new URLSearchParams(window.location.search);
@@ -17,16 +27,16 @@ window.ResultsLoaded = {
 
         // se non siamo in una ricerca (es. siamo tornati in Home), spegniamo tutto e puliamo la memoria
         if (!isSearchPage) {
-            this.stopAndClean();
+            this.customCleanUp();
         }
         // se invece siamo ancora in una pagina di ricerca, aspettiamo che un trigger ci dica di accendere l'osservatore
-    },
+    }
 
     // funzione per iniziare il tracciamento dei risultati. Verra chiamata dagli interventi quando scatta il trigger.
     startScraping(query) {
         
         // puliamo la memoria da eventuali ricerche precedenti
-        this.stopAndClean();
+        this.customCleanUp();
         
         // funzione per estrarre i dati dei post
         const tryScrape = () => {
@@ -62,7 +72,7 @@ window.ResultsLoaded = {
 
             // se abbiamo estratto nuovi post, inviamo tutto al backend
             if (newResults.length > 0) {
-                ApiManager.addEventToQueue("telemetry.events.TargetedResultsLoadedEvent", {
+                ApiManager.addEventToQueue("telemetry.events.ResultsLoadedEvent", {
                     search_query: query,
                     extracted_count: newResults.length,
                     scraped_posts: newResults
@@ -79,10 +89,10 @@ window.ResultsLoaded = {
             this.currentObserver = new MutationObserver(() => { tryScrape(); });
             this.currentObserver.observe(document.body, { childList: true, subtree: true });
         }, 1000); 
-    },
+    }
 
     // funzione helper per spegnere i motori e formattare il disco
-    stopAndClean() {
+    customCleanUp() {
         
         // se c'è un observer attivo, lo disconnettiamo
         if (this.currentObserver) {
@@ -99,4 +109,6 @@ window.ResultsLoaded = {
         // svuotiamo il Set. In questo modo il prossimo post estratto avrà position 1.
         this.scrapedUrls.clear(); 
     }
-};
+}
+
+window.ResultsLoaded = new ResultsLoadedObserver();

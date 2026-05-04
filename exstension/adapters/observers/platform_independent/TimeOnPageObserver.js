@@ -11,44 +11,65 @@
 // a google.com/search?q=terapie+vaccini). In questo modo possiamo inviare la telemetria ogni volta che l'utente cambia "pagina" 
 // anche se chrome non resetta completamente il DOM.
 
-window.TimeOnPage = {
-    
-    start(apiManager) {
+class TimeOnPageObserver extends BaseObserver {
+
+    constructor() {
+        super("TimeOnPage");
+        this.startTime = null;
+        this.currentUrl = null;
+    }
+
+    start() {
+        this.isActive = true;
         let startTime = Date.now();
         let currentUrl = window.location.href;
-        
-        // 1. Gestione Chiusura o Ricaricamento
-        window.addEventListener('beforeunload', () => {
-            sendTelemetry(currentUrl);
+ 
+        this.attachListener(window, 'beforeunload', () => {
+            this.calculateTimeSpentOn(this.currentUrl);
         });
+    }
 
-        // 2. Gestione SPA
-        if (typeof SpaWatcher !== 'undefined') {
+    // metodo chiamato ad ogni cambio URL: nel nostro caso dobbiamo calcolare il tempo speso 
+    // sulla pagina precedente, e resettare il cronometro per la nuova pagina
+    check() {
 
-            SpaWatcher.watch(() => {
-                const newUrl = window.location.href;
-                if (newUrl !== currentUrl) {
-                    sendTelemetry(currentUrl); // Invia il tempo speso sulla VECCHIA pagina
-                    startTime = Date.now();    // Resetta il cronometro per la NUOVA pagina
-                    currentUrl = newUrl;
-                }
+        if (!this.isActive) return;
+        const newUrl = window.location.href;
+        
+        // se l'URL è effettivamente cambiato rispetto a quello che stavamo tracciando
+        if (newUrl !== this.currentUrl) {
+            
+            // invia il tempo speso sulla VECCHIA pagina
+            this.calculateTimeSpentOn(this.currentUrl); 
+            
+            // resetta il cronometro e aggiorna l'URL per la NUOVA pagina
+            this.startTime = Date.now();    
+            this.currentUrl = newUrl;
+        }
+    }
+
+    // metodo helper per calcolare il tempo passato (ed inviarlo al backend)
+    calculateTimeSpentOn(url) {
+
+        if (!this.startTime || !url) return;
+
+        const timeSpentSeconds = Math.round((Date.now() - this.startTime) / 1000);
+        if (timeSpentSeconds > 0) {
+            this.addEventToQueue("telemetry.events.TimeOnPageEvent", {
+                duration_seconds: timeSpentSeconds,
+                url_pagina: url
             });
         }
+    }
 
-
-        // funzione helper per inviare la telemetria
-        const sendTelemetry = (urlToLog) => {
-            
-            const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
-            if (timeSpentSeconds > 0) {
-                apiManager.addEventToQueue("telemetry.events.TimeOnPageEvent", {
-                    duration_seconds: timeSpentSeconds,
-                    url_pagina: urlToLog
-                });
-                // Log.adapter(`Telemetria: TimeOnPage inviato per ${urlToLog} (${timeSpentSeconds}s)`);
-            }
-        };
+    // spegnimento dell'observer
+    customCleanUp() {
+        // prima di spegnere l'observer, salviamo i secondi passati sull'ultima pagina PRIMA che l'utente venga sbattuto sul Post-Survey
+        this.calculateTimeSpentOn(this.currentUrl);
+        this.startTime = null;
+        this.currentUrl = null;
     }
 };
 
+window.TimeOnPage = new TimeOnPageObserver();
 Log.telemetry_registry("Observer caricato: TimeOnPageEvent");

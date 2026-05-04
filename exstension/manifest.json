@@ -44,6 +44,8 @@
         "adapters/events/SearchSubmittedEvent.js",
         "adapters/events/EngineReadyEvent.js",
 
+        "adapters/observers/BaseObserver.js",
+
         "adapters/observers/platform_dependent/SearchSubmittedObserver.js",
         "adapters/observers/platform_dependent/ResultsLoadedObserver.js",
         "adapters/observers/platform_dependent/ClickOnResultObserver.js",

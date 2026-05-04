@@ -142,33 +142,55 @@ const ApiManager = {
         // se esiste già un intervallo di sincronizzazione, lo cancelliamo per evitare duplicati
         if (this.syncInterval) clearInterval(this.syncInterval);
         
-        // impostiamo un nuovo intervallo, al termine del quale:
+        // creiamo un nuovo timer periodico, al termine del quale mandiamo i dati in coda al backend 
         this.syncInterval = setInterval(async () => {
-
-            // se la coda è vuota o non abbiamo un participantId (all'avvio), usciamo subito dalla funzione (non facciamo nulla). 
-            if (this.telemetryQueue.length === 0 || !this.participantId) return;
-
-            // altrimenti, creiamo il payload da inviare al backend (contiene tutti gli eventi attualmente in coda) e svuotiamo la coda
-            const eventsToSend = [...this.telemetryQueue];
-            this.telemetryQueue = []; 
-
-            // NON facciamo piu la chiamata al backend ma inviamo un messaggio al background.js
-            const success = await this._sendMessage({ 
-                action: "SYNC_TELEMETRY", 
-                participantId: this.participantId,
-                payload: { events: eventsToSend }
-            }, "Sync Telemetria");
-
-            // se l'invio è andato a buon fine logghiamo il successo
-            if (success) {
-                Log.telemetry_flush(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
-            
-            // altrimenti lancia un errore e reinserisce gli eventi falliti in coda (PER NON PERDERLI!)
-            } else {
-                Log.error("ApiManager", "Sync fallito. Reinserimento dati in coda.");
-                this.telemetryQueue = [...eventsToSend, ...this.telemetryQueue];
-            }
+            this.syncTelemetryQueue();
         }, interval_ms);
+    },
+
+    // funzione per invia i dati al backend
+    async syncTelemetryQueue() {
+
+        // se la coda è vuota o non abbiamo un participantId, usciamo subito
+        if (this.telemetryQueue.length === 0 || !this.participantId) return;
+
+        // altrimenti, creiamo il payload da inviare al backend (contiene tutti gli eventi attualmente in coda) e svuotiamo la coda
+        const eventsToSend = [...this.telemetryQueue];
+        this.telemetryQueue = []; 
+
+        // NON facciamo piu la chiamata al backend ma inviamo un messaggio al background.js
+        const success = await this._sendMessage({ 
+            action: "SYNC_TELEMETRY", 
+            participantId: this.participantId,
+            payload: { events: eventsToSend }
+        }, "Sync Telemetria");
+
+        // se l'invio è andato a buon fine logghiamo il successo
+        if (success) {
+            Log.telemetry_flush(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
+
+        // altrimenti lancia un errore e reinserisce gli eventi falliti in coda (PER NON PERDERLI!)
+        } else {
+            Log.error("ApiManager", "Sync fallito. Reinserimento dati in coda.");
+            this.telemetryQueue = [...eventsToSend, ...this.telemetryQueue];
+        }
+    },
+
+    // funzione per sincronizzare la coda un ultima volta e poi fermare il sync periodico (pulisce il timer)
+    stopTelemetrySync() {
+
+        if (this.syncInterval) {
+
+            // ferma il sync periodico
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+            
+            // salva i dati in cosa un'ultima volta
+            this.syncTelemetryQueue(); 
+        
+        }  else {
+            Log.Error("ApiManager", "Nessun intervallo di sincronizzazione attivo da fermare.");
+        }
     },
 
 // -------------------------------------------- WEBSOCKET CONNECT --------------------------------------------

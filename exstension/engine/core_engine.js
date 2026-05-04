@@ -4,6 +4,7 @@ class Engine {
     constructor() {
         this.config = null;
         this.group = null;
+        this.isActive = false;
         this.init();
     }
 
@@ -46,7 +47,7 @@ class Engine {
                 break;
             
             case "POST-SURVEY-NOT-COMPLETED":
-                Log.engine("🏁 Esperimento concluso! Aggiornamento stato e apertura Post-Survey...");
+                Log.engine("🏁 Aggiornamento stato e apertura Post-Survey...");
                 chrome.storage.local.get(['postSurveyLink'], (data) => {
                     if (data.postSurveyLink) {
                         chrome.runtime.sendMessage({ action: "OPEN_TAB", url: data.postSurveyLink });
@@ -117,7 +118,8 @@ class Engine {
         ApiManager.startTelemetrySync(syncTime);
 
         // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
-        document.dispatchEvent(new EngineReadyEvent());  
+        document.dispatchEvent(new EngineReadyEvent()); 
+        this.isActive = true; 
         Log.engine("Avvio Completato");
 
         // avvia il timer dell'esperimento
@@ -160,14 +162,14 @@ class Engine {
                     this.endExperiment(data.postSurveyLink);
                 }, remainingTime);
             }
-            // NB. se l'utente chiude la pagina durante questo timer, la prossima volta che apre Reddit, verrà richiamata
-            // l'intera funzione startExperimentTimer() che ricalcolerà il tempo passato confrontando NOW con la data/ora 
-            // salvata in locale, e poi avvierà un nuovo timer.
         });
     }
 
     // metodo per fermare il tracciamento/manipolazione ed aprire il post-survey
     endExperiment(postSurveyLink) {
+
+        // spegniamo il motore (disattiviamo tracciamento ed interventi)
+        this.stopExperiment();
 
         // aggiorniamo lo stato del partecipante
         chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: "POST-SURVEY-NOT-COMPLETED" }, (response) => {
@@ -180,6 +182,34 @@ class Engine {
                 Log.error("Engine", "Errore durante l'aggiornamento dello stato di fine esperimento.");
             }
         });
+    }
+
+    // metodo per spegnere il motore (disattivare tracciamento ed interventi)
+    stopExperiment() {
+
+        Log.engine("🛑 Stop tracciamento ed interventi");
+        
+        // disattiviamo gli interventi 
+        this.isActive = false;
+
+        // disattiviamo il timer della telemetria (fa anche un ultimo flush dei dati in coda)
+        ApiManager.stopTelemetrySync();
+
+        // disattiviamo gli obserer
+        this.stopObservers();
+    }
+
+    // metodo per disattivare gli observer di telemetria
+    stopObservers() {
+
+        // recuperiamo l'array degli eventi che stiamo tracciando
+        const trackEvents = this.config?.telemetry_settings?.track_events || [];
+        
+        // per ogni evento, recuperiamo l'observer dedicato e lo fermiamo (ogni observer ha il metodo stop() prche lo abbiamo definito nell'interfaccia BaseObserver)
+        for (let eventName of trackEvents) {
+            const observer = window[eventName];
+            observer.stop();
+        }
     }
 
 
@@ -213,7 +243,7 @@ class Engine {
             // peschiamo l'Observer dal registro e ...
             const observer = window[eventName];
             if (observer) {
-                observer.start(ApiManager); 
+                observer.start(); 
                 Log.engine(`Observer telemetria attivato: ${eventName}`);
 
             } else {
@@ -225,6 +255,9 @@ class Engine {
 
     // metodo per gestire interamente la ricezione di un evento: controlla se scatena dei trigger e in caso esegue gli interventi associati
     handleEvent(eventName, eventData) {
+
+        // se il mototre è spento NON facciamo nulla
+        if (!this.isActive) return;
 
         Log.engine(`Ricevuto evento: ${eventName}\n`, eventData);
 
