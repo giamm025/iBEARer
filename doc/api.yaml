@@ -105,6 +105,8 @@ components:
           $ref: "#/components/schemas/UUID"
         preSurveyLink:
           $ref: "#/components/schemas/Link"
+        postSurveyLink:
+          $ref: "#/components/schemas/Link"
 
     StatusUpdatePayload:
       description: Webhook payload from Google Forms.

@@ -5,11 +5,12 @@ from rest_framework import serializers
 class EnrollmentResponseSerializer(serializers.Serializer):
     participantId = serializers.UUIDField()
     preSurveyLink = serializers.URLField()
+    postSurveyLink = serializers.URLField()
 
 
 class ExperimentSettingsSerializer(serializers.Serializer):
     experiment_name = serializers.CharField()
-    experiment_duration_minutes = serializers.IntegerField()
+    experiment_duration_minutes = serializers.FloatField()
     groups = serializers.ListField(child=serializers.CharField(), required=True)
 
 class TelemetrySettingsSerializer(serializers.Serializer):

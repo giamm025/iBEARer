@@ -76,15 +76,16 @@ const ApiManager = {
         // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
         if (data && data.participantId) {
             this.participantId = data.participantId;
-            const surveyLink = data.preSurveyLink;
+            const preSurveyLink = data.preSurveyLink;
+            const postSurveyLink = data.postSurveyLink;
 
             // aggiorniamo l'id ed il link del questionario nella memoria del browser
-            await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: surveyLink });
+            await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: preSurveyLink, postSurveyLink: postSurveyLink });
             Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
 
             // diciamo al background.js di aprire un'altra tab con il questionario
-            if (surveyLink) {
-                chrome.runtime.sendMessage({ action: "OPEN_TAB", url: surveyLink });
+            if (preSurveyLink) {
+                chrome.runtime.sendMessage({ action: "OPEN_TAB", url: preSurveyLink });
             }
 
             return true;

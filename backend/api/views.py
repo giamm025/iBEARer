@@ -25,13 +25,17 @@ def enroll_participant(request):
         )
 
         # creazione Deep Link
-        base_form_url = "https://docs.google.com/forms/d/e/1FAIpQLScUOjPZviDKFnx0Ml1d3sBAtTkjHFFx7YnEuC2J-ZCvnTxJVA/viewform"
-        pre_survey_link = f"{base_form_url}?entry.2119809368={participant.id}"
+        base_pre_form_url = "https://docs.google.com/forms/d/e/1FAIpQLScUOjPZviDKFnx0Ml1d3sBAtTkjHFFx7YnEuC2J-ZCvnTxJVA/viewform"
+        pre_survey_link = f"{base_pre_form_url}?entry.2119809368={participant.id}"
+
+        base_post_form_url = "https://docs.google.com/forms/d/e/1FAIpQLScVnXcdATtuA3C-3TFz1WQx6ip1vAyfJjTUrJ_k5glugbB7Xg/viewform"
+        post_survey_link = f"{base_post_form_url}?usp=pp_url&entry.2119809368={participant.id}"
 
         # prepariamo i dati da mandare al serializer
         response_data = {
             'participantId': participant.id,
-            'preSurveyLink': pre_survey_link
+            'preSurveyLink': pre_survey_link,
+            'postSurveyLink': post_survey_link
         }
 
         # il serializer trasforma i dati in JSON secondo la specifica api.yaml e controlla che i dati siano corretti (es. che participant.id sia un UUID valido, che preSurveyLink sia una URL valida, ecc.)

@@ -21,55 +21,46 @@ class Engine {
         await this.handleParticipantStatus();
     }
 
-    // metodo per gestire l'esperimento sulla base dello stato del partecipante (ENROLLED, PRE-SURVEY-COMPLETED, POST-SURVEY-COMPLETED)
+
+    // metodo per gestire l'esperimento sulla base dello stato del partecipante
     async handleParticipantStatus() {
 
         // recuperiamo lo stato e il gruppo del partecipante
         let statusData = await ApiManager.getStatus();
         if (!statusData || !statusData.status) {
-            Log.error("Engine", "Errore critico: Impossibile recuperare lo stato.");
+            Log.error("Engine", "Impossibile recuperare lo stato.");
             return;
         }
 
         switch (statusData.status) {
             
-            // se lo stato attuale è ENROLLED => deve ancora completare il pre-survey => aspettiamo 
             case "ENROLLED":
                 Log.engine("In attesa del completamento del pre-survey...");
-                
-                // creiamo una promessa che blocca il mototre finche non riceve la notifica (callback) 
-                // da ApiManager che conferma il completamento del form. 
-                const assignedGroup = await new Promise((resolve) => {
-                    ApiManager.onExperimentStartCallback = (group) => {
-                        resolve(group);
-                    };
-                
-                    // Se Chrome ha ucciso il background.js nel mentre che l'utente stava compilando il pre-survey, non riceveremo mai la callback. 
-                    // in questo caso, aggiungiamo un listener che aspetta che la pagina torni visibile (cioe l'utente ha completatao il survey ed è
-                    // tornaro su Reddit). a quel punto ricontrolliamo lo stato, se è PRE-SURVEY-COMPLETED, allora avviamo il mototre
-                    const onVisibilityChange = async () => {
-                        if (document.visibilityState === "visible") {
-                            let checkData = await ApiManager.getStatus();
-                            if (checkData && checkData.status === "PRE-SURVEY-COMPLETED") {
-                                document.removeEventListener("visibilitychange", onVisibilityChange);
-                                resolve(checkData.group);
-                            }
-                        }
-                    };
-                    document.addEventListener("visibilitychange", onVisibilityChange);
-                });
-
-                // quando la promise si risolve avviamo l'esperimento, passando il gruppo a cui è stato assegnato l'utente
-                await this.startExperiment(assignedGroup);
+                await this.waitForStatus("PRE-SURVEY-COMPLETED", true);
+                await this.handleParticipantStatus();
                 break;
 
-            // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento
             case "PRE-SURVEY-COMPLETED":
+                Log.engine("Pre-survey completato. Avvio esperimento...");
                 await this.startExperiment(statusData.group);
+                break;
+            
+            case "POST-SURVEY-NOT-COMPLETED":
+                Log.engine("🏁 Esperimento concluso! Aggiornamento stato e apertura Post-Survey...");
+                chrome.storage.local.get(['postSurveyLink'], (data) => {
+                    if (data.postSurveyLink) {
+                        chrome.runtime.sendMessage({ action: "OPEN_TAB", url: data.postSurveyLink });
+                    } else {
+                        Log.error("Engine", "Link del Post-Survey non trovato nella memoria locale!");
+                    }
+                });
+
+                await this.waitForStatus("POST-SURVEY-COMPLETED", false);
+                await this.handleParticipantStatus();
                 break;
 
             case "POST-SURVEY-COMPLETED":
-                Log.error("Engine", "Ancora nessuna implementazione per POST-SURVEY-COMPLETED.");
+                Log.engine("✅ L'utente ha completato tutto l'esperimento. Il motore si disattiva definitivamente. Grazie per aver partecipato!");
                 break;
 
             default:
@@ -78,6 +69,28 @@ class Engine {
         }
     }
     
+    // metodo helper per astrarre la logica di attesa dei questionari
+    async waitForStatus(targetStatus, useWebSocket = false) {
+
+        // creiamo una promessa che blocca il motore finche non riceve la notifica (callback) da ApiManager che conferma il completamento del form. 
+        return new Promise((resolve) => {
+            
+            // se Chrome ha ucciso il background.js nel mentre che l'utente stava compilando il pre-survey, non riceveremo mai la callback. 
+            // in questo caso, aggiungiamo un listener che aspetta che la pagina torni visibile (cioe l'utente ha completatao il survey ed è
+            // tornaro su Reddit). a quel punto ricontrolliamo lo stato, se è PRE-SURVEY-COMPLETED, allora avviamo il mototre
+            const onVisibilityChange = async () => {
+                if (document.visibilityState === "visible") {
+                    let checkData = await ApiManager.getStatus();
+                    if (checkData && checkData.status === targetStatus) {
+                        document.removeEventListener("visibilitychange", onVisibilityChange);
+                        resolve();
+                    }
+                }
+            };
+            document.addEventListener("visibilitychange", onVisibilityChange);
+        });
+    }
+
     // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
     async startExperiment(assignedGroup) {
         
@@ -106,7 +119,69 @@ class Engine {
         // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
         document.dispatchEvent(new EngineReadyEvent());  
         Log.engine("Avvio Completato");
+
+        // avvia il timer dell'esperimento
+        this.startExperimentTimer();
     }
+
+
+    // metodo per avviare il timer dell'esperimento (multi-sessione)
+    startExperimentTimer() {
+
+        // recupera la durata in millisecondi dal config
+        const durationMs = (this.config.experiment.experiment_duration_minutes || 30) * 60 * 1000;
+
+        // prendiamo il timer dalla memoria del browser
+        chrome.storage.local.get(['experimentStartTime', 'postSurveyLink'], (data) => {
+            
+            // prendiamo la data/ora in cui inizia l'esperimento
+            let startTime = data.experimentStartTime;
+
+            // se la data/ora di inziio esperimento NON c'è significa che questo il primo timer 
+            // che creiamo => stiamo iniziando ora l'esperimento => salviamo la data/ora
+            if (!startTime) {
+                startTime = Date.now();
+                chrome.storage.local.set({ experimentStartTime: startTime });
+                Log.engine(`Timer avviato per la prima volta. Durata: ${durationMs / 60000} minuti.`);
+            }
+
+            // calcoliamo il tempo rimasto al timer
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = durationMs - elapsedTime;
+
+            // se non c'è tempo rimanente => timer scaduto => apriamo il post-survey
+            if (remainingTime <= 0) {
+                this.endExperiment(data.postSurveyLink);
+
+            // se c'è ancora tempo => aggiungiamo un timer al termine del quale apriremo il post-survey
+            } else {
+                Log.engine(`Timer ripreso. Mancano ${Math.round(remainingTime / 60000)} minuti alla fine.`);
+                setTimeout(() => {
+                    this.endExperiment(data.postSurveyLink);
+                }, remainingTime);
+            }
+            // NB. se l'utente chiude la pagina durante questo timer, la prossima volta che apre Reddit, verrà richiamata
+            // l'intera funzione startExperimentTimer() che ricalcolerà il tempo passato confrontando NOW con la data/ora 
+            // salvata in locale, e poi avvierà un nuovo timer.
+        });
+    }
+
+    // metodo per fermare il tracciamento/manipolazione ed aprire il post-survey
+    endExperiment(postSurveyLink) {
+
+        // aggiorniamo lo stato del partecipante
+        chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: "POST-SURVEY-NOT-COMPLETED" }, (response) => {
+            
+            // se l'aggiornamento è andato a buon fine, gestiamo il nuovo stato
+            if (response && response.success) {
+                this.handleParticipantStatus();
+
+            } else {
+                Log.error("Engine", "Errore durante l'aggiornamento dello stato di fine esperimento.");
+            }
+        });
+    }
+
 
     // metodo per mettere in ascolto il motore su tutti gli event_source presenti nel config.json 
     initListeners() {

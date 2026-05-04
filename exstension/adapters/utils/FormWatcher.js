@@ -7,18 +7,49 @@ console.log("🕵️ [FormWatcher] In ascolto su Google Forms...");
 // appena atterriamo sulla pagina di "Risposta registrata" (formResponse)
 if (window.location.href.includes("formResponse")) {
     
-    // scriviamo un log e mandiamo il messaggio al background
-    console.log("✅ [FormWatcher] Questionario completato! Avviso il background...");
+    // estraiamo i link dei questionari 
+    chrome.storage.local.get(['preSurveyLink', 'postSurveyLink'], (data) => {
+        
+        // facciamo parsing degli url per estrarre gli ID dei questionari
+        const { preSurveyId, postSurveyId } = extractFormIds(data);
+        const currentUrl = window.location.href;
 
-    // QUI DOVREMO AGGIUNGERE LA LOGICA PER CAPIRE SE è STATO COMPLETATO IL PRE O IL POST SURVEY
-    // isPreSurvey = ...
-    // status = isPreSurvey ? "PRE-SURVEY-COMPLETED" : "POST-SURVEY-COMPLETED";
-    
-    const status = "PRE-SURVEY-COMPLETED";
-    chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: status }, (response) => {
-        if (response && response.success) {
-            console.log("✅ [FormWatcher] Backend aggiornato.");
-            chrome.runtime.sendMessage({ action: "CLOSE_CURRENT_TAB" });        
+        // tramite gli idcerchiamo di capire quale questionario è stato completato 
+        let status = null;
+        if (window.location.href.includes(preSurveyId)) {
+            status = "PRE-SURVEY-COMPLETED";
+            console.log("✅ [FormWatcher] PRE-Survey completato!");
+        }
+        else if (window.location.href.includes(postSurveyId)) {
+            status = "POST-SURVEY-COMPLETED";
+            console.log("✅ [FormWatcher] POST-Survey completato!");
+        }
+
+        // se abbiamo riconosciuto il questionario, aggiorniamo lo stato dell'utente 
+        if (status) {
+            chrome.runtime.sendMessage({ action: "UPDATE_STATUS", status: status }, (response) => {
+                if (response && response.success) {
+                    chrome.runtime.sendMessage({ action: "CLOSE_CURRENT_TAB" });
+                }
+            });
+            
+        } else {
+            console.log("⚠️ [FormWatcher] Questionario sconosciuto. Nessuna azione intrapresa.");
         }
     });
+}
+
+// funzione helper per estrarre gli ID dei questionari dagli url
+function extractFormIds(data) {
+
+    const extractId = (url) => {
+        if (!url) return null;
+        const match = url.match(/\/d\/e\/([a-zA-Z0-9_-]+)/);
+        return match ? match[1] : null;
+    };
+
+    return {
+        preSurveyId: extractId(data.preSurveyLink),
+        postSurveyId: extractId(data.postSurveyLink)
+    };
 }
