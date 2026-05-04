@@ -14,14 +14,6 @@ class Engine {
         // avvia l'API manager (per permettere di effettuare le chiamatae HTTP al backend)
         await ApiManager.init();
 
-        // GET config.json dal backend
-        const config = await ApiManager.getConfig();
-        if (!config) {
-            Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
-            return;
-        }
-        this.config = config;
-
         // ci connettiamo con la Web Socket del Backend
         await ApiManager.connectWebSocket();
 
@@ -49,17 +41,31 @@ class Engine {
                 // da ApiManager che conferma il completamento del form. 
                 const assignedGroup = await new Promise((resolve) => {
                     ApiManager.onExperimentStartCallback = (group) => {
-                        Log.engine(`Callback ricevuta da ApiManager. Gruppo assegnato: ${group}`);
                         resolve(group);
                     };
+                
+                    // Se Chrome ha ucciso il background.js nel mentre che l'utente stava compilando il pre-survey, non riceveremo mai la callback. 
+                    // in questo caso, aggiungiamo un listener che aspetta che la pagina torni visibile (cioe l'utente ha completatao il survey ed è
+                    // tornaro su Reddit). a quel punto ricontrolliamo lo stato, se è PRE-SURVEY-COMPLETED, allora avviamo il mototre
+                    const onVisibilityChange = async () => {
+                        if (document.visibilityState === "visible") {
+                            let checkData = await ApiManager.getStatus();
+                            if (checkData && checkData.status === "PRE-SURVEY-COMPLETED") {
+                                document.removeEventListener("visibilitychange", onVisibilityChange);
+                                resolve(checkData.group);
+                            }
+                        }
+                    };
+                    document.addEventListener("visibilitychange", onVisibilityChange);
                 });
+
                 // quando la promise si risolve avviamo l'esperimento, passando il gruppo a cui è stato assegnato l'utente
-                this.startExperiment(assignedGroup);
+                await this.startExperiment(assignedGroup);
                 break;
 
             // se invece lo stato è PRE-SURVEY-COMPLETED => inizia l'esperimento
             case "PRE-SURVEY-COMPLETED":
-                this.startExperiment(statusData.group);
+                await this.startExperiment(statusData.group);
                 break;
 
             case "POST-SURVEY-COMPLETED":
@@ -73,10 +79,19 @@ class Engine {
     }
     
     // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
-    startExperiment(assignedGroup) {
+    async startExperiment(assignedGroup) {
         
         // salviamo il gruppo in una variabile, cosi che anche le altre funzioni (es. executeIntervention) possano usarlo
         this.group = assignedGroup;
+        Log.engine(`Gruppo Assegnato: ${this.group}`);
+
+        // otteniamo la configurazione dal backend (lo abbiamo spostato qui perche ora la GET dipende dal gruppo dell'utente)
+        const config = await ApiManager.getConfig();
+        if (!config) {
+            Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
+            return;
+        }
+        this.config = config;
 
         // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
         this.initListeners();
@@ -209,12 +224,6 @@ class Engine {
 
     // metodo per eseguire una o più funzioni intervento
     executeInterventions(interventionIds, eventData) {
-
-        // prima di tutto, se siamo in gruppo solo controllo non applichiamo nessun intervento
-        if (this.group === 'CONTROL') {
-            Log.engine("Utente in gruppo CONTROL: Interventi saltati (telemetria attiva).");
-            return; 
-        }
 
         // per ogni intervento ID
         for (let interventionID of interventionIds) {

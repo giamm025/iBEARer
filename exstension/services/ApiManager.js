@@ -85,7 +85,6 @@ const ApiManager = {
             // diciamo al background.js di aprire un'altra tab con il questionario
             if (surveyLink) {
                 chrome.runtime.sendMessage({ action: "OPEN_TAB", url: surveyLink });
-                Log.adapter("ApiManager: Richiesta apertura questionario inviata al background.");
             }
 
             return true;

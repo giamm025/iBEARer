@@ -33,21 +33,21 @@ def error_response(status_code, custom_message=None):
 # funzione per assegnare un gruppo al partecipante (per ora facciamo una scelta random 50 e 50)
 def assign_group():
     
-    # prendiamo la lista dei gruppi disponibili dal config.json
-    # se i gruppi non sono specificati nel config.json assumiamo che sia un semplice A/B Test con solo TREATMENT e CONTROL
-    available_groups = ["TREATMENT", "CONTROL"] 
+    # prendiamo il config.json dal DB
     config = models.Config.objects.filter(pk=1).first()
-    if config and config.data:
-        experiment_settings = config.data.get('experiment', {})
-        available_groups = experiment_settings.get('groups', available_groups)
+    if not config or not config.data:
+        raise ValueError("Nessuna configurazione salvata nel database.")
     
-    # DEBUG: Per ora ho tolto CONTROL per testare più facilmente
-    if "CONTROL" in available_groups:  available_groups.remove("CONTROL")
+    # estriamo i gruppi disponibili dal config.json
+    experiment_settings = config.data.get('experiment', {})
+    available_groups = experiment_settings.get('groups',  [])
     
-    # Contiamo quanti partecipanti hanno GIA' un gruppo assegnato
-    assigned_count = models.Participant.objects.exclude(group='UNASSIGNED').count()
-    
+    # controlliamo che il campo "goups" NON sia vuoto (senno ricadiamo nel bug di prima)
+    if not available_groups or len(available_groups) == 0:
+        raise ValueError("La lista 'groups' nel config.json è vuota. Impossibile assegnare un gruppo.")
+
     # assegniamo il prossimo gruppo in modo ciclico (round-robin) per garantire una distribuzione equilibrata tra i gruppi
+    assigned_count = models.Participant.objects.exclude(group='UNASSIGNED').count()
     next_group_index = assigned_count % len(available_groups)
     assigned_group = available_groups[next_group_index]
     

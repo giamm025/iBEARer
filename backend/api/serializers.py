@@ -10,6 +10,7 @@ class EnrollmentResponseSerializer(serializers.Serializer):
 class ExperimentSettingsSerializer(serializers.Serializer):
     experiment_name = serializers.CharField()
     experiment_duration_minutes = serializers.IntegerField()
+    groups = serializers.ListField(child=serializers.CharField(), required=True)
 
 class TelemetrySettingsSerializer(serializers.Serializer):
     track_events = serializers.ListField(child=serializers.CharField())
