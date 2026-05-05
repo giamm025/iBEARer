@@ -48,15 +48,23 @@ class Engine {
             
             case "POST-SURVEY-NOT-COMPLETED":
                 Log.engine("🏁 Aggiornamento stato e apertura Post-Survey...");
+
+                // disegniamo il pop-up sullo schermo
                 chrome.storage.local.get(['postSurveyLink'], (data) => {
                     if (data.postSurveyLink) {
-                        chrome.runtime.sendMessage({ action: "OPEN_TAB", url: data.postSurveyLink });
+                        RedditAdapter.showEndExperimentModal(data.postSurveyLink);
                     } else {
                         Log.error("Engine", "Link del Post-Survey non trovato nella memoria locale!");
                     }
                 });
 
+                // ci mettiamo in attesa del completamento del post survey
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
+                
+                // rimuoviamo il pop-up bloccante
+                RedditAdapter.hideEndExperimentModal();
+
+                // gestiamo il nuovo stato (POST-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
                 break;
 
@@ -130,39 +138,101 @@ class Engine {
     // metodo per avviare il timer dell'esperimento (multi-sessione)
     startExperimentTimer() {
 
-        // recupera la durata in millisecondi dal config
-        const durationMs = (this.config.experiment.experiment_duration_minutes || 30) * 60 * 1000;
+        // recupera la durata dal config
+        const endCondition = this.config.experiment.end_condition;
+        const type = endCondition.type;
+        const duration = endCondition.duration;
 
-        // prendiamo il timer dalla memoria del browser
-        chrome.storage.local.get(['experimentStartTime', 'postSurveyLink'], (data) => {
+        // decidiamo come agire in base al tipo impostato dal ricercatore
+        switch (type) {
             
-            // prendiamo la data/ora in cui inizia l'esperimento
-            let startTime = data.experimentStartTime;
+            case "ACTIVE_MINUTES_ON_PLATFORM": {
 
-            // se la data/ora di inziio esperimento NON c'è significa che questo il primo timer 
-            // che creiamo => stiamo iniziando ora l'esperimento => salviamo la data/ora
-            if (!startTime) {
-                startTime = Date.now();
-                chrome.storage.local.set({ experimentStartTime: startTime });
-                Log.engine(`Timer avviato per la prima volta. Durata: ${durationMs / 60000} minuti.`);
+                const targetMs = duration * 60 * 1000;
+                Log.engine(`⏱️ Timer Attivo: ${duration} minuti.`);
+
+                let sessionStartTime = null;
+                let checkInterval = null;
+
+                const startTracking = () => {
+                    if (sessionStartTime) return; 
+                    sessionStartTime = Date.now();
+                    checkInterval = setInterval(saveAndCheckTime, 5000); 
+                };
+
+                const stopTracking = () => {
+                    if (!sessionStartTime) return;
+                    clearInterval(checkInterval);
+                    checkInterval = null;
+                    saveAndCheckTime(); 
+                    sessionStartTime = null;
+                };
+
+                const saveAndCheckTime = () => {
+                    if (!sessionStartTime) return;
+                    const now = Date.now();
+                    const elapsed = now - sessionStartTime;
+                    sessionStartTime = now; 
+
+                    chrome.storage.local.get(['accumulatedTimeMs', 'postSurveyLink'], (data) => {
+                        const currentTotal = (data.accumulatedTimeMs || 0) + elapsed;
+                        chrome.storage.local.set({ accumulatedTimeMs: currentTotal });
+
+                        if (currentTotal >= targetMs) {
+                            Log.engine("🏁 Tempo attivo scaduto!");
+                            stopTracking();
+                            document.removeEventListener("visibilitychange", handleVisibility);
+                            window.removeEventListener("beforeunload", stopTracking);
+                            this.endExperiment(data.postSurveyLink);
+                        }
+                    });
+                };
+
+                const handleVisibility = () => {
+                    if (document.visibilityState === 'visible') startTracking();
+                    else stopTracking();
+                };
+
+                document.addEventListener("visibilitychange", handleVisibility);
+                window.addEventListener("beforeunload", stopTracking);
+                
+                if (document.visibilityState === 'visible') startTracking();
+                break;
             }
 
-            // calcoliamo il tempo rimasto al timer
-            const elapsedTime = Date.now() - startTime;
-            const remainingTime = durationMs - elapsedTime;
+            case "ABSOLUTE_DAYS": {
 
-            // se non c'è tempo rimanente => timer scaduto => apriamo il post-survey
-            if (remainingTime <= 0) {
-                this.endExperiment(data.postSurveyLink);
+                // convertiamo i giorni in milli-secondi
+                const targetMs = duration * 24 * 60 * 60 * 1000;
+                
+                chrome.storage.local.get(['experimentStartTime', 'postSurveyLink'], (data) => {
+                    let startTime = data.experimentStartTime;
+                    if (!startTime) {
+                        startTime = Date.now();
+                        chrome.storage.local.set({ experimentStartTime: startTime });
+                        Log.engine(`⏳ Timer Assoluto avviato: ${duration} giorni.`);
+                    }
 
-            // se c'è ancora tempo => aggiungiamo un timer al termine del quale apriremo il post-survey
-            } else {
-                Log.engine(`Timer ripreso. Mancano ${Math.round(remainingTime / 60000)} minuti alla fine.`);
-                setTimeout(() => {
-                    this.endExperiment(data.postSurveyLink);
-                }, remainingTime);
+                    const elapsed = Date.now() - startTime;
+                    const remainingTime = targetMs - elapsed;
+
+                    if (remainingTime <= 0) {
+                        this.endExperiment(data.postSurveyLink);
+                    } else {
+                        Log.engine(`⏳ Timer Assoluto in corso. Mancano ${Math.round(remainingTime / 3600000)} ore.`);
+                        setTimeout(() => {
+                            this.endExperiment(data.postSurveyLink);
+                        }, remainingTime);
+                    }
+                });
+                break;
             }
-        });
+
+            // se non siamo caduti in nessuno degli altri case => errore 
+            default:
+                Log.error("Engine", `implementazione mancante per il tipo di timer: ${type}`);
+                break;
+        }
     }
 
     // metodo per fermare il tracciamento/manipolazione ed aprire il post-survey

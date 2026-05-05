@@ -1,7 +1,10 @@
 {
   "experiment": {
     "experiment_name": "reddit_cospiracy",
-    "experiment_duration_minutes": 300,
+    "end_condition": {
+        "type": "ACTIVE_MINUTES_ON_PLATFORM",
+        "duration": 0.2
+    },
     "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },
 

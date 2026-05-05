@@ -189,7 +189,7 @@ const ApiManager = {
             this.syncTelemetryQueue(); 
         
         }  else {
-            Log.Error("ApiManager", "Nessun intervallo di sincronizzazione attivo da fermare.");
+            Log.error("ApiManager", "Nessun intervallo di sincronizzazione attivo da fermare.");
         }
     },
 

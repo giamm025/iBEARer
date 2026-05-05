@@ -267,18 +267,31 @@ components:
 
     # ------------------------------------ COMPONENTI CONDIVISI ------------------------------------
     ExperimentSettings:
-      required: [experiment_name, experiment_duration_minutes]
+      required: [experiment_name, end_condition, groups]
       properties:
         experiment_name:
           type: string
-        experiment_duration_minutes:
-          type: integer
+        end_condition:
+          $ref: '#/components/schemas/EndCondition'
         groups:
           type: array
           items:
             type: string
           example: ["CONTROL", "TREATMENT1", "TREATMENT2"]
-          
+        
+    EndCondition:
+      description: "Definisce le regole di scadenza del timer per l'esperimento."
+      required: [type, duration]
+      properties:
+        type:
+          type: string
+          enum: [ACTIVE_MINUTES_ON_PLATFORM, ABSOLUTE_DAYS]
+          example: "ACTIVE_MINUTES_ON_PLATFORM"
+        duration:
+          type: number
+          description: "Valore numerico della durata. L'unità di misura dipende dal 'type'."
+          example: 30
+
     TelemetrySettings:
       properties:
         track_events:

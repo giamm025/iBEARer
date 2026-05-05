@@ -8,9 +8,13 @@ class EnrollmentResponseSerializer(serializers.Serializer):
     postSurveyLink = serializers.URLField()
 
 
+class EndConditionSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["ACTIVE_MINUTES_ON_PLATFORM", "ABSOLUTE_DAYS"])
+    duration = serializers.FloatField()
+    
 class ExperimentSettingsSerializer(serializers.Serializer):
     experiment_name = serializers.CharField()
-    experiment_duration_minutes = serializers.FloatField()
+    end_condition = EndConditionSerializer()
     groups = serializers.ListField(child=serializers.CharField(), required=True)
 
 class TelemetrySettingsSerializer(serializers.Serializer):
