@@ -46,12 +46,12 @@
 
         "adapters/observers/BaseObserver.js",
 
-        "adapters/observers/platform_dependent/SearchSubmittedObserver.js",
-        "adapters/observers/platform_dependent/ResultsLoadedObserver.js",
-        "adapters/observers/platform_dependent/ClickOnResultObserver.js",
+        "adapters/observers/trigger-event-sources/SearchSubmittedObserver.js",
 
-        "adapters/observers/platform_independent/ClickOnLinkObserver.js",
-        "adapters/observers/platform_independent/TimeOnPageObserver.js",
+        "adapters/observers/telemetry-track-events/ResultsLoadedObserver.js",
+        "adapters/observers/telemetry-track-events/ClickOnResultObserver.js",
+        "adapters/observers/telemetry-track-events/ClickOnLinkObserver.js",
+        "adapters/observers/telemetry-track-events/TimeOnPageObserver.js",
 
         "adapters/reddit_adapter.js"
       ],

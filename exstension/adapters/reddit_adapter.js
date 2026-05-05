@@ -6,20 +6,26 @@ function runRedditAdapter() {
 
         Log.adapter("Avvio Reddit Adapter...");
 
-        // definiamo la funzione che l'SpaWatcher drovrà eseguire ad ogni cambio di URL. 
-        // nel nostro caso si occuperà solo di attivare gli Observer registrati.
-        SpaWatcher.watch(() => {
+        // definiamo la funzione che "sveglia" TUTTI gli observers attivi 
+        const notifyObservers = () => {
 
             // se ci sono observer registrati, chiamiamo il loro metodo check() per svegliarli
             if (window.ObserverRegistry) {
                 for (const observer of window.ObserverRegistry) {
                     observer.check();
-                }
-            
+                    Log.adapter(`Notifico observer ${observer.name} del cambio URL.`);
+                }     
+
             // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
             } else {
                 Log.adapter("Nessun Observer registrato.");
             }
+        };
+
+        // definiamo la funzione che l'SpaWatcher drovrà eseguire AD OGNI CAMBIO URL. 
+        // nel nostro caso si occuperà solo di attivare gli Observer registrati.
+        SpaWatcher.watch(() => {
+            notifyObservers()
         });
     });
 }

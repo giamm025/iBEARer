@@ -7,7 +7,13 @@ class SearchSubmittedObserver extends BaseObserver {
         super("SearchSubmitted");
     }
 
+    start() {
+        this.isActive = true;
+    }
+
     check() {
+
+        if (!this.isActive) return;
 
         // creiamo un URLSearchParams per leggere i parametri dall'URL (es. ?q=conspiracy)
         const urlParams = new URLSearchParams(window.location.search);

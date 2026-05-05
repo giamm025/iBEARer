@@ -118,8 +118,8 @@ class Engine {
         ApiManager.startTelemetrySync(syncTime);
 
         // comunica a tutti che il motore è partito (serve a dare il via all'adapter per intercettare gli eventi)
-        document.dispatchEvent(new EngineReadyEvent()); 
         this.isActive = true; 
+        document.dispatchEvent(new EngineReadyEvent()); 
         Log.engine("Avvio Completato");
 
         // avvia il timer dell'esperimento
@@ -225,7 +225,14 @@ class Engine {
         
         // mettiamo il motore in ascolto di tutti gli event_source di tutti i trigger
         for (let eventName of eventsToListen) {
+
             document.addEventListener(eventName, (e) => this.handleEvent(eventName, e.detail));
+
+            // estriamo il nome dell'observer (es. "telemetry.events.SearchSubmittedEvent" => "SearchSubmittedObserver") 
+            // e lo accendiamo con il suo metodo check()
+            const observerName = eventName.split('.').pop();
+            const observer = window[observerName];
+            if (observer) {  observer.start(); }
         }
 
         Log.engine(`In ascolto su: ${Array.from(eventsToListen).join(', ')}`);
