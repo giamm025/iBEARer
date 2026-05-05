@@ -42,7 +42,7 @@ class BaseObserver {
     // metodo per spegnere l'observer quando l'esperimento finisce
     stop() {
 
-        // segniamo che l0observer è disattivato
+        // segniamo che l'observer è disattivato
         this.isActive = false;
 
         // rimuoviamo TUTTI i listeners registrati
@@ -56,8 +56,6 @@ class BaseObserver {
         // se un observer figlio ha bisogno di fare delle pulizie extra (es. resettare variabili, cancellare timers, etc) 
         // può implementare una funzione customCleanUp() 
         this.customCleanUp();
-
-        Log.adapter(`Observer ${this.name} disattivato.`);
     }
 
 

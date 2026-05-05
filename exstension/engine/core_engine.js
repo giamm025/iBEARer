@@ -138,101 +138,16 @@ class Engine {
     // metodo per avviare il timer dell'esperimento (multi-sessione)
     startExperimentTimer() {
 
-        // recupera la durata dal config
+        // recupera i dati dal config
         const endCondition = this.config.experiment.end_condition;
-        const type = endCondition.type;
-        const duration = endCondition.duration;
 
-        // decidiamo come agire in base al tipo impostato dal ricercatore
-        switch (type) {
-            
-            case "ACTIVE_MINUTES_ON_PLATFORM": {
-
-                const targetMs = duration * 60 * 1000;
-                Log.engine(`⏱️ Timer Attivo: ${duration} minuti.`);
-
-                let sessionStartTime = null;
-                let checkInterval = null;
-
-                const startTracking = () => {
-                    if (sessionStartTime) return; 
-                    sessionStartTime = Date.now();
-                    checkInterval = setInterval(saveAndCheckTime, 5000); 
-                };
-
-                const stopTracking = () => {
-                    if (!sessionStartTime) return;
-                    clearInterval(checkInterval);
-                    checkInterval = null;
-                    saveAndCheckTime(); 
-                    sessionStartTime = null;
-                };
-
-                const saveAndCheckTime = () => {
-                    if (!sessionStartTime) return;
-                    const now = Date.now();
-                    const elapsed = now - sessionStartTime;
-                    sessionStartTime = now; 
-
-                    chrome.storage.local.get(['accumulatedTimeMs', 'postSurveyLink'], (data) => {
-                        const currentTotal = (data.accumulatedTimeMs || 0) + elapsed;
-                        chrome.storage.local.set({ accumulatedTimeMs: currentTotal });
-
-                        if (currentTotal >= targetMs) {
-                            Log.engine("🏁 Tempo attivo scaduto!");
-                            stopTracking();
-                            document.removeEventListener("visibilitychange", handleVisibility);
-                            window.removeEventListener("beforeunload", stopTracking);
-                            this.endExperiment(data.postSurveyLink);
-                        }
-                    });
-                };
-
-                const handleVisibility = () => {
-                    if (document.visibilityState === 'visible') startTracking();
-                    else stopTracking();
-                };
-
-                document.addEventListener("visibilitychange", handleVisibility);
-                window.addEventListener("beforeunload", stopTracking);
-                
-                if (document.visibilityState === 'visible') startTracking();
-                break;
-            }
-
-            case "ABSOLUTE_DAYS": {
-
-                // convertiamo i giorni in milli-secondi
-                const targetMs = duration * 24 * 60 * 60 * 1000;
-                
-                chrome.storage.local.get(['experimentStartTime', 'postSurveyLink'], (data) => {
-                    let startTime = data.experimentStartTime;
-                    if (!startTime) {
-                        startTime = Date.now();
-                        chrome.storage.local.set({ experimentStartTime: startTime });
-                        Log.engine(`⏳ Timer Assoluto avviato: ${duration} giorni.`);
-                    }
-
-                    const elapsed = Date.now() - startTime;
-                    const remainingTime = targetMs - elapsed;
-
-                    if (remainingTime <= 0) {
-                        this.endExperiment(data.postSurveyLink);
-                    } else {
-                        Log.engine(`⏳ Timer Assoluto in corso. Mancano ${Math.round(remainingTime / 3600000)} ore.`);
-                        setTimeout(() => {
-                            this.endExperiment(data.postSurveyLink);
-                        }, remainingTime);
-                    }
-                });
-                break;
-            }
-
-            // se non siamo caduti in nessuno degli altri case => errore 
-            default:
-                Log.error("Engine", `implementazione mancante per il tipo di timer: ${type}`);
-                break;
+        // definiamo cosa deve succedere quando il timer scadrà (deve solo chiamare endExperiment ed aprire il post-survey)
+        const onExpiredCallback = function(postSurveyLink) {
+            this.endExperiment(postSurveyLink);
         }
+
+        // deleghiamo l'intero compito al TimerManager.  
+        TimerManager.start(endCondition, onExpiredCallback.bind(this)); 
     }
 
     // metodo per fermare il tracciamento/manipolazione ed aprire il post-survey
@@ -265,7 +180,7 @@ class Engine {
         // disattiviamo il timer della telemetria (fa anche un ultimo flush dei dati in coda)
         ApiManager.stopTelemetrySync();
 
-        // disattiviamo gli obserer
+        // disattiviamo gli observers
         this.stopObservers();
     }
 

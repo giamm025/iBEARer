@@ -24,6 +24,7 @@
         "utils/logger.js",
         "adapters/utils/SpaWatcher.js",
         "services/ApiManager.js",
+        "services/TimerManager.js",
 
         "engine/operators/CONTAINS_ANY.js",
         "engine/operators/NOT_CONTAINS_ANY.js",

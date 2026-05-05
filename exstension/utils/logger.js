@@ -6,6 +6,8 @@ const LoggerConfig = {
     modules: {
         engine: true,
         adapter: true,
+        timer_manager: true,
+
         telemetry: true,
         telemetry_flush: false,
 
@@ -50,6 +52,12 @@ const Log = {
     adapter: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.adapter) {
             console.log("🕵️ [Adapter]", ...args);
+        }
+    },
+
+    timer_manager: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.timer_manager) {
+            console.log("⏱️ [TimerManager]", ...args);
         }
     },
 

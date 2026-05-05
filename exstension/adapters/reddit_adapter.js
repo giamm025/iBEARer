@@ -62,7 +62,6 @@ const RedditAdapter = {
             if (window.ObserverRegistry) {
                 for (const observer of window.ObserverRegistry) {
                     observer.check();
-                    Log.adapter(`Notifico observer ${observer.name} del cambio URL.`);
                 }     
 
             // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
