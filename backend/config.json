@@ -8,7 +8,8 @@
   "telemetry_settings": {
     "track_events": [
       "ClickOnLink", 
-      "ClickOnResult"
+      "ClickOnResult",
+      "ResultsLoaded"
     ],
     "sync_interval_ms": 10000
   },

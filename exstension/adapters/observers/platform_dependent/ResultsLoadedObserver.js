@@ -49,21 +49,36 @@ class ResultsLoadedObserver extends BaseObserver {
             // per ogni link (post) trovato estriamo i dati
             links.forEach((link) => {
 
-                // prendiamo l'url del post
-                const url = link.href; 
+                // prendiamo l'url del post e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
+                const url = link.href.split('?')[0].split('#')[0]; 
+
+                // EDIT: ogni post ha un link "comments", MA se invece abbiamo un link 
+                // "comment" (singolare) stiamo guardando letteralmente un COMMENTO => dobbiamo ignorarlo
+                if (!url || url.includes('/comment/')) return; 
 
                 // se l'url è gia presente, saltiamo questo post. altrimenti lo aggiungiamo al Set
-                if (!url || this.scrapedUrls.has(url)) return; 
-                this.scrapedUrls.add(url);
+                if (!url || this.scrapedUrls.has(url)) return;
 
-                // estraiamo il subreddit ed il titolo del post dall'url
+                // estraiamo il titolo
+                let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();                
+                
+                // solitamente il link del titolo principale avvolge quasi sempre un <h2> o <h3>. 
+                const hasHeader = link.querySelector('h2, h3, h4');
+
+                // se il link non ha un header ed il testo è sospettosamente corto (es. "1 anno fa", "Condividi")
+                // probabilmente il parsing ha sbagliato e quello che ha pescato non è il titolo
+                if (!hasHeader && title.length < 15) return;
+
+                // aggiungiamo l'url al alla lista dei risultati
+                this.scrapedUrls.add(url); 
+
+                // estraiamo il subreddit
                 const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
                 const subreddit = subMatch ? "r/" + subMatch[1] : "";
-                let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();
 
                 // aggiungiamo il post alla lista dei risultati da inviare al backend
                 newResults.push({
-                    position: this.scrapedUrls.size,
+                    position: this.scrapedUrls.size, 
                     title: title,
                     url: url,
                     subreddit: subreddit
@@ -72,7 +87,7 @@ class ResultsLoadedObserver extends BaseObserver {
 
             // se abbiamo estratto nuovi post, inviamo tutto al backend
             if (newResults.length > 0) {
-                ApiManager.addEventToQueue("telemetry.events.ResultsLoadedEvent", {
+                this.addEventToQueue("telemetry.events.ResultsLoadedEvent", {
                     search_query: query,
                     extracted_count: newResults.length,
                     scraped_posts: newResults
@@ -85,8 +100,21 @@ class ResultsLoadedObserver extends BaseObserver {
         // impostiamo un timer di 1 sec per evitare di lanciare l'observer troppo presto, prima che la pagina abbia caricato 
         // (prima capitava che venissero inviati al backend anche i post della homepage siccome non davamo abbastanza tempo a react di caricare i veri risultati di ricerca)
         this.initTimer = setTimeout(() => {
-            tryScrape(); 
-            this.currentObserver = new MutationObserver(() => { tryScrape(); });
+
+            tryScrape();
+
+            // EDIT: aggiungiamo un "debounce" di 500ms per l'observer. in questo modo evitiamo di lanciare tryScrape
+            // ad ogni micro modifica. Lo lanciamo solo dopo che il DOM ha finito di caricarsi
+            let debounceTimeout = null;
+            this.currentObserver = new MutationObserver(() => {
+
+                if (debounceTimeout) clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(() => {
+                    tryScrape();
+                }, 500); 
+
+            });
+
             this.currentObserver.observe(document.body, { childList: true, subtree: true });
         }, 1000); 
     }

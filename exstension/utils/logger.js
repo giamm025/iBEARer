@@ -7,7 +7,7 @@ const LoggerConfig = {
         engine: true,
         adapter: true,
         telemetry: true,
-        telemetry_flush: true,
+        telemetry_flush: false,
 
         registry: false,
         intervention_registry: true,
