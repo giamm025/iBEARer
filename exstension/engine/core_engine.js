@@ -18,10 +18,19 @@ class Engine {
         // ci connettiamo con la Web Socket del Backend
         await ApiManager.connectWebSocket();
 
+        // scarichiamo la configurazione per ottenere la configurazione generale dell'esperimento (es. timer, durata, pre e post sruvey, ecc.)
+        await this.getConfig();
+
         // controlliamo lo stato dell'utente per capire se mostrare il pre-survey o se possiamo iniziare
         await this.handleParticipantStatus();
     }
 
+    // metodo per richiedere la configurazione al backend e salvarla come attributo dell'engine
+    async getConfig() {
+        const config = await ApiManager.getConfig();
+        if (!config) { Log.error("Engine", "Avvio interrotto: Configurazione mancante."); return; }
+        this.config = config;
+    }
 
     // metodo per gestire l'esperimento sulla base dello stato del partecipante
     async handleParticipantStatus() {
@@ -108,53 +117,39 @@ class Engine {
     async displaySurveyModal(surveyType) {
 
         return new Promise((resolve) => {
-            
-            // leggiamo il parametro surveyType per capire se stiamo disegnando il pop-up per il PRe o POST survey
-            let storageKey = '';
-            if (surveyType === "PRE")       { storageKey = 'preSurveyLink'; } 
-            else if (surveyType === "POST") { storageKey = 'postSurveyLink'; }
-            else {
-                Log.error("Engine", `Tipo di survey sconosciuto per displaySurveyModal: ${surveyType}`);
-                resolve();
-                return;
-            }
 
-            // recuperiamo il link del questionario dal local storage
-            chrome.storage.local.get([storageKey], (data) => {
+            // recuperiamo la configurazione del modale dal config.json (titolo, messaggio, testo del bottone, link al questionario)
+            let surveyConfig;
+            if (surveyType === "PRE")       { surveyConfig = this.config.survey_settings.pre_survey; } 
+            else if (surveyType === "POST") { surveyConfig = this.config.survey_settings.post_survey; }
+            else { Log.error("Engine", `Tipo di survey sconosciuto: ${surveyType}`); return; }
 
-                const link = data[storageKey];
-                if (link) {
+            // creiamo il deep link al questionario
+            const finalLink = this.createDeepLink(surveyConfig);
 
-                    let modalConfig = '';
-                    if (surveyType === "PRE") {
-                        modalConfig = {
-                            title: "Benvenuto nello Studio!",
-                            message: "Prima di iniziare la navigazione su Reddit, ti chiediamo di compilare un breve questionario iniziale.<br><br>Una volta inviate le risposte, la pagina si sbloccherà automaticamente e l'esperimento avrà inizio.",
-                            buttonText: "Vai al Questionario Iniziale",
-                            link: link
-                        };
+            // creiamo l'oggetto di configurazione da passare all'adapter
+            const modalConfiguration = {
+                title: surveyConfig.modal_ui.title,
+                message: surveyConfig.modal_ui.message,
+                buttonText: surveyConfig.modal_ui.button_text,
+                link: finalLink
+            };
 
-                    } else {
-                        modalConfig = {
-                            title: "L'esperimento è concluso!",
-                            message: "Il tempo a tua disposizione su Reddit per questo studio è terminato. <br><br>Ti preghiamo di completare il questionario finale. Una volta inviate le risposte, la pagina si sbloccherà automaticamente.",
-                            buttonText: "Vai al Questionario Finale",
-                            link: link
-                        };
-                    }
-                    Log.error("Engine", `modalConfig HARDCODED!!!!!!!!!!!!!!!!`);
-
-                    // diciamo all'Adapter di disegnare il pop-up effettivo
-                    PlatformAdapter.showSurveyModal(modalConfig);
+            // diciamo all'adapter di mostrare il pop-up
+            PlatformAdapter.showSurveyModal(modalConfiguration);
                 
-                } else {
-                    Log.error("Engine", `Link del ${surveyType}-Survey non trovato nella memoria locale!`);
-                }
-                
-                // comunichiamo che l'operazione è finita
-                resolve(); 
-            });
+            // comunichiamo che l'operazione è finita
+            resolve(); 
         });
+    }
+
+    // metodo helper per creare un deep link al questionario
+    createDeepLink(surveyConfig) {
+        const baseUrl = surveyConfig.base_url;
+        const paramKey = surveyConfig.id_param;
+        const joinChar = baseUrl.includes('?') ? '&' : '?';
+        const finalLink = `${baseUrl}${joinChar}${paramKey}=${ApiManager.participantId}`;
+        return finalLink;
     }
 
     // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
@@ -164,13 +159,8 @@ class Engine {
         this.group = assignedGroup;
         Log.engine(`Gruppo Assegnato: ${this.group}`);
 
-        // otteniamo la configurazione dal backend (lo abbiamo spostato qui perche ora la GET dipende dal gruppo dell'utente)
-        const config = await ApiManager.getConfig();
-        if (!config) {
-            Log.error("Engine", "Avvio interrotto: Configurazione mancante.");
-            return;
-        }
-        this.config = config;
+        // otteniamo la configurazione dal backend completa di trigger e interventi filtrati sulla base del GRUPPO UTENTE
+        this.getConfig();
 
         // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
         this.initListeners();

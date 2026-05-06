@@ -99,14 +99,10 @@ components:
 
     EnrollmentResponse:
       description: Data returned to the extension upon successful registration.
-      required: [participantId, preSurveyLink]
+      required: [participantId]
       properties:
         participantId:
           $ref: "#/components/schemas/UUID"
-        preSurveyLink:
-          $ref: "#/components/schemas/Link"
-        postSurveyLink:
-          $ref: "#/components/schemas/Link"
 
     StatusUpdatePayload:
       description: Webhook payload from Google Forms.
@@ -167,10 +163,12 @@ components:
 
     Config:
       description: The raw, unfiltered rules engine configuration uploaded by the researcher.
-      required: [experiment, telemetry_settings, target, triggers, interventions]
+      required: [experiment, telemetry_settings, target, triggers, interventions, survey_settings]
       properties:
         experiment:
           $ref: '#/components/schemas/ExperimentSettings'
+        survey_settings:
+          $ref: '#/components/schemas/SurveySettings'
         telemetry_settings:
           $ref: '#/components/schemas/TelemetrySettings'
         target:
@@ -291,6 +289,53 @@ components:
           type: number
           description: "Valore numerico della durata. L'unità di misura dipende dal 'type'."
           example: 30
+
+    ModalUI:
+      type: object
+      required:
+        - title
+        - message
+        - button_text
+      properties:
+        title:
+          type: string
+          example: "L'esperimento è concluso!"
+        message:
+          type: string
+          example: "Testo descrittivo con <br> per andare a capo."
+        button_text:
+          type: string
+          example: "Vai al Questionario"
+
+    SurveyDefinition:
+      type: object
+      required:
+        - base_url
+        - id_param
+        - modal_ui
+      properties:
+        base_url:
+          type: string
+          format: uri
+          description: "L'URL base del modulo, inclusivo di eventuali query param preesistenti (es. ?usp=pp_url)"
+          example: "https://docs.google.com/forms/d/e/1FAIp.../viewform"
+        id_param:
+          type: string
+          description: "La chiave del parametro URL usato per iniettare l'ID del partecipante"
+          example: "entry.2119809368"
+        modal_ui:
+          $ref: '#/components/schemas/ModalUI'
+
+    SurveySettings:
+      type: object
+      required:
+        - pre_survey
+        - post_survey
+      properties:
+        pre_survey:
+          $ref: '#/components/schemas/SurveyDefinition'
+        post_survey:
+          $ref: '#/components/schemas/SurveyDefinition'
 
     TelemetrySettings:
       properties:

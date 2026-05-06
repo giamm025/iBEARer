@@ -8,6 +8,27 @@
     "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },
 
+  "survey_settings": {
+    "pre_survey": {
+      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLScUOjPZviDKFnx0Ml1d3sBAtTkjHFFx7YnEuC2J-ZCvnTxJVA/viewform",
+      "id_param": "entry.2119809368",
+      "modal_ui": {
+        "title": "Benvenuto nello Studio!",
+        "message": "Prima di iniziare la navigazione, ti chiediamo di compilare un breve questionario iniziale.<br><br>Una volta inviate le risposte, la pagina si sbloccherà automaticamente.",
+        "button_text": "Vai al Questionario Iniziale"
+      }
+    },
+    "post_survey": {
+      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLScVnXcdATtuA3C-3TFz1WQx6ip1vAyfJjTUrJ_k5glugbB7Xg/viewform?usp=pp_url",
+      "id_param": "entry.2119809368",
+      "modal_ui": {
+        "title": "L'esperimento è concluso!",
+        "message": "Il tempo a tua disposizione per questo studio è terminato. <br><br>Ti preghiamo di completare il questionario finale. Una volta inviato, la pagina si sbloccherà.",
+        "button_text": "Vai al Questionario Finale"
+      }
+    }
+  },
+
   "telemetry_settings": {
     "track_events": [
       "ClickOnLink", 

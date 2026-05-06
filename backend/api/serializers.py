@@ -4,9 +4,6 @@ from rest_framework import serializers
 
 class EnrollmentResponseSerializer(serializers.Serializer):
     participantId = serializers.UUIDField()
-    preSurveyLink = serializers.URLField()
-    postSurveyLink = serializers.URLField()
-
 
 class EndConditionSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["ACTIVE_MINUTES_ON_PLATFORM", "ABSOLUTE_DAYS"])
@@ -16,6 +13,20 @@ class ExperimentSettingsSerializer(serializers.Serializer):
     experiment_name = serializers.CharField()
     end_condition = EndConditionSerializer()
     groups = serializers.ListField(child=serializers.CharField(), required=True)
+
+class ModalUISerializer(serializers.Serializer):
+    title = serializers.CharField()
+    message = serializers.CharField()
+    button_text = serializers.CharField()
+
+class SurveyDefinitionSerializer(serializers.Serializer):
+    base_url = serializers.URLField()
+    id_param = serializers.CharField()
+    modal_ui = ModalUISerializer()
+
+class SurveySettingsSerializer(serializers.Serializer):
+    pre_survey = SurveyDefinitionSerializer()
+    post_survey = SurveyDefinitionSerializer()
 
 class TelemetrySettingsSerializer(serializers.Serializer):
     track_events = serializers.ListField(child=serializers.CharField())
@@ -46,6 +57,7 @@ class InterventionSerializer(serializers.Serializer):
 class ConfigSerializer(serializers.Serializer):
     """Mappa l'intero schema Config definito in api.yaml"""
     experiment = ExperimentSettingsSerializer()
+    survey_settings = SurveySettingsSerializer()
     telemetry_settings = TelemetrySettingsSerializer()
     target = TargetSerializer()
     triggers = TriggerSerializer(many=True)
