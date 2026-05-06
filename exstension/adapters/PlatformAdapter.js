@@ -1,12 +1,14 @@
 // espone i metodi che modificano la UI specifica di Reddit
 class RedditAdapter {
     
-    // metodo per far apparire il po-up bloccante del Post-Survey
-    showEndExperimentModal(postSurveyLink) {
-        if (document.getElementById('reddit-cospiracy-end-modal')) return;
+    // metodo per far apparire il pop-up bloccante (valido sia per Pre che Post-Survey)
+    showSurveyModal(modalConfiguration) {
+
+        // usiamo un id fisso per il nostro pop-up, in modo da poterlo identificare e rimuovere facilmente in seguito
+        if (document.getElementById('reddit-cospiracy-survey-modal')) return;
 
         const modal = document.createElement('div');
-        modal.id = 'reddit-cospiracy-end-modal';
+        modal.id = 'reddit-cospiracy-survey-modal';
         
         modal.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -21,17 +23,17 @@ class RedditAdapter {
             text-align: center; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         `;
 
+        // Inseriamo dinamicamente i valori passati tramite l'oggetto modalConfiguration
         box.innerHTML = `
-            <h2 style="color: #1a1a1b; margin-top: 0; font-size: 24px;">L'esperimento è concluso!</h2>
+            <h2 style="color: #1a1a1b; margin-top: 0; font-size: 24px;">${modalConfiguration.title}</h2>
             <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                Grazie per aver partecipato al nostro studio su Reddit! <br><br>
-                Ti preghiamo di completare il questionario finale. Una volta inviate le risposte, la pagina si sbloccherà automaticamente.
+                ${modalConfiguration.message}
             </p>
-            <a href="${postSurveyLink}" target="_blank" style="
+            <a href="${modalConfiguration.link}" target="_blank" style="
                 background: #ff4500; color: white; padding: 14px 28px;
                 text-decoration: none; font-weight: bold; border-radius: 999px;
                 font-size: 16px; display: inline-block; cursor: pointer;
-            ">Vai al Questionario Finale</a>
+            ">${modalConfiguration.buttonText}</a>
         `;
 
         modal.appendChild(box);
@@ -39,9 +41,9 @@ class RedditAdapter {
         document.body.style.overflow = 'hidden';
     }
 
-    // metodo per disattivare il pop-up bloccante del Post-Survey
-    hideEndExperimentModal() {
-        const modal = document.getElementById('reddit-cospiracy-end-modal');
+    // metodo per chiudere il pop-up bloccante (valido sia per Pre che Post-Survey)
+    hideSurveyModal() {
+        const modal = document.getElementById('reddit-cospiracy-survey-modal');
         if (modal) modal.remove();
         document.body.style.overflow = ''; 
     }

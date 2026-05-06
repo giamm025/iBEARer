@@ -37,7 +37,17 @@ class Engine {
             
             case "ENROLLED":
                 Log.engine("In attesa del completamento del pre-survey...");
+
+                // disegniamo il pop-up sullo schermo
+                await this.displaySurveyModal("PRE");
+
+                // ci mettiamo in attesa del completamento del pre survey
                 await this.waitForStatus("PRE-SURVEY-COMPLETED", true);
+
+                // rimuoviamo il pop-up bloccante
+                PlatformAdapter.hideSurveyModal();
+
+                // gestiamo il nuovo stato (PRE-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
                 break;
 
@@ -50,19 +60,13 @@ class Engine {
                 Log.engine("🏁 Aggiornamento stato e apertura Post-Survey...");
 
                 // disegniamo il pop-up sullo schermo
-                chrome.storage.local.get(['postSurveyLink'], (data) => {
-                    if (data.postSurveyLink) {
-                        PlatformAdapter.showEndExperimentModal(data.postSurveyLink);
-                    } else {
-                        Log.error("Engine", "Link del Post-Survey non trovato nella memoria locale!");
-                    }
-                });
+                await this.displaySurveyModal("POST");
 
                 // ci mettiamo in attesa del completamento del post survey
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
                 
                 // rimuoviamo il pop-up bloccante
-                PlatformAdapter.hideEndExperimentModal();
+                PlatformAdapter.hideSurveyModal();
 
                 // gestiamo il nuovo stato (POST-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
@@ -97,6 +101,59 @@ class Engine {
                 }
             };
             document.addEventListener("visibilitychange", onVisibilityChange);
+        });
+    }
+
+    // metodo helper per aprire il pop-up bloccante (finestra modale) per il Pre o Post-Survey
+    async displaySurveyModal(surveyType) {
+
+        return new Promise((resolve) => {
+            
+            // leggiamo il parametro surveyType per capire se stiamo disegnando il pop-up per il PRe o POST survey
+            let storageKey = '';
+            if (surveyType === "PRE")       { storageKey = 'preSurveyLink'; } 
+            else if (surveyType === "POST") { storageKey = 'postSurveyLink'; }
+            else {
+                Log.error("Engine", `Tipo di survey sconosciuto per displaySurveyModal: ${surveyType}`);
+                resolve();
+                return;
+            }
+
+            // recuperiamo il link del questionario dal local storage
+            chrome.storage.local.get([storageKey], (data) => {
+
+                const link = data[storageKey];
+                if (link) {
+
+                    let modalConfig = '';
+                    if (surveyType === "PRE") {
+                        modalConfig = {
+                            title: "Benvenuto nello Studio!",
+                            message: "Prima di iniziare la navigazione su Reddit, ti chiediamo di compilare un breve questionario iniziale.<br><br>Una volta inviate le risposte, la pagina si sbloccherà automaticamente e l'esperimento avrà inizio.",
+                            buttonText: "Vai al Questionario Iniziale",
+                            link: link
+                        };
+
+                    } else {
+                        modalConfig = {
+                            title: "L'esperimento è concluso!",
+                            message: "Il tempo a tua disposizione su Reddit per questo studio è terminato. <br><br>Ti preghiamo di completare il questionario finale. Una volta inviate le risposte, la pagina si sbloccherà automaticamente.",
+                            buttonText: "Vai al Questionario Finale",
+                            link: link
+                        };
+                    }
+                    Log.error("Engine", `modalConfig HARDCODED!!!!!!!!!!!!!!!!`);
+
+                    // diciamo all'Adapter di disegnare il pop-up effettivo
+                    PlatformAdapter.showSurveyModal(modalConfig);
+                
+                } else {
+                    Log.error("Engine", `Link del ${surveyType}-Survey non trovato nella memoria locale!`);
+                }
+                
+                // comunichiamo che l'operazione è finita
+                resolve(); 
+            });
         });
     }
 

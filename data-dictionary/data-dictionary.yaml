@@ -53,3 +53,9 @@ function_fqn:
     interventions.dom.demotePost:
       description: "Spostare fisicamente il contenuto in fondo alla pagina."
       payload: "{\"new_position\": ...}"
+
+end_condition_type:
+  description: "Definisce quando deve essere valutata la fine di un intervento (end_condition)."
+  values:
+    ACTIVE_MINUTES_ON_PLATFORM: "Il timer termina dopo che l'utente ha passato un certo numero di minuti sulla piattaforma."
+    ABSOLUTE_DAYS: "Il timer termina dopo un certo numero di giorni (indipendentemente dall'attività dell'utente)."

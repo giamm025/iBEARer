@@ -51,12 +51,6 @@ const ApiManager = {
             // se lo stato dell'utente è ENROLLED significa che non ha ancora compilato il questionario
             if (statusData && statusData.status === "ENROLLED") {
                 Log.adapter("ApiManager: Utente in stato ENROLLED. Apertura pre-survey.");
-                if (data.preSurveyLink) {
-                    chrome.runtime.sendMessage({ action: "OPEN_TAB", url: data.preSurveyLink });
-                }
-                else {
-                    Log.error("ApiManager", "Link del pre-survey non trovato nello storage locale.");
-                }
 
             } else {
                 Log.adapter(`ApiManager: Stato utente confermato: ${statusData?.status}`);
@@ -82,11 +76,6 @@ const ApiManager = {
             // aggiorniamo l'id ed il link del questionario nella memoria del browser
             await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: preSurveyLink, postSurveyLink: postSurveyLink });
             Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
-
-            // diciamo al background.js di aprire un'altra tab con il questionario
-            if (preSurveyLink) {
-                chrome.runtime.sendMessage({ action: "OPEN_TAB", url: preSurveyLink });
-            }
 
             return true;
         }
