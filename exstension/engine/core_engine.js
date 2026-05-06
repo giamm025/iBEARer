@@ -52,7 +52,7 @@ class Engine {
                 // disegniamo il pop-up sullo schermo
                 chrome.storage.local.get(['postSurveyLink'], (data) => {
                     if (data.postSurveyLink) {
-                        RedditAdapter.showEndExperimentModal(data.postSurveyLink);
+                        PlatformAdapter.showEndExperimentModal(data.postSurveyLink);
                     } else {
                         Log.error("Engine", "Link del Post-Survey non trovato nella memoria locale!");
                     }
@@ -62,7 +62,7 @@ class Engine {
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
                 
                 // rimuoviamo il pop-up bloccante
-                RedditAdapter.hideEndExperimentModal();
+                PlatformAdapter.hideEndExperimentModal();
 
                 // gestiamo il nuovo stato (POST-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();

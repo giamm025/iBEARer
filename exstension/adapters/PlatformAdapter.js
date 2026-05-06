@@ -1,8 +1,8 @@
 // espone i metodi che modificano la UI specifica di Reddit
-const RedditAdapter = {
+class RedditAdapter {
     
     // metodo per far apparire il po-up bloccante del Post-Survey
-    showEndExperimentModal: function(postSurveyLink) {
+    showEndExperimentModal(postSurveyLink) {
         if (document.getElementById('reddit-cospiracy-end-modal')) return;
 
         const modal = document.createElement('div');
@@ -24,7 +24,7 @@ const RedditAdapter = {
         box.innerHTML = `
             <h2 style="color: #1a1a1b; margin-top: 0; font-size: 24px;">L'esperimento è concluso!</h2>
             <p style="color: #444; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                Il tempo a tua disposizione su Reddit per questo studio è terminato. <br><br>
+                Grazie per aver partecipato al nostro studio su Reddit! <br><br>
                 Ti preghiamo di completare il questionario finale. Una volta inviate le risposte, la pagina si sbloccherà automaticamente.
             </p>
             <a href="${postSurveyLink}" target="_blank" style="
@@ -37,48 +37,48 @@ const RedditAdapter = {
         modal.appendChild(box);
         document.body.appendChild(modal);
         document.body.style.overflow = 'hidden';
-    },
+    }
 
     // metodo per disattivare il pop-up bloccante del Post-Survey
-    hideEndExperimentModal: function() {
+    hideEndExperimentModal() {
         const modal = document.getElementById('reddit-cospiracy-end-modal');
         if (modal) modal.remove();
         document.body.style.overflow = ''; 
-    },
+    }
 
     // metodo per avviare l'esperimento su REDDIT
     run() {
 
-    // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
-    // altrimenti rischiamo di intercettare eventi prima che l'engine sia pronto a gestirli
-    document.addEventListener("EngineReady", () => {
+        // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
+        // altrimenti rischiamo di intercettare eventi prima che l'engine sia pronto a gestirli
+        document.addEventListener("EngineReady", () => {
 
-        Log.adapter("Avvio Reddit Adapter...");
+            Log.adapter("Avvio Reddit Adapter...");
 
-        // definiamo la funzione che "sveglia" TUTTI gli observers attivi 
-        const notifyObservers = () => {
+            // definiamo la funzione che "sveglia" TUTTI gli observers attivi 
+            const notifyObservers = () => {
 
-            // se ci sono observer registrati, chiamiamo il loro metodo check() per svegliarli
-            if (window.ObserverRegistry) {
-                for (const observer of window.ObserverRegistry) {
-                    observer.check();
-                }     
+                // se ci sono observer registrati, chiamiamo il loro metodo check() per svegliarli
+                if (window.ObserverRegistry) {
+                    for (const observer of window.ObserverRegistry) {
+                        observer.check();
+                    }     
 
-            // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
-            } else {
-                Log.adapter("Nessun Observer registrato.");
-            }
-        };
+                // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
+                } else {
+                    Log.adapter("Nessun Observer registrato.");
+                }
+            };
 
-        // definiamo la funzione che l'SpaWatcher drovrà eseguire AD OGNI CAMBIO URL. 
-        // nel nostro caso si occuperà solo di attivare gli Observer registrati.
-        SpaWatcher.watch(() => {
-            notifyObservers()
+            // definiamo la funzione che l'SpaWatcher drovrà eseguire AD OGNI CAMBIO URL. 
+            // nel nostro caso si occuperà solo di attivare gli Observer registrati.
+            SpaWatcher.watch(() => {
+                notifyObservers()
+            });
         });
-    });
     }
 };
 
-
 // ------------------------------------------------- AVVIO -------------------------------------------------
-RedditAdapter.run()
+const PlatformAdapter = new RedditAdapter();
+PlatformAdapter.run();

@@ -54,7 +54,7 @@
         "adapters/observers/telemetry-track-events/ClickOnLinkObserver.js",
         "adapters/observers/telemetry-track-events/TimeOnPageObserver.js",
 
-        "adapters/reddit_adapter.js"
+        "adapters/PlatformAdapter.js"
       ],
       "run_at": "document_end"
     },
