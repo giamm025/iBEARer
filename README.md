@@ -18,7 +18,6 @@ Il sistema è costruito attorno a un'architettura **completamente agnostica risp
 
 Il codice è organizzato seguendo il principio di **Separation of Concerns (SoC)**:
 
-\`\`\`text
 extension/
 ├── main.js                 # Entry point, inizializza le classi e avvia l'Engine
 ├── config.json             # (Caricato dal Backend) Il "DNA" dell'esperimento
@@ -43,7 +42,6 @@ extension/
 └── utils/                  # Helper trasversali
     ├── SpaWatcher.js       # Intercetta History API
     └── logger.js           # Logging formattato per il debug
-\`\`\`
 
 ---
 
