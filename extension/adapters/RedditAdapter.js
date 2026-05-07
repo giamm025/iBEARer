@@ -80,7 +80,3 @@ class RedditAdapter {
         });
     }
 };
-
-// ------------------------------------------------- AVVIO -------------------------------------------------
-const PlatformAdapter = new RedditAdapter();
-PlatformAdapter.run();

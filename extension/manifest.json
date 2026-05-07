@@ -22,46 +22,47 @@
       "matches": ["*://*.reddit.com/*"],
       "js": [
         "utils/logger.js",
-        "adapters/utils/SpaWatcher.js",
+        "utils/SpaWatcher.js",
         "services/ApiManager.js",
         "services/SurveyManager.js",
         "services/TimerManager.js",
 
+        
         "engine/operators/CONTAINS_ANY.js",
         "engine/operators/NOT_CONTAINS_ANY.js",
         "engine/operators/EQUALS.js",
-
-        "engine/interventions/BaseIntervantion.js",
+        
+        "engine/interventions/BaseIntervention.js",
         "engine/interventions/debug/applyBorder.js",
         "engine/interventions/ui/showDebunkingBanner.js", 
         "engine/interventions/ui/formatPost.js", 
         "engine/interventions/ui/injectFakePost.js", 
         "engine/interventions/ui/removePost.js", 
         "engine/interventions/ui/modifyPost.js",
-        "engine/interventions/tracking/trackResults.js", 
-        
-        "engine/core_engine.js",
+        "engine/interventions/tracking/trackResults.js",
 
+        "engine/events/EngineReadyEvent.js",
+                        
         "adapters/events/BaseEvent.js",
         "adapters/events/SearchSubmittedEvent.js",
-        "adapters/events/EngineReadyEvent.js",
 
         "adapters/observers/BaseObserver.js",
-
         "adapters/observers/trigger-event-sources/SearchSubmittedObserver.js",
-
         "adapters/observers/telemetry-track-events/ResultsLoadedObserver.js",
         "adapters/observers/telemetry-track-events/ClickOnResultObserver.js",
         "adapters/observers/telemetry-track-events/ClickOnLinkObserver.js",
         "adapters/observers/telemetry-track-events/TimeOnPageObserver.js",
 
-        "adapters/PlatformAdapter.js"
+        "adapters/RedditAdapter.js",
+        "engine/core_engine.js",
+
+        "main.js"
       ],
       "run_at": "document_end"
     },
     {
       "matches": ["*://docs.google.com/forms/*"],
-      "js": ["adapters/utils/FormWatcher.js"]
+      "js": ["adapters/google-forms/FormWatcher.js"]
     }
   ]
 }
