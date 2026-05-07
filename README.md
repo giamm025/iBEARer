@@ -1,5 +1,4 @@
-# BEAR
-Browser Extension for Academic Research
+# BEAR - Browser Extension for Academic Research
 
 Una Chrome Extension modulare e data-driven progettata per condurre esperimenti comportamentali e sociologici su Reddit. 
 
