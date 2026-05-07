@@ -38,25 +38,16 @@ const ApiManager = {
     async init() {
 
         // prova a recuperare l'ID ed il link al pre survey dal local storage
-        const data = await chrome.storage.local.get(['participantId', 'preSurveyLink']);
+        const data = await chrome.storage.local.get(['participantId']);
 
-        // se esiste, usalo; altrimenti, registra un nuovo partecipante
+        // se esiste, usalo 
         if (data.participantId) {
             this.participantId = data.participantId;
-            Log.adapter(`ApiManager: ParticipantID recuperato: ${this.participantId}`);
+            Log.api_manager(`ParticipantID recuperato: ${this.participantId}`);
 
-            // recupera lo stato dell'utente dal backend per capire se è già compilato il questionario
-            const statusData = await this.getStatus();
-
-            // se lo stato dell'utente è ENROLLED significa che non ha ancora compilato il questionario
-            if (statusData && statusData.status === "ENROLLED") {
-                Log.adapter("ApiManager: Utente in stato ENROLLED. Apertura pre-survey.");
-
-            } else {
-                Log.adapter(`ApiManager: Stato utente confermato: ${statusData?.status}`);
-            }
-
+        // altrimenti, registra un nuovo partecipante
         } else {
+            Log.api_manager("Nessun ParticipantID trovato. Avvio Enrollment...");
             await this.enrollParticipant();
         }
     },
@@ -70,12 +61,10 @@ const ApiManager = {
         // se l'enrollment è andato a buon fine, salva l'ID del partecipante e memorizzalo nello storage locale
         if (data && data.participantId) {
             this.participantId = data.participantId;
-            const preSurveyLink = data.preSurveyLink;
-            const postSurveyLink = data.postSurveyLink;
-
-            // aggiorniamo l'id ed il link del questionario nella memoria del browser
-            await chrome.storage.local.set({ participantId: this.participantId, preSurveyLink: preSurveyLink, postSurveyLink: postSurveyLink });
-            Log.adapter(`ApiManager: Enrollment completato. ID: ${this.participantId}`);
+            
+            // aggiorniamo l'id nella memoria del browser
+            await chrome.storage.local.set({ participantId: this.participantId });
+            Log.api_manager(`Enrollment completato. ID: ${this.participantId}`);
 
             return true;
         }
@@ -94,7 +83,7 @@ const ApiManager = {
         
         // se la risposta c'è ed ha avuto successo, restituisci i dati della configurazione
         if (data) {
-            Log.adapter("ApiManager: Configurazione scaricata via Background.");
+            Log.api_manager("Configurazione scaricata via Background.");
         }
         
         return data;
@@ -122,7 +111,7 @@ const ApiManager = {
             metadata
         };
         this.telemetryQueue.push(telemetryEvent);
-        Log.telemetry(`ApiManager: Evento aggiunto in coda: ${event_fqn}\n`, metadata);
+        Log.telemetry(`Evento aggiunto in coda: ${event_fqn}\n`, metadata);
     },
 
     // funzione per sincronizzare la coda di telemetria con il backend a intervalli regolari
@@ -156,7 +145,7 @@ const ApiManager = {
 
         // se l'invio è andato a buon fine logghiamo il successo
         if (success) {
-            Log.telemetry_flush(`ApiManager: Inviati ${eventsToSend.length} eventi di telemetria.`);
+            Log.telemetry_flush(`Inviati ${eventsToSend.length} eventi di telemetria.`);
 
         // altrimenti lancia un errore e reinserisce gli eventi falliti in coda (PER NON PERDERLI!)
         } else {
@@ -203,7 +192,7 @@ const ApiManager = {
 // Quando il background riceve il segnale dal WebSocket, avvisa questa tab
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "START_EXPERIMENT") {
-        Log.adapter(`ApiManager: Ricevuto segnale START_EXPERIMENT! Gruppo: ${request.group}`);
+        Log.api_manager(`Ricevuto segnale START_EXPERIMENT! Gruppo: ${request.group}`);
         
         // Se l'Engine ha registrato la sua callback, chiamiamola!
         if (ApiManager.onExperimentStartCallback) {

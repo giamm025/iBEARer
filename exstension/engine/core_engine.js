@@ -119,32 +119,58 @@ class Engine {
         return new Promise((resolve) => {
 
             // recuperiamo la configurazione del modale dal config.json (titolo, messaggio, testo del bottone, link al questionario)
-            let surveyConfig;
-            if (surveyType === "PRE")       { surveyConfig = this.config.survey_settings.pre_survey; } 
-            else if (surveyType === "POST") { surveyConfig = this.config.survey_settings.post_survey; }
-            else { Log.error("Engine", `Tipo di survey sconosciuto: ${surveyType}`); return; }
+            const parsed = this.parseSurveyConfig(surveyType);
+            if (!parsed) { resolve(); return; }
+            const { surveyConfig, storageKey } = parsed
 
             // creiamo il deep link al questionario
-            const finalLink = this.createDeepLink(surveyConfig);
+            const finalLink = this.createDeepLink(surveyConfig, storageKey);
 
-            // creiamo l'oggetto di configurazione da passare all'adapter
-            const modalConfiguration = {
-                title: surveyConfig.modal_ui.title,
-                message: surveyConfig.modal_ui.message,
-                buttonText: surveyConfig.modal_ui.button_text,
-                link: finalLink
-            };
+            // salviamo il link completo (con ID) nella memoria del browser (servirà al FormWatcher!)
+            chrome.storage.local.set({ [storageKey]: finalLink }, () => {
+            // solo dopo che è stato salvato:
 
-            // diciamo all'adapter di mostrare il pop-up
-            PlatformAdapter.showSurveyModal(modalConfiguration);
+                // creiamo l'oggetto di configurazione da passare all'adapter
+                const modalConfiguration = {
+                    title: surveyConfig.modal_ui.title,
+                    message: surveyConfig.modal_ui.message,
+                    buttonText: surveyConfig.modal_ui.button_text,
+                    link: finalLink
+                };
+
+                // diciamo all'adapter di mostrare il pop-up
+                PlatformAdapter.showSurveyModal(modalConfiguration);
                 
-            // comunichiamo che l'operazione è finita
-            resolve(); 
+                // comunichiamo che l'operazione è finita
+                resolve(); 
+            });
         });
     }
 
+    // metodo heper per fare il parsing del config.json e recuperare i survey_settings
+    parseSurveyConfig(surveyType) {
+
+        switch (surveyType) {
+            case "PRE":
+                return {
+                    surveyConfig: this.config.survey_settings.pre_survey,
+                    storageKey: "preSurveyLink"
+                };
+            
+            case "POST":
+                return {
+                    surveyConfig: this.config.survey_settings.post_survey,
+                    storageKey: "postSurveyLink"
+                };
+
+            default:
+                Log.error("Engine", `Tipo di survey sconosciuto: ${surveyType}`);
+                return null; 
+        }
+    }
+
     // metodo helper per creare un deep link al questionario
-    createDeepLink(surveyConfig) {
+    createDeepLink(surveyConfig, storageKey) {
         const baseUrl = surveyConfig.base_url;
         const paramKey = surveyConfig.id_param;
         const joinChar = baseUrl.includes('?') ? '&' : '?';

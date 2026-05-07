@@ -6,6 +6,7 @@ const LoggerConfig = {
     modules: {
         engine: true,
         adapter: true,
+        api_manager: true,
         timer_manager: true,
 
         telemetry: true,
@@ -55,6 +56,12 @@ const Log = {
         }
     },
 
+    api_manager: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.api_manager) {
+            console.log("🌐 [ApiManager]", ...args);
+        }
+    },
+
     timer_manager: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.timer_manager) {
             console.log("⏱️ [TimerManager]", ...args);
@@ -81,13 +88,13 @@ const Log = {
 
     web_socket: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.web_socket) {
-            console.log("🌐 [WebSocket]", ...args);
+            console.log("📡 [WebSocket]", ...args);
         }
     },
 
     heart_beat: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.heart_beat) {
-            console.log("💓 [ApiManager]", ...args);
+            console.log("💓 [HeartBeat]", ...args);
         }
     },
 
