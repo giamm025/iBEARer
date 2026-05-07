@@ -48,13 +48,13 @@ class Engine {
                 Log.engine("In attesa del completamento del pre-survey...");
 
                 // disegniamo il pop-up sullo schermo
-                await this.displaySurveyModal("PRE");
+                await SurveyManager.displaySurveyModal("PRE", this.config.survey_settings, ApiManager.participantId);
 
                 // ci mettiamo in attesa del completamento del pre survey
                 await this.waitForStatus("PRE-SURVEY-COMPLETED", true);
 
                 // rimuoviamo il pop-up bloccante
-                PlatformAdapter.hideSurveyModal();
+                SurveyManager.hideSurveyModal();
 
                 // gestiamo il nuovo stato (PRE-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
@@ -69,13 +69,13 @@ class Engine {
                 Log.engine("🏁 Aggiornamento stato e apertura Post-Survey...");
 
                 // disegniamo il pop-up sullo schermo
-                await this.displaySurveyModal("POST");
+                await SurveyManager.displaySurveyModal("POST", this.config.survey_settings, ApiManager.participantId);
 
                 // ci mettiamo in attesa del completamento del post survey
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
                 
                 // rimuoviamo il pop-up bloccante
-                PlatformAdapter.hideSurveyModal();
+                SurveyManager.hideSurveyModal();
 
                 // gestiamo il nuovo stato (POST-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
@@ -111,71 +111,6 @@ class Engine {
             };
             document.addEventListener("visibilitychange", onVisibilityChange);
         });
-    }
-
-    // metodo helper per aprire il pop-up bloccante (finestra modale) per il Pre o Post-Survey
-    async displaySurveyModal(surveyType) {
-
-        return new Promise((resolve) => {
-
-            // recuperiamo la configurazione del modale dal config.json (titolo, messaggio, testo del bottone, link al questionario)
-            const parsed = this.parseSurveyConfig(surveyType);
-            if (!parsed) { resolve(); return; }
-            const { surveyConfig, storageKey } = parsed
-
-            // creiamo il deep link al questionario
-            const finalLink = this.createDeepLink(surveyConfig, storageKey);
-
-            // salviamo il link completo (con ID) nella memoria del browser (servirà al FormWatcher!)
-            chrome.storage.local.set({ [storageKey]: finalLink }, () => {
-            // solo dopo che è stato salvato:
-
-                // creiamo l'oggetto di configurazione da passare all'adapter
-                const modalConfiguration = {
-                    title: surveyConfig.modal_ui.title,
-                    message: surveyConfig.modal_ui.message,
-                    buttonText: surveyConfig.modal_ui.button_text,
-                    link: finalLink
-                };
-
-                // diciamo all'adapter di mostrare il pop-up
-                PlatformAdapter.showSurveyModal(modalConfiguration);
-                
-                // comunichiamo che l'operazione è finita
-                resolve(); 
-            });
-        });
-    }
-
-    // metodo heper per fare il parsing del config.json e recuperare i survey_settings
-    parseSurveyConfig(surveyType) {
-
-        switch (surveyType) {
-            case "PRE":
-                return {
-                    surveyConfig: this.config.survey_settings.pre_survey,
-                    storageKey: "preSurveyLink"
-                };
-            
-            case "POST":
-                return {
-                    surveyConfig: this.config.survey_settings.post_survey,
-                    storageKey: "postSurveyLink"
-                };
-
-            default:
-                Log.error("Engine", `Tipo di survey sconosciuto: ${surveyType}`);
-                return null; 
-        }
-    }
-
-    // metodo helper per creare un deep link al questionario
-    createDeepLink(surveyConfig, storageKey) {
-        const baseUrl = surveyConfig.base_url;
-        const paramKey = surveyConfig.id_param;
-        const joinChar = baseUrl.includes('?') ? '&' : '?';
-        const finalLink = `${baseUrl}${joinChar}${paramKey}=${ApiManager.participantId}`;
-        return finalLink;
     }
 
     // metodo per avviare l'esperimento: imposta il gruppo, avvia i listeners per gli eventi e per la telemetria, avvisa che il motore è pronto
@@ -269,7 +204,6 @@ class Engine {
             observer.stop();
         }
     }
-
 
     // metodo per mettere in ascolto il motore su tutti gli event_source presenti nel config.json 
     initListeners() {

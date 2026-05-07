@@ -7,7 +7,9 @@ const LoggerConfig = {
         engine: true,
         adapter: true,
         api_manager: true,
+        survey_manager: true,
         timer_manager: true,
+        web_socket: true,
 
         telemetry: true,
         telemetry_flush: false,
@@ -18,7 +20,6 @@ const LoggerConfig = {
         telemetry_registry: true,
 
         intervention: false,
-        web_socket: true,
         heart_beat: false
     }
 };
@@ -59,6 +60,12 @@ const Log = {
     api_manager: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.api_manager) {
             console.log("🌐 [ApiManager]", ...args);
+        }
+    },
+
+    survey_manager: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.survey_manager) {
+            console.log("📝 [SurveyManager]", ...args);
         }
     },
 
