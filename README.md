@@ -18,30 +18,30 @@ Il sistema è costruito attorno a un'architettura **completamente agnostica risp
 
 Il codice è organizzato seguendo il principio di **Separation of Concerns (SoC)**:
 
-extension/
-├── main.js                 # Entry point, inizializza le classi e avvia l'Engine
-├── config.json             # (Caricato dal Backend) Il "DNA" dell'esperimento
-│
-├── engine/                 # Il Core agnostico
-│   ├── core_engine.js      # La State Machine che orchestra l'esperimento
-│   ├── interventions/      # Logica di manipolazione DOM (es. injectFakePost, hidePost)
-│   └── operators/          # Operatori logici puri (CONTAINS_ANY, EQUALS)
-│
-├── adapters/               # L'interfaccia con la piattaforma ospite (Reddit/Google Forms)
-│   ├── RedditAdapter.js    # Metodi UI specifici (es. creazione Modali bloccanti)
-│   ├── google-forms/       # Script per tracciare il completamento dei survey
-│   └── observers/          # Sensori sul DOM
-│       ├── telemetry/      # Tracciano passivamente azioni per il backend (es. ClickOnLink)
-│       └── triggers/       # Generano eventi per il Core Engine (es. SearchSubmitted)
-│
-├── services/               # Gestori logici di alto livello
-│   ├── ApiManager.js       # Comunicazione REST e WebSocket via background.js
-│   ├── SurveyManager.js    # Assemblaggio Deep Link e gestione Modali
-│   └── TimerManager.js     # Gestione cronometri (Active Time vs Absolute Time)
-│
-└── utils/                  # Helper trasversali
-    ├── SpaWatcher.js       # Intercetta History API
-    └── logger.js           # Logging formattato per il debug
+    extension/
+    ├── main.js                 # Entry point, inizializza le classi e avvia l'Engine
+    ├── config.json             # (Caricato dal Backend) Il "DNA" dell'esperimento
+    │
+    ├── engine/                 # Il Core agnostico
+    │   ├── core_engine.js      # La State Machine che orchestra l'esperimento
+    │   ├── interventions/      # Logica di manipolazione DOM (es. injectFakePost, ecc.)
+    │   └── operators/          # Operatori logici puri (CONTAINS_ANY, EQUALS)
+    │
+    ├── adapters/               # Interfaccia con la piattaforma ospite (Reddit/GForms)
+    │   ├── RedditAdapter.js    # Metodi UI specifici (es. creazione Modali bloccanti)
+    │   ├── google-forms/       # Script per tracciare il completamento dei survey
+    │   └── observers/          # Sensori sul DOM
+    │       ├── telemetry/      # Tracciano azioni passivamente (es. ClickOnLink)
+    │       └── triggers/       # Generano eventi per il Core Engine (es. SearchSubmitted)
+    │
+    ├── services/               # Gestori logici di alto livello
+    │   ├── ApiManager.js       # Comunicazione REST e WebSocket via background.js
+    │   ├── SurveyManager.js    # Assemblaggio Deep Link e gestione Modali
+    │   └── TimerManager.js     # Gestione cronometri (Active Time vs Absolute Time)
+    │
+    └── utils/                  # Helper trasversali
+        ├── SpaWatcher.js       # Intercetta History API
+        └── logger.js           # Logging formattato per il debug
 
 ---
 
