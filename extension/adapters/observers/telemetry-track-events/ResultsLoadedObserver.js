@@ -32,73 +32,59 @@ class ResultsLoadedObserver extends BaseObserver {
         // se invece siamo ancora in una pagina di ricerca, aspettiamo che un trigger ci dica di accendere l'osservatore
     }
 
-    // funzione per iniziare il tracciamento dei risultati. Verra chiamata dagli interventi quando scatta il trigger.
+    // funzione per iniziare il tracciamento dei risultati
     startScraping(query) {
         
         // puliamo la memoria da eventuali ricerche precedenti
         this.customCleanUp();
         
-        // funzione per estrarre i dati dei post
+        // funzione per capire quale tab è attiva e decidere quale sottofunzione di scraping chiamare
         const tryScrape = () => {
             
-            // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
-            // EDIT: <shreddit-post> non funziona piu... quindi usiamo i link ai commenti. ogni post ne deve avere uno.
-            const links = document.querySelectorAll('a[href*="/comments/"]');
-            const newResults = [];
+            // estraiamo l'intero url ed il parametro "type" per capire quale tab è aperto (es. posts, communities, people, comments)
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabType = urlParams.get('type') || "all";
+            let newResults = [];
 
-            // per ogni link (post) trovato estriamo i dati
-            links.forEach((link) => {
+            switch (tabType) {
 
-                // prendiamo l'url del post e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
-                const url = link.href.split('?')[0].split('#')[0]; 
-
-                // EDIT: ogni post ha un link "comments", MA se invece abbiamo un link 
-                // "comment" (singolare) stiamo guardando letteralmente un COMMENTO => dobbiamo ignorarlo
-                if (!url || url.includes('/comment/')) return; 
-
-                // se l'url è gia presente, saltiamo questo post. altrimenti lo aggiungiamo al Set
-                if (!url || this.scrapedUrls.has(url)) return;
-
-                // estraiamo il titolo
-                let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();                
+                case "all":
+                case "posts":
+                case "media":
+                    newResults = this.scrapePosts();
+                    break;
                 
-                // solitamente il link del titolo principale avvolge quasi sempre un <h2> o <h3>. 
-                const hasHeader = link.querySelector('h2, h3, h4');
+                case "communities":
+                    newResults = this.scrapeCommunities(); 
+                    break;
+                
+                case "comments":
+                    // TODO: Da implementare in futuro
+                    break;
 
-                // se il link non ha un header ed il testo è sospettosamente corto (es. "1 anno fa", "Condividi")
-                // probabilmente il parsing ha sbagliato e quello che ha pescato non è il titolo
-                if (!hasHeader && title.length < 15) return;
+                case "people":
+                    // TODO: Da implementare in futuro
+                    break;
 
-                // aggiungiamo l'url al alla lista dei risultati
-                this.scrapedUrls.add(url); 
+                default:
+                    Log.adapter(`ResultsLoadedObserver: Tab type '${tabType}' sconosciuto o non tracciato.`);
+                    break;
+            }
 
-                // estraiamo il subreddit
-                const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
-                const subreddit = subMatch ? "r/" + subMatch[1] : "";
-
-                // aggiungiamo il post alla lista dei risultati da inviare al backend
-                newResults.push({
-                    position: this.scrapedUrls.size, 
-                    title: title,
-                    url: url,
-                    subreddit: subreddit
-                });
-            });
-
-            // se abbiamo estratto nuovi post, inviamo tutto al backend
+            // se abbiamo estratto nuovi risultati, inviamo tutto al backend
             if (newResults.length > 0) {
                 this.addEventToQueue("telemetry.events.ResultsLoadedEvent", {
                     search_query: query,
                     extracted_count: newResults.length,
                     scraped_posts: newResults
                 });
-                Log.adapter(`ResultsLoadedObserver: Estratti ${newResults.length} post per la query: "${query}".`);
+                Log.adapter(`ResultsLoadedObserver: Estratti ${newResults.length} risultati (${tabType.toUpperCase()}) per la query: "${query}".`);
             }
         };
 
-        // AVVIAMO L'OBSERVER
-        // impostiamo un timer di 1 sec per evitare di lanciare l'observer troppo presto, prima che la pagina abbia caricato 
-        // (prima capitava che venissero inviati al backend anche i post della homepage siccome non davamo abbastanza tempo a react di caricare i veri risultati di ricerca)
+        // AVVIAMO L'OBSERVER: impostiamo un timer di 1 sec per evitare di lanciare l'observer troppo presto, prima che la pagina 
+        // abbia caricato (prima capitava che venissero inviati al backend anche i post della homepage siccome non davamo abbastanza
+        // tempo a React di caricare i veri risultati di ricerca)
         this.initTimer = setTimeout(() => {
 
             tryScrape();
@@ -118,6 +104,115 @@ class ResultsLoadedObserver extends BaseObserver {
             this.currentObserver.observe(document.body, { childList: true, subtree: true });
         }, 1000); 
     }
+
+    // ----------------------------------------------------------------------------------
+    // STRATEGIE DI SCRAPING SPECIFICHE PER TAB
+    // ----------------------------------------------------------------------------------
+
+    // POSTS, ALL e MEDIA 
+    scrapePosts() {
+
+        // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
+        // EDIT: <shreddit-post> non funziona piu... quindi usiamo i link ai commenti. ogni post ne deve avere uno.
+        const links = document.querySelectorAll('a[href*="/comments/"]');
+        const results = [];
+
+        // per ogni link (post) trovato estriamo i dati
+        links.forEach((link) => {
+
+            // prendiamo l'url del post e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
+            const url = link.href.split('?')[0].split('#')[0]; 
+
+            // ignoriamo i link diretti ai singoli commenti
+            if (!url || url.includes('/comment/')) return; 
+
+            // se l'url è gia presente, saltiamo questo post. altrimenti lo aggiungiamo al Set
+            if (this.scrapedUrls.has(url)) return;
+
+            // estraiamo il titolo
+            let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();                
+            
+            // solitamente il link del titolo principale avvolge quasi sempre un <h2> o <h3>. 
+            const hasHeader = link.querySelector('h2, h3, h4');
+
+            // se il link non ha un header ed il testo è sospettosamente corto (es. "1 anno fa", "Condividi")
+            // probabilmente il parsing ha sbagliato e quello che ha pescato non è il titolo
+            if (!hasHeader && title.length < 15) return;
+
+            // aggiungiamo l'url al alla lista dei risultati
+            this.scrapedUrls.add(url); 
+
+            // estraiamo il subreddit
+            const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
+            const subreddit = subMatch ? "r/" + subMatch[1] : "";
+
+            // aggiungiamo il post alla lista dei risultati da inviare al backend
+            results.push({
+                type: "POST",
+                position: this.scrapedUrls.size, 
+                title: title,
+                url: url,
+                subreddit: subreddit,
+                content_text: "" 
+            });
+        });
+
+        return results;
+    }
+
+    // COMMUNITIES
+    scrapeCommunities() {
+
+        // estriamo tutti i blocchi che rappresentano una community 
+        const communityBlocks = document.querySelectorAll('div[data-testid="search-community"]');
+        const results = [];
+
+        // per ogni blocco di community trovato, estraiamo i dati
+        communityBlocks.forEach((block) => {
+
+            // cerchiamo il link che porta al subreddit
+            const link = block.querySelector('a[href^="/r/"]');
+            if (!link) return;
+
+            // puliamo l'URL
+            const url = link.href.split('?')[0].split('#')[0];
+            
+            // Deduplicazione per l'infinite scroll
+            if (this.scrapedUrls.has(url)) return;
+
+            // estraiamo il nome della community che si trova dentro il tag H2
+            const titleElement = block.querySelector('h2');
+            let communityName = titleElement ? titleElement.innerText.trim() : "";
+            
+            // FALLBACK: se Reddit dovesse cambiare l'H2, estraiamo il nome direttamente dall'URL (es. /r/destiny2/)
+            if (!communityName) {
+                const subMatch = url.match(/\/r\/([^\/]+)/i);
+                communityName = subMatch ? "r/" + subMatch[1] : "Comunità Sconosciuta";
+            }
+
+            // aggiungiamo l'url al set per evitare duplicati
+            this.scrapedUrls.add(url);
+
+            // per le community, il "subreddit" coincide letteralmente con il titolo (es. "r/destiny2")
+            const subreddit = communityName.startsWith("r/") ? communityName : "";
+
+            // aggiungiamo il post alla lista dei risultati da inviare al backend
+            results.push({
+                type: "COMMUNITY",
+                position: this.scrapedUrls.size,
+                title: communityName,
+                url: url,
+                subreddit: subreddit,
+                content_text: ""
+            });
+        });
+
+        return results;
+    }
+
+    // ----------------------------------------------------------------------------------
+    // CLEANUP
+    // ----------------------------------------------------------------------------------
 
     // funzione helper per spegnere i motori e formattare il disco
     customCleanUp() {
