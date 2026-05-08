@@ -59,7 +59,7 @@ class ResultsLoadedObserver extends BaseObserver {
                     break;
                 
                 case "comments":
-                    // TODO: Da implementare in futuro
+                    newResults = this.scrapeComments();
                     break;
 
                 case "people":
@@ -177,7 +177,7 @@ class ResultsLoadedObserver extends BaseObserver {
             // puliamo l'URL
             const url = link.href.split('?')[0].split('#')[0];
             
-            // Deduplicazione per l'infinite scroll
+            // se abbiamo già visto questo URL, saltiamo questa community
             if (this.scrapedUrls.has(url)) return;
 
             // estraiamo il nome della community che si trova dentro il tag H2
@@ -204,6 +204,55 @@ class ResultsLoadedObserver extends BaseObserver {
                 url: url,
                 subreddit: subreddit,
                 content_text: ""
+            });
+        });
+
+        return results;
+    }
+
+    // COMMENTS
+    scrapeComments() {
+
+        // estriamo tutti i blocchi che rappresentano un commento 
+        const commentBlocks = document.querySelectorAll('div[data-testid="search-sdui-comment-unit"]');
+        const results = [];
+
+        // per ogni blocco commento trovato, estraiamo i dati
+        commentBlocks.forEach((block) => {
+
+            // CERCHIAMO IL LINK AL COMMENTO: Reddit usa un tag <a> invisibile sopra il testo del commento legato tramite aria-labelledby
+            const commentLink = block.querySelector('a[aria-labelledby^="comment-content-"]');
+            if (!commentLink) return;
+
+            // prendiamo l'url del commento e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
+            const url = commentLink.href.split('?')[0].split('#')[0];
+            
+            // se abbiamo già visto questo URL, saltiamo questo commento
+            if (this.scrapedUrls.has(url)) return;
+
+            // estraiamo il titolo del post "padre"
+            const postTitleElement = block.querySelector('h2.i18n-search-comment-post-title');
+            const postTitle = postTitleElement ? postTitleElement.innerText.trim() : "Titolo Sconosciuto";
+
+            // estriamo il testo del commento
+            const commentContentElement = block.querySelector('.i18n-search-comment-content');
+            const commentText = commentContentElement ? commentContentElement.innerText.trim() : "";
+
+            // estraiamo il subreddit
+            const subMatch = url.match(/\/r\/([^\/]+)/i);
+            const subreddit = subMatch ? "r/" + subMatch[1] : "";
+
+            // aggiungiamo l'url al set per evitare duplicati
+            this.scrapedUrls.add(url);
+
+            // aggiungiamo il post alla lista dei risultati da inviare al backend
+            results.push({
+                type: "COMMENT",
+                position: this.scrapedUrls.size,
+                title: postTitle,        
+                url: url,                
+                subreddit: subreddit,
+                content_text: commentText 
             });
         });
 
