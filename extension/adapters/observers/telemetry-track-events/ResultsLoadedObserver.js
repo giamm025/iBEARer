@@ -112,13 +112,12 @@ class ResultsLoadedObserver extends BaseObserver {
     // POSTS, ALL e MEDIA 
     scrapePosts() {
 
-        // crechiamo i post (risultati delle ricerche), che Reddit avvolge nel tag <shreddit-post>
-        // EDIT: <shreddit-post> non funziona piu... quindi usiamo i link ai commenti. ogni post ne deve avere uno.
-        const links = document.querySelectorAll('a[href*="/comments/"]');
+        // estriamo tutti i titoli dei post (usando il selettore specifico)
+        const titleLinks = document.querySelectorAll('a[data-testid="post-title"]');
         const results = [];
 
-        // per ogni link (post) trovato estriamo i dati
-        links.forEach((link) => {
+        // per ogni link al titolo (post) trovato estriamo i dati
+        titleLinks.forEach((link) => {
 
             // prendiamo l'url del post e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
             const url = link.href.split('?')[0].split('#')[0]; 
@@ -130,14 +129,7 @@ class ResultsLoadedObserver extends BaseObserver {
             if (this.scrapedUrls.has(url)) return;
 
             // estraiamo il titolo
-            let title = (link.innerText || link.getAttribute('aria-label') || "").replace(/\s+/g, ' ').trim();                
-            
-            // solitamente il link del titolo principale avvolge quasi sempre un <h2> o <h3>. 
-            const hasHeader = link.querySelector('h2, h3, h4');
-
-            // se il link non ha un header ed il testo è sospettosamente corto (es. "1 anno fa", "Condividi")
-            // probabilmente il parsing ha sbagliato e quello che ha pescato non è il titolo
-            if (!hasHeader && title.length < 15) return;
+            const title = link.innerText.replace(/\s+/g, ' ').trim();
 
             // aggiungiamo l'url al alla lista dei risultati
             this.scrapedUrls.add(url); 
