@@ -63,7 +63,7 @@ class ResultsLoadedObserver extends BaseObserver {
                     break;
 
                 case "people":
-                    // TODO: Da implementare in futuro
+                    newResults = this.scrapePeople();
                     break;
 
                 default:
@@ -253,6 +253,57 @@ class ResultsLoadedObserver extends BaseObserver {
                 url: url,                
                 subreddit: subreddit,
                 content_text: commentText 
+            });
+        });
+
+        return results;
+    }
+
+    // PEOPLE
+    scrapePeople() {
+
+        // estriamo tutti i blocchi che rappresentano un profilo 
+        const peopleBlocks = document.querySelectorAll('div[data-testid="search-author"]');
+        const results = [];
+
+        // per ogni blocco profilo trovato, estraiamo i dati
+        peopleBlocks.forEach((block) => {
+
+            // cerchiamo il link che porta al profilo dell'utente
+            const link = block.querySelector('a[href^="/user/"]');
+            if (!link) return;
+
+            // prendiamo l'url e lo normalizziamo (togliamo la query e tutto quello dopo gli #)
+            const url = link.href.split('?')[0].split('#')[0];
+            
+            // se abbiamo già visto questo URL, saltiamo questo profilo
+            if (this.scrapedUrls.has(url)) return;
+
+            // estriamo il nome utente (tag H2)
+            const titleElement = block.querySelector('h2');
+            let username = titleElement ? titleElement.innerText.trim() : "";
+            
+            // FALLBACK: estraiamo dall'URL
+            if (!username) {
+                const userMatch = url.match(/\/user\/([^\/]+)/i);
+                username = userMatch ? "u/" + userMatch[1] : "Utente Sconosciuto";
+            }
+
+            // estraiamo la bio dell'utente se presente (tag <p> con data-testid="search-subreddit-desc-text")
+            const descElement = block.querySelector('p[data-testid="search-subreddit-desc-text"]');
+            const description = descElement ? descElement.innerText.trim() : "";
+
+            // aggiungiamo l'url al set per evitare duplicati
+            this.scrapedUrls.add(url);
+
+            // aggiungiamo il post alla lista dei risultati da inviare al backend
+            results.push({
+                type: "PERSON",
+                position: this.scrapedUrls.size,
+                title: username,             
+                url: url,                 
+                subreddit: "",            
+                content_text: description 
             });
         });
 
