@@ -20,6 +20,7 @@ class ApplyBorderIntervention extends BaseIntervention {
         Log.intervention("Bordo Applicato!");
         document.body.style.border = payload.border_style;
         document.body.style.boxSizing = "border-box"; 
+        return true;
     }
 }
 

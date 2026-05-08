@@ -24,6 +24,8 @@ class TrackResultsIntervention extends BaseIntervention {
         } else {
             Log.error("Intervention", "Impossibile avviare trackResults: query mancante in eventData.");
         }
+
+        return true;
     }
 };
 

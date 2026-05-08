@@ -69,7 +69,7 @@
       "apply_interventions": {
         "apply_red_border": [ "TREATMENT1"],
         "inject_debunking": ["TREATMENT1"],
-        "inject_fake_post_vaccines": ["TREATMENT2"],
+        "inject_fake_post_vaccines": ["TREATMENT1", "TREATMENT2"],
         "modify_post": ["TREATMENT1", "TREATMENT2"]
       }
     },

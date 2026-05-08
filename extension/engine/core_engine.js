@@ -341,13 +341,16 @@ class Engine {
                 const fqn = intervention.function_fqn;      // estraiamo il Fully Qualified Name (FQN) 
                 const payload = intervention.payload;       // estraiamo il payload da passare alla funzione intervento
 
-                this.executeInterventionFQN(fqn, payload, eventData);  // eseguiamo la funzione intervento
+                // eseguiamo la funzione intervento (ritorna 'false' se l'intervento ha deciso di abortire volontariamente)
+                const isApplied = this.executeInterventionFQN(fqn, payload, eventData);  
 
-                // registriamo che l'intervento è stato applicato
-                ApiManager.addEventToQueue("telemetry.events.InterventionAppliedEvent", {
-                    intervention_id: intervention.id,
-                    function_fqn: intervention.function_fqn
-                });
+                // se l'intervento è stato applicato con successo, registriamo che l'intervento è stato applicato
+                if (isApplied) {
+                    ApiManager.addEventToQueue("telemetry.events.InterventionAppliedEvent", {
+                        intervention_id: intervention.id,
+                        function_fqn: intervention.function_fqn
+                    });
+                }
 
             } else {
                 Log.error("Engine", `Istanza di intervento non trovata nel config.json: ${interventionID}`);
@@ -359,7 +362,11 @@ class Engine {
     // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload
     // scrive un log di errore se il FQN non è presente nel registro delle funzioni intervento
     executeInterventionFQN(fqn, payload, eventData) {
-        if (window[fqn]) { window[fqn](payload, eventData); } 
-        else {Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); }
+        if (window[fqn]) { 
+            return window[fqn](payload, eventData); 
+        } else {
+            Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); 
+            return false;
+        }
     }
 }
