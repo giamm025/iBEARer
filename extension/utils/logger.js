@@ -8,7 +8,7 @@ const LoggerConfig = {
         adapter: true,
         api_manager: true,
         survey_manager: true,
-        timer_manager: true,
+        timer_manager: false,
         web_socket: true,
 
         telemetry: true,
