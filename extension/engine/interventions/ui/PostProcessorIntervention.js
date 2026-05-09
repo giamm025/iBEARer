@@ -50,6 +50,8 @@ class PostProcessorIntervention extends BaseIntervention {
         return true;
     }
 
+
+    
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
     processPosts(keywords, positions, initialQuery, payload) {
 
@@ -93,6 +95,8 @@ class PostProcessorIntervention extends BaseIntervention {
         });
     }
 
+
+
     // metodo per verificare se siamo in una schermata compatibile ("Posts" o "All") prima di applicare l'intervento
     isPostPage() {
 
@@ -108,10 +112,14 @@ class PostProcessorIntervention extends BaseIntervention {
         return true;
     }
 
+
+
     // metodo astratto che le sottoclassi DEVONO implementare per definire l'azione specifica (modifica, rimozione, ecc.)
     applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {
         throw new Error(`[Architecture Violation] ${this.fqn} NON ha implementato applyAction().`);
     }
+
+
 
     // metodo helper per personalizzare un post (cambiare titolo, subreddit, immagine, testo, ecc.)
     formatPost(postNode, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments) {
@@ -212,6 +220,24 @@ class PostProcessorIntervention extends BaseIntervention {
 
             // IMMAGINE
             if (f_image && innerBox) {
+
+                const existingImages = innerBox.querySelectorAll('img');
+                existingImages.forEach(img => {
+                    if (!img.closest('span[avatar]')) {
+                        let nodeToRemove = img;
+
+                        while (nodeToRemove.parentElement && nodeToRemove.parentElement !== innerBox) {
+                            nodeToRemove = nodeToRemove.parentElement;
+                        }
+
+                        if (nodeToRemove !== textColumn && nodeToRemove !== counterRow) {
+                            nodeToRemove.remove();
+                        } else {
+                            img.remove();
+                        }
+                    }
+                });
+
                 innerBox.style.alignItems = "flex-start";
                 if (textColumn) textColumn.style.paddingRight = "16px";
 
@@ -234,6 +260,8 @@ class PostProcessorIntervention extends BaseIntervention {
         }
     }
     
+
+
     // metodo per inviare i dati al backend tramite l'ApiManager
     sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
        

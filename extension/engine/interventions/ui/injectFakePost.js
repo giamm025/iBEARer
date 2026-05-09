@@ -41,7 +41,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         // chiamiamo la funzione responsabile della clonazione 
         const finder = setInterval(() => {
             this.attemptInjection(payload, initialQuery, finder);
-        }, 150); 
+        }, 200); 
         // NB. Usiamo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). In questo modo evitiamo problemi di "elemento non trovato" e rendiamo l'intervento più robusto.
 
         return true;
