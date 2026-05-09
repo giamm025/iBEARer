@@ -51,7 +51,7 @@ class PostProcessorIntervention extends BaseIntervention {
     }
 
 
-    
+
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
     processPosts(keywords, positions, initialQuery, payload) {
 
@@ -61,9 +61,10 @@ class PostProcessorIntervention extends BaseIntervention {
 
         // prendiamo tutti i titoli dei post
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
+        const realTitles = Array.from(allTitles).filter(link => !link.closest('#bear-fake-post'));
         
         // iteriamo su tutti i titoli per verificare se corrispondono a keyword o posizione
-        allTitles.forEach((titleLink, index) => {
+        realTitles.forEach((titleLink, index) => {
 
             // estriamo posizione e testo del post
             const currentPos = index + 1;

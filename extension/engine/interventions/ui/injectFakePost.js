@@ -19,35 +19,61 @@
 class InjectFakePostIntervention extends PostProcessorIntervention {
     
     constructor() {
-        // Usa il FQN esatto che scriverai nel config.json
         super("injectFakePost"); 
     }
 
-    /**
-     * @param {InjectFakePostPayload} payload 
-     * @param {Object} eventData 
-     */
     execute(payload, eventData) {
-
+        
         // se siamo in una schermata incompatibile, usciamo subito dall'intervento (e non applichiamo la telemetria) 
         if (!this.isPostPage()) { return false; } 
-    
-        // se c'è gia un post fake (abbiamo gia applicato l'intervento) non facciamo nulla
-        if (document.getElementById("bear-fake-post")) { return false; }
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
         const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+        
+        // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
+        const observerKey = `_bearInjectObserver`;
 
-        // chiamiamo la funzione responsabile della clonazione 
-        const finder = setInterval(() => {
-            this.attemptInjection(payload, initialQuery, finder);
-        }, 200); 
-        // NB. Usiamo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). In questo modo evitiamo problemi di "elemento non trovato" e rendiamo l'intervento più robusto.
+        // resettiamo il flag della telemetria per questa ricerca
+        this.telemetrySent = false;
 
+        // se ci sono observer derivanti da iniezioni precedenti => li rimuoviamo
+        if (window[observerKey]) { window[observerKey].disconnect(); }
+
+        // facciamo un primo tentativo immediato
+        this.attemptInjection(payload, initialQuery);
+
+        // Se il primo tentativo non ha funzionato lanciamo un secondo tentativo
+        // dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
+        setTimeout(() => this.attemptInjection(payload, initialQuery), 500);
+
+        // MutationObserver: se React carica nuovi dati e ci cancella il post, lo rimettiamo
+        const observer = new MutationObserver((mutations) => {
+
+            // estraiamo la query di ricerca attuale
+            const currentQuery = new URLSearchParams(window.location.search).get('q');
+            
+            // se la query attuale è diversa a quella iniziale => abbiamo cambiato pagina => disconnettiamo l'observer e usciamo
+            if (currentQuery !== initialQuery) { observer.disconnect(); return; }
+
+            // altrimenti, se il post è stato rimosso, lo reinseriamo
+            if (!document.getElementById("bear-fake-post")) { this.attemptInjection(payload, initialQuery); }
+        });
+
+        // avviamo l'observer
+        observer.observe(document.body, { childList: true, subtree: true });
+        window[observerKey] = observer;
         return true;
     }
 
-    attemptInjection(payload, initialQuery, finder) {
+    // metodo helper per iniettare il post
+    attemptInjection(payload, initialQuery) {  
+
+        // estraiamo la query di ricerca attuale per verificare che sia ancora la stessa (se l'utente ha cambiato ricerca, non facciamo nulla)
+        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        if (currentQuery !== initialQuery) return;
+
+        // se c'è già un nostro fake post iniettato, non facciamo nulla
+        if (document.getElementById("bear-fake-post")) return;
 
         // estraiamo i dati dal config.json (se alcuni valori mancano usiamo dei Default)
         const f_title = payload.title || "Attenzione: Informazione Scientifica";
@@ -60,47 +86,51 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         const f_date = payload.date || null;
         const f_votes = payload.votes || null;
         const f_comments = payload.comments || null;
-        const f_new_position = payload.new_position || 1;    
-                
-        // cerchiamo il link del primo post (usando il titolo) che sarà quello che andremo a clonare
+        const f_new_position = payload.new_position || 1;  
+
+        // cerchiamo il primo post (quello da clonare)
         const firstTitleLink = document.querySelector('a[data-testid="post-title"]');
-        if (firstTitleLink) {
+        if (!firstTitleLink) return;
 
-            // appena troviamo un post originale, fermiamo il setInterval (ma proseguiamo con la costruzione del post fake)
-            clearInterval(finder); 
+        // cerchiamo il container principale dei post (dove inseriremo il nostro finto post)
+        const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
+        if (!mainFeedContainer) return;
 
-            // 1. TROVIAMO LA COLONNA CENTRALE DI REDDIT
-            const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
-            if (!mainFeedContainer) {
-                Log.error("Intervention", "Impossibile trovare la colonna principale dei risultati.");
-                return false;
-            }
-
-            // 2. RISALIAMO FINO AL FIGLIO DIRETTO DELLA COLONNA
-            let originalPostWrapper = firstTitleLink;
-            while (originalPostWrapper.parentElement && originalPostWrapper.parentElement !== mainFeedContainer) {
-                originalPostWrapper = originalPostWrapper.parentElement;
-            }
-
-            // 3. CLONAZIONE DEL WRAPPER COMPLETO
-            const fakePost = originalPostWrapper.cloneNode(true);
-            fakePost.id = "bear-fake-post";
-
-            // 4. MODIFICA DEL DOM CLONATO (funzione helper)
-            this.formatPost(fakePost, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments);
-
-            // 5. INSERIMENTO NELLA PAGINA
-            mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
-            
-            const divider = document.createElement("hr");
-            divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
-            mainFeedContainer.insertBefore(divider, originalPostWrapper);
-            
-            // --- 6. TELEMETRIA: INVIAMO I DATI AL BACKEND ---
-            const search_query = new URLSearchParams(window.location.search).get('q') || "";
-            this.sendPostToBackend("INJECTED", search_query, f_new_position, f_title, f_subreddit, f_link);
+        // estriamo il wrapper del post da clonare
+        let originalPostWrapper = firstTitleLink;
+        while (originalPostWrapper.parentElement && originalPostWrapper.parentElement !== mainFeedContainer) {
+            originalPostWrapper = originalPostWrapper.parentElement;
         }
-        return true;
+
+        // cloniamo il post originale
+        const fakePost = originalPostWrapper.cloneNode(true);
+        fakePost.id = "bear-fake-post";
+
+        // Modifichiamo il post clonato usando i dati del payload
+        this.formatPost(
+            fakePost, 
+            f_title,
+            f_subreddit,
+            f_avatar,
+            f_content,
+            f_image,
+            f_link,
+            f_date,
+            f_votes, 
+            f_comments
+        );
+
+        // iniettiamo il post fake
+        mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
+        const divider = document.createElement("hr");
+        divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
+        mainFeedContainer.insertBefore(divider, originalPostWrapper);
+        
+        // inviamo la telemetria SOLO LA PRIMA VOLTA
+        if (!this.telemetrySent) {
+            this.sendPostToBackend("INJECTED", initialQuery, payload.new_position || 1, payload.title, payload.subreddit, payload.target_url);
+            this.telemetrySent = true;
+        }
     }
 }
 
