@@ -69,6 +69,7 @@
       "apply_interventions": {
         "apply_red_border": [ "TREATMENT1"],
         "inject_debunking": ["TREATMENT1"],
+        "inject_fake_post_vaccines_ai": ["TREATMENT1", "TREATMENT2"],
         "inject_fake_post_vaccines": ["TREATMENT1", "TREATMENT2"],
         "modify_post": ["TREATMENT1", "TREATMENT2"]
       }
@@ -130,8 +131,18 @@
           "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
           "date": "1 anno fa",
           "votes": 100,
-          "comments": 50
+          "comments": 50,
+          "new_position": 2
       }
+    },
+    {
+      "id": "inject_fake_post_vaccines_ai",
+      "function_fqn": "injectFakePost",
+      "payload": {
+          "use_ai_generation": true,
+          "ai_prompt_context": "Sei un fact-checker esperto. Smentisci le teorie complottiste basandoti su fatti scientifici. SCRIVI SOLO UN'ANTEPRIMA PER REDDIT: crea un titolo e un corpo del testo di MASSIMO 2 RIGHE (max 30 parole). Tono formale. Usa la stessa lingua della ricerca dell'utente.",          
+          "new_position": 1
+        }
     },
     {
       "id": "hide_post",

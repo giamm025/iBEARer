@@ -171,6 +171,17 @@ const ApiManager = {
         }
     },
 
+// -------------------------------------------- POST /ai/generate-post --------------------------------------------
+    async generateAiPost(searchQuery, promptContext) {
+        return await this._sendMessage({ 
+            action: "GENERATE_AI_POST",
+            payload: {
+                search_query: searchQuery,
+                ai_prompt_context: promptContext
+            }
+        }, "Generazione Post AI");
+    },
+
 // -------------------------------------------- WEBSOCKET CONNECT --------------------------------------------
     async connectWebSocket() {
         await chrome.runtime.sendMessage({ 

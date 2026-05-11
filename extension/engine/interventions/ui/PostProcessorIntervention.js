@@ -61,8 +61,8 @@ class PostProcessorIntervention extends BaseIntervention {
 
         // prendiamo tutti i titoli dei post
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
-        const realTitles = Array.from(allTitles).filter(link => !link.closest('#bear-fake-post'));
-        
+        const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+
         // iteriamo su tutti i titoli per verificare se corrispondono a keyword o posizione
         realTitles.forEach((titleLink, index) => {
 
@@ -199,7 +199,12 @@ class PostProcessorIntervention extends BaseIntervention {
 
                 // TESTO (DESCRIZIONE)
                 if (f_content) {
+                    
+                    const existingCustomBox = textColumn.querySelector('.bear-custom-text-box');
+                    if (existingCustomBox) existingCustomBox.remove();
+                    
                     const customTextBox = document.createElement("div");
+                    customTextBox.className = "bear-custom-text-box"; 
                     customTextBox.style.marginTop = "2px";
                     customTextBox.style.marginBottom = "6px"; 
                     customTextBox.style.fontSize = "14px";

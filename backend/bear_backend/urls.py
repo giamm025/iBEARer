@@ -27,6 +27,7 @@ urlpatterns = [
     path('participants/<str:participant_id>/status/', views.manage_participant_status),
     path('participants/<str:participant_id>/telemetry/', views.send_telemetry),
     path('participants/<str:participant_id>/config/', views.get_config),
+    path('ai/generate-post/', views.generate_ai_post),
 
     path('admin/', admin.site.urls),
     path('config/', views.get_config),

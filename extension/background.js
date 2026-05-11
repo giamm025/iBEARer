@@ -172,4 +172,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return false;
     }
 
+// -------------------------------------------- POST /ai/generate-post --------------------------------------------
+    if (request.action === "GENERATE_AI_POST") {
+        fetch(`${BASE_URL}/ai/generate-post/`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request.payload)
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errorData = await res.json(); 
+                throw new Error(errorData.message || `HTTP status: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => sendResponse({ success: true, data: data }))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+        return true; 
+    }
+
 });

@@ -3,13 +3,22 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-import copy
+
+from google import genai
+from google.genai import types
 
 from . import models
 from . import serializers
 from . import utils
+from dotenv import load_dotenv
 
 import json
+import copy
+import os
+
+# importiamo le variabili d'ambiente
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 # -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
@@ -235,4 +244,58 @@ def manage_participant_status(request, participant_id):
 
     except Exception as e:
         return utils.error_response(500, str(e))
-    
+
+# ------------------------------------- POST /ai/generate-post --------------------------------------
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def generate_ai_post(request):
+    try:
+
+        # ------------------------------------- COMPONIAMO IL PROMPT -------------------------------------
+        # (unendo le richieste del ricercatore, la search_query e la struttura della risposta che vogliamo ottenere)
+        search_query = request.data.get('search_query', '')
+        ai_context = request.data.get('ai_prompt_context', '')
+        prompt = f"""
+        ISTRUZIONI DEL RICERCATORE:
+        {ai_context}
+
+        PAROLA CERCATA DALL'UTENTE: "{search_query}"
+
+        REGOLE DI SISTEMA OBBLIGATORIE:
+        Restituisci ESATTAMENTE e SOLO un oggetto JSON con questa struttura (non aggiungere markdown, solo il JSON):
+        {{
+            "title": "Titolo",
+            "content_text": "Le due righe di descrizione...",
+            "subreddit": "r/NomeAdattoAlContesto",
+            "author": "NomeUtente",
+            "votes": numero intero casuale tra 0 e 500,
+            "comments": numero intero casuale tra 0 e 500,
+        }}
+        """
+
+        # ------------------------------------- CHIAMATA API -------------------------------------
+        print("🧠 Chiamata a Gemini in corso (Nuovo SDK)...")
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            )
+        )
+
+        # ------------------------------------- RISPOSTA -------------------------------------
+        ai_response_text = response.text.strip()
+        if ai_response_text.startswith("```json"):
+            ai_response_text = ai_response_text[7:]
+        if ai_response_text.endswith("```"):
+            ai_response_text = ai_response_text[:-3]
+        ai_response_data = json.loads(ai_response_text.strip())
+        
+        print("✅ Generazione completata con successo!")
+        return Response(ai_response_data, status=status.HTTP_200_OK)
+
+    except json.JSONDecodeError:
+        return utils.error_response(500, "Errore: Gemini non ha restituito un JSON valido.")
+    except Exception as e:
+        return utils.error_response(500, f"Errore durante la generazione AI: {str(e)}")
