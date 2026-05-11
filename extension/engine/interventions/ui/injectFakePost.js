@@ -20,6 +20,24 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     
     constructor() {
         super("injectFakePost"); 
+        this.instancesState = {}; 
+    }
+
+    // metodo helper per ottenere lo stato di un singolo intervento in base alla posizone (es. se applichiamo piu fake post alla stessa ricerca)
+    getState(position) {
+
+        // se non esiste uno stato per questa posizione => stiamo applicando un nuovo intervento => creiamo un'istanza con stato di default
+        if (!this.instancesState[position]) {
+            this.instancesState[position] = {
+                lastQuery: "",
+                telemetrySent: false,
+                aiFailed: false,
+                cachedAiData: null
+            };
+        }
+
+        // altrimenti (abbiamo trovat l'istanza) => restituiamo
+        return this.instancesState[position];
     }
 
     execute(payload, eventData) {
@@ -29,45 +47,50 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
         const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+        
+        // recuperiamo la posizione dal config.json e lo stato della singola istanza
+        const pos = payload.new_position || 1;
+        const state = this.getState(pos);
 
         // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
-        const observerKey = `_bearInjectObserver`;
+        // EDIT: differenziamo ogni chiave usando la posizione in cui inseriremo il fakePost. questo di permettera di inserire piu post sulla stessa ricerca
+        const observerKey = `_bearInjectObserver_${pos}`;
 
         // se ci sono observer derivanti da iniezioni precedenti => li rimuoviamo
         if (window[observerKey]) { window[observerKey].disconnect(); }
 
         // se la query di ricerca è cambiata  => è stata fatta una nuova ricerca => resettiamo tutto
-        if (this.lastQuery !== initialQuery) {
-
+        if (state.lastQuery !== initialQuery) {
+            
             // resettiamo il flag della telemetria per questa ricerca
-            this.telemetrySent = false;
+            state.telemetrySent = false;
 
             // resettiamo il flag che ci avverte quando la generazione AI fallisce (per evitare che il backend mandi richieste all'infinito (consumando token che poi io pago :,)
-            this.aiFailed = false;
+            state.aiFailed = false;
 
             // resettiamo la cache dei dati generati dall'AI (per evitare di mostrare dati di ricerche passate)
-            this.cachedAiData = null;
+            state.cachedAiData = null;
 
             // aggiorniamo l'ultima query salvata
-            this.lastQuery = initialQuery;
+            state.lastQuery = initialQuery;
         }
 
         // facciamo un primo tentativo dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
-        setTimeout(() => this.injectFakePost(payload, initialQuery), 500);
+        setTimeout(() => this.injectFakePost(payload, initialQuery, pos, state), 500);
 
         // MutationObserver: se React carica nuovi dati e ci cancella il post, lo rimettiamo
         const observer = new MutationObserver((mutations) => {
-
+            
             // estraiamo la query di ricerca attuale
-            const currentQuery = new URLSearchParams(window.location.search).get('q');
-
-            // se la query attuale è diversa a quella iniziale => abbiamo cambiato pagina => disconnettiamo l'observer e usciamo
+           const currentQuery = new URLSearchParams(window.location.search).get('q');
+            
+           // se la query attuale è diversa a quella iniziale => abbiamo cambiato pagina => disconnettiamo l'observer e usciamo
             if (currentQuery !== initialQuery) { observer.disconnect(); return; }
 
             // altrimenti, se il post è stato rimosso (e l'ai non ha fallito) => lo reinseriamo
-            const isPostMissing = !document.getElementById("bear-fake-post");
-            const isAiPostMissing = !document.getElementById("bear-fake-post-ai");
-            if (isPostMissing && isAiPostMissing && !this.aiFailed) { this.injectFakePost(payload, initialQuery); }
+            const isPostMissing = !document.getElementById(`bear-fake-post-${pos}`);
+            const isAiPostMissing = !document.getElementById(`bear-fake-post-ai-${pos}`);
+            if (isPostMissing && isAiPostMissing && !state.aiFailed) { this.injectFakePost(payload, initialQuery, pos, state); }
         });
 
         // avviamo l'observer
@@ -78,16 +101,18 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
     // ------------------------------------- DECISORE (deleghera all funzioni specifiche) -------------------------------------
     // metodo principale che fa i controlli DOM, clona e poi DELEGA il lavoro
-    async injectFakePost(payload, initialQuery) {  
+    async injectFakePost(payload, initialQuery, pos, state) {  
 
         // se la query attuale è diversa da quella iniziale (l'utente ha cambiato ricerca) => non facciamo nulla
         const currentQuery = new URLSearchParams(window.location.search).get('q');
         if (currentQuery !== initialQuery) return;
 
         // se abbiamo gia una fake post (nostro o dell'AI) iniettato => non facciamo nulla
-        if (document.getElementById("bear-fake-post") || document.getElementById("bear-fake-post-ai") || this.aiFailed) return;
+        if (document.getElementById(`bear-fake-post-${pos}`) || document.getElementById(`bear-fake-post-ai-${pos}`) || state.aiFailed) return;
         
-        const firstTitleLink = document.querySelector('a[data-testid="post-title"]');
+        // estraiamo il primo post (quello che cloneremo) escludendo quelli che abbiamo gia iniettato noi 
+        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'));
+        const firstTitleLink = allTitleLinks.find(link => !link.closest('[id^="bear-fake-post"]'));
         if (!firstTitleLink) return;
 
         // estriamo il container principale dove sono tutti i post 
@@ -117,21 +142,27 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // se il config.json ci dice di usare l'AI, chiamiamo la funzione apposita, altrimenti usiamo quella solita
         if (payload.use_ai_generation) {
-            await this.aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery);
+            await this.aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
         } else {
-            this.staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery);
+            this.staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
         }
     }
 
-    // ------------------------------------- INIEZIONE STATICA-------------------------------------
+    // ------------------------------------- INIEZIONE STATICA -------------------------------------
     // la vecchia logica di iniezione, che prende i dati dal payload e li mette direttamente nel post clonato.
-    staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery) {
-        fakePost.id = "bear-fake-post";
+    staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
+
+        fakePost.id = `bear-fake-post-${pos}`;
+
+        // puliamo eventuali stili lasciati da interventi AI precedenti
+        fakePost.style.animation = "none";
+        fakePost.style.opacity = "1";
+        
         this.formatPost(
             fakePost, 
             payload.title || "Attenzione: Informazione Scientifica", 
             payload.subreddit || "r/SanitaPubblica", 
-            payload.subreddit_icon_url || null, 
+            payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png", 
             payload.content_text || "Questo è un messaggio di debunking inserito dall'estensione.", 
             payload.image_url || null, 
             payload.target_url || null, 
@@ -142,17 +173,17 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         this.killAllLinks(fakePost);
 
-        // iniezione del post finto
         mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
         mainFeedContainer.insertBefore(divider, originalPostWrapper);
-        this.sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, payload.new_position);
+        this.sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, pos, state);
     }
 
     // ------------------------------------- INIEZIONE AI ---------------------------------------------
-    async aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery) {
+    async aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
+        
+        fakePost.id = `bear-fake-post-ai-${pos}`;
         
         // formattiamo lo "scheletro" (la zona in cui andranno i dati dell'AI)
-        fakePost.id = "bear-fake-post-ai";
         this.formatPost(
             fakePost, 
             "✨ Generazione risposta AI in corso...", 
@@ -182,26 +213,26 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         mainFeedContainer.insertBefore(divider, originalPostWrapper);
 
         // prendiamo i dati dalla "cache" (se esistono)
-        let aiData = await this.retrieveAiData(initialQuery, payload);
+        let aiData = await this.retrieveAiData(initialQuery, payload, pos, state);
 
         // se nel frattempo l'utente ha cambiato query di ricerca o il post è stato rimosso da Reddit => usciamo senza fare nulla 
         const newQuery = new URLSearchParams(window.location.search).get('q');
-        if (newQuery !== initialQuery || !document.getElementById("bear-fake-post-ai")) {
+        if (newQuery !== initialQuery || !document.getElementById(`bear-fake-post-ai-${pos}`)) {
             return; 
         }
 
         // se la generazione AI ha successo, aggiorniamo il post con i nuovi dati. 
         if (aiData) {
-
-            Log.intervention("Post AI Generato con successo!");
-
+        
+            Log.intervention(`Post AI Generato con successo (Posizione: ${pos})!`);
+           
             // uniamo i dati dell'AI con quelli statici del payload (in modo che se l'AI non restituisce qualche campo, usiamo quello statico)
             const mergedPayload = { ...payload, ...aiData };
 
             // (ri)formattiamo il post per far sparire l'effetto "caricamento" ed inserire i dati generati dall'AI
             fakePost.style.animation = "none";
             fakePost.style.opacity = "1";
-            fakePost.id = "bear-fake-post";
+            fakePost.id = `bear-fake-post-${pos}`; 
             this.formatPost(
                 fakePost, mergedPayload.title, mergedPayload.subreddit, mergedPayload.subreddit_icon_url, 
                 mergedPayload.content_text, mergedPayload.image_url, mergedPayload.target_url, 
@@ -209,43 +240,45 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             );
 
             this.killAllLinks(fakePost);
-
             // inviamo la telemetria
-            this.sendTelemetry(mergedPayload.title, mergedPayload.subreddit, mergedPayload.target_url, initialQuery, mergedPayload.new_position);
+            this.sendTelemetry(mergedPayload.title, mergedPayload.subreddit, mergedPayload.target_url, initialQuery, pos, state);
 
         // altrimenti, se la generazione AI fallisce, rimuoviamo il post e settiamo un flag per evitare nuovi tentativi
         } else {
-            Log.error("Intervention", "Generazione AI fallita, rimozione post AI.");
-            this.aiFailed = true;
+            Log.error("Intervention", `Generazione AI fallita, rimozione post AI (Posizione: ${pos}).`);
+            state.aiFailed = true;
             fakePost.remove();
             divider.remove();
         }
     }
 
+    // ----------------------------------------------------------------------------------
+    // HELPER RECUPERO AI CON CACHE ISOLATA
+    // ----------------------------------------------------------------------------------
     // metodo helper per recuperare i dati generati dall'AI
-    async retrieveAiData(initialQuery, payload) {
+    async retrieveAiData(initialQuery, payload, pos, state) {
 
         // se abbiamo gia i dati in cache => restituiamo quelli
-        if (this.cachedAiData) { return this.cachedAiData; }
+        if (state.cachedAiData) { return state.cachedAiData; }
         
         // altrimenti (non abbiamo i dati in cache) => cerchiamo nella memoria di sessione (magari l'utente ha solo premuto F5)
         // NB. per poter salvare piu dati nella stessa sessione, creiamo una chiave che dipende dalla search_query (es. "bear_ai_vaccini")
-        const cacheKey = `bear_ai_${initialQuery}`;
+        const cacheKey = `bear_ai_${initialQuery}_pos_${pos}`;
         const savedData = sessionStorage.getItem(cacheKey);
         if (savedData) {
-            Log.intervention("Dati AI recuperati dal Session Storage (F5 rilevato). Nessuna chiamata API.");
-            this.cachedAiData = JSON.parse(savedData);
-            return this.cachedAiData;
+            Log.intervention(`Dati AI recuperati dal Session Storage per Posizione ${pos}.`);
+            state.cachedAiData = JSON.parse(savedData);
+            return state.cachedAiData;
         }
 
         // se non abbiamo trovato i dati nè in cache nè nel Session Storage => è la prima volta che generiamo il post => facciamo la chiamata API
-        Log.intervention("Nessuna cache trovata. Richiesta Post AI in corso...");
+        Log.intervention(`Nessuna cache trovata. Richiesta Post AI in corso per Posizione ${pos}...`);
         const apiData = await ApiManager.generateAiPost(initialQuery, payload.ai_prompt_context || "");
         if (apiData) {
-            this.cachedAiData = apiData;
-            sessionStorage.setItem(cacheKey, JSON.stringify(apiData)); // Il sessionStorage accetta solo stringhe!
+            state.cachedAiData = apiData;
+            sessionStorage.setItem(cacheKey, JSON.stringify(apiData)); 
         }
-        return this.cachedAiData;
+        return state.cachedAiData;
     }
 
     // ----------------------------------------------------------------------------------
@@ -254,7 +287,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // NB. la funzione formatPost GIA' è in grado di sotituire i link (es. quando clicco il post api wikipedia per debunking)
     //     QUESTA FUNZIONE SERVE SOLO A "PULIRE" TUTTI GLI ALTRI LINK! Ad esempio il link al subreddit originale, o l'autore.
     killAllLinks(fakePost) {
-
         // estriamo tutti i tag <a> del post originale
         const allLinks = fakePost.querySelectorAll('a');
          
@@ -285,8 +317,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // ----------------------------------------------------------------------------------
     // HELPER PER LA TELEMETRIA
     // ----------------------------------------------------------------------------------
-    sendTelemetry(title, subreddit, target_url, initialQuery, position) {
-        if (!this.telemetrySent) {
+    sendTelemetry(title, subreddit, target_url, initialQuery, position, state) {
+        if (!state.telemetrySent) {
             this.sendPostToBackend(
                 "INJECTED", 
                 initialQuery, 
@@ -295,7 +327,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 subreddit, 
                 target_url
             );
-            this.telemetrySent = true;
+            state.telemetrySent = true;
         }
     }
 }
