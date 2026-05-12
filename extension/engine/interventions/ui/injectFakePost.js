@@ -21,6 +21,83 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     constructor() {
         super("injectFakePost"); 
         this.instancesState = {}; 
+
+        // chiamiamo il metodo per "nascondere il feed" finche l'ai non ci genera il fake post
+        this.injectHidingStyles();
+    }
+
+    // metodo per nascondere il feed finche l'ai non ci genera il fake post
+    injectHidingStyles() {
+        if (!document.getElementById("bear-curtain-style")) {
+            const style = document.createElement("style");
+            style.id = "bear-curtain-style";
+            style.innerHTML = `
+                .bear-feed-hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+
+                .bear-stagger-hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+
+                .bear-fade-in {
+                    animation: bearFadeIn 0.5s ease-in forwards;
+                }
+                @keyframes bearFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // metodo per "abbassare il sipario" (nascondere) il feed originale 
+    hidePageContent(mainFeedContainer) {
+
+        // se il feed non è già nascosto => nascondiamolo
+        if (!mainFeedContainer.classList.contains('bear-feed-hidden')) {
+            mainFeedContainer.classList.add('bear-feed-hidden');
+            
+            // cerchiamo i menu laterali usando tag specifici di Reddit
+            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
+            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
+            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
+
+            // nascondiamo i menu laterali
+            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
+            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
+            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
+
+            // mostriamo il menu sinistro dopo 1.5 secondi
+            setTimeout(() => {
+                if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden');
+            }, 1500); 
+
+            // mostriamo il menu destro dopo 3 secondi
+            setTimeout(() => {
+                if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden');
+            }, 3000); 
+
+            setTimeout(() => {
+                if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');
+            }, 4000); 
+        }
+    }
+
+    // metodo per "alzare il sipario" (mostrare) il feed originale
+    revealPageContent(state) {
+        state.contentRevealed = true;
+        
+        // rendiamo visibile il feed centrale
+        const hiddenFeeds = document.querySelectorAll('.bear-feed-hidden');
+        hiddenFeeds.forEach(feed => feed.classList.remove('bear-feed-hidden'));
+
+        // inoltre, se la chiamata all'AI fallisce o termina prima del previsto => mostriamo anche i menu laterali subito
+        const hiddenMenus = document.querySelectorAll('.bear-stagger-hidden');
+        hiddenMenus.forEach(menu => menu.classList.remove('bear-stagger-hidden'));
     }
 
     // metodo helper per ottenere lo stato di un singolo intervento in base alla posizone (es. se applichiamo piu fake post alla stessa ricerca)
@@ -32,7 +109,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 lastQuery: "",
                 telemetrySent: false,
                 aiFailed: false,
-                cachedAiData: null
+                cachedAiData: null,
+                contentRevealed: false,
+                isGenerating: false
             };
         }
 
@@ -71,9 +150,18 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             // resettiamo la cache dei dati generati dall'AI (per evitare di mostrare dati di ricerche passate)
             state.cachedAiData = null;
 
+            // resettiamo il flag per nascondere il feed
+            state.contentRevealed = false;
+
+            // resettiamo il flag che indica se stiamo aspettando la generazione dell'AI 
+            state.isGenerating = false;
+
             // aggiorniamo l'ultima query salvata
             state.lastQuery = initialQuery;
         }
+
+        // aggiungiamo un timer di sicurezza per cui: se l'ai dopo 5 sec ancora non ha caricato il post mostriamo il feed all'utente SENZA il fake post
+        setTimeout(() => { if (!state.contentRevealed) this.revealPageContent(state); }, 150000)
 
         // facciamo un primo tentativo dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
         setTimeout(() => this.injectFakePost(payload, initialQuery, pos, state), 500);
@@ -89,8 +177,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
             // altrimenti, se il post è stato rimosso (e l'ai non ha fallito) => lo reinseriamo
             const isPostMissing = !document.getElementById(`bear-fake-post-${pos}`);
-            const isAiPostMissing = !document.getElementById(`bear-fake-post-ai-${pos}`);
-            if (isPostMissing && isAiPostMissing && !state.aiFailed) { this.injectFakePost(payload, initialQuery, pos, state); }
+            if (isPostMissing && !state.aiFailed) { this.injectFakePost(payload, initialQuery, pos, state); }
         });
 
         // avviamo l'observer
@@ -102,6 +189,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // ------------------------------------- DECISORE (deleghera all funzioni specifiche) -------------------------------------
     // metodo principale che fa i controlli DOM, clona e poi DELEGA il lavoro
     async injectFakePost(payload, initialQuery, pos, state) {  
+
+        // se stiamo gia generando non accettiamo altre chiamate
+        if (state.isGenerating) return;
 
         // se la query attuale è diversa da quella iniziale (l'utente ha cambiato ricerca) => non facciamo nulla
         const currentQuery = new URLSearchParams(window.location.search).get('q');
@@ -117,7 +207,17 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // estriamo il container principale dove sono tutti i post 
         const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
-        if (!mainFeedContainer) return;
+        if (!firstTitleLink || !mainFeedContainer) return;
+
+        // se c'è il main feed ma non abbiamo ancora i dati dell'ai => nascondiamo il feed
+        if (mainFeedContainer && !state.contentRevealed) { this.hidePageContent(mainFeedContainer); }
+
+        // prendiamo i primi 7 post visibili (escludendo quelli che abbiamo gia iniettato noi) per darli in pasto all'AI e farci generare il nostro post finto
+        const scrapedPostsText = Array.from(document.querySelectorAll('shreddit-post'))
+            .filter(p => !p.id.includes('bear-fake-post')) // Escludiamo i nostri post
+            .slice(0, 7) 
+            .map(p => `- Subreddit: ${p.getAttribute('subreddit-prefixed-name')} | Titolo: ${p.getAttribute('post-title')}`)
+            .join("\n");
 
         // estriamo il wrapper del primo post (per clonarlo)
         let originalPostWrapper = firstTitleLink;
@@ -140,9 +240,25 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             }
         });
 
+        // rimuoviamo l'avatar/immagine del subreddit
+        const avatars = fakePost.querySelectorAll('img[src*="avatar"], img[src*="communityIcon"]');
+        const defaultIcon = payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png";
+        avatars.forEach(img => {
+            img.removeAttribute('srcset'); 
+            img.src = defaultIcon;
+        });
+
+        // inseriamo la data 
+        const timeElements = fakePost.querySelectorAll('faceplate-timeago');
+        timeElements.forEach(timeEl => {
+            timeEl.removeAttribute('ts');
+            timeEl.innerHTML = ""; 
+            timeEl.innerText = "2 mesi fa"; 
+        });
+
         // se il config.json ci dice di usare l'AI, chiamiamo la funzione apposita, altrimenti usiamo quella solita
         if (payload.use_ai_generation) {
-            await this.aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
+            await this.aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText);
         } else {
             this.staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
         }
@@ -176,79 +292,66 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
         mainFeedContainer.insertBefore(divider, originalPostWrapper);
         this.sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, pos, state);
+
+        // appena abbiamo finito mostriamo il feed all'utente
+        this.revealPageContent(state);
     }
 
     // ------------------------------------- INIEZIONE AI ---------------------------------------------
-    async aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
-        
+    async aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText) {
+
         fakePost.id = `bear-fake-post-ai-${pos}`;
-        
-        // formattiamo lo "scheletro" (la zona in cui andranno i dati dell'AI)
-        this.formatPost(
-            fakePost, 
-            "✨ Generazione risposta AI in corso...", 
-            "r/AI_Analysis",                          
-            "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png", 
-            "Attendere prego. Il modello sta analizzando le fonti per questa ricerca...",
-            null, null, "ora", "...", "..."
-        );
+        state.isGenerating = true;
 
-        // effetto caricamento (opacità + animazione)
-        fakePost.style.animation = "bear-pulse 1.5s infinite ease-in-out";
-        if (!document.getElementById("bear-pulse-style")) {
-            const style = document.createElement("style");
-            style.id = "bear-pulse-style";
-            style.innerHTML = `
-                @keyframes bear-pulse {
-                    0% { opacity: 0.5; }
-                    50% { opacity: 0.8; }
-                    100% { opacity: 0.5; }
-                }
-            `;
-            document.head.appendChild(style);
-        }
+        try {
 
-        // iniezione del post finto
-        mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
-        mainFeedContainer.insertBefore(divider, originalPostWrapper);
+            // prendiamo i dati dalla "cache" (se esistono)
+            let aiData = await this.retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText);
 
-        // prendiamo i dati dalla "cache" (se esistono)
-        let aiData = await this.retrieveAiData(initialQuery, payload, pos, state);
+            // se nel frattempo l'utente ha cambiato query di ricerca => usciamo senza fare nulla 
+            const newQuery = new URLSearchParams(window.location.search).get('q');
+            if (newQuery !== initialQuery) { return; }
 
-        // se nel frattempo l'utente ha cambiato query di ricerca o il post è stato rimosso da Reddit => usciamo senza fare nulla 
-        const newQuery = new URLSearchParams(window.location.search).get('q');
-        if (newQuery !== initialQuery || !document.getElementById(`bear-fake-post-ai-${pos}`)) {
-            return; 
-        }
+            // se la generazione AI ha successo, aggiorniamo il post con i nuovi dati. 
+            if (aiData) {
+            
+                Log.intervention(`Post AI Generato con successo (Posizione: ${pos})!`);
+            
+                // uniamo i dati dell'AI con quelli statici del payload (in modo che se l'AI non restituisce qualche campo, usiamo quello statico)
+                const mergedPayload = { ...payload, ...aiData };
 
-        // se la generazione AI ha successo, aggiorniamo il post con i nuovi dati. 
-        if (aiData) {
-        
-            Log.intervention(`Post AI Generato con successo (Posizione: ${pos})!`);
-           
-            // uniamo i dati dell'AI con quelli statici del payload (in modo che se l'AI non restituisce qualche campo, usiamo quello statico)
-            const mergedPayload = { ...payload, ...aiData };
+                // (ri)formattiamo il post per far sparire l'effetto "caricamento" ed inserire i dati generati dall'AI
+                fakePost.style.animation = "none";
+                fakePost.style.opacity = "1";
+                fakePost.id = `bear-fake-post-${pos}`; 
+                this.formatPost(
+                    fakePost, mergedPayload.title, mergedPayload.subreddit, mergedPayload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png", 
+                    mergedPayload.content_text, mergedPayload.image_url, mergedPayload.target_url, 
+                    mergedPayload.date, mergedPayload.votes, mergedPayload.comments
+                );
 
-            // (ri)formattiamo il post per far sparire l'effetto "caricamento" ed inserire i dati generati dall'AI
-            fakePost.style.animation = "none";
-            fakePost.style.opacity = "1";
-            fakePost.id = `bear-fake-post-${pos}`; 
-            this.formatPost(
-                fakePost, mergedPayload.title, mergedPayload.subreddit, mergedPayload.subreddit_icon_url, 
-                mergedPayload.content_text, mergedPayload.image_url, mergedPayload.target_url, 
-                mergedPayload.date, mergedPayload.votes, mergedPayload.comments
-            );
+                this.killAllLinks(fakePost);
 
-            this.killAllLinks(fakePost);
-            // inviamo la telemetria
-            this.sendTelemetry(mergedPayload.title, mergedPayload.subreddit, mergedPayload.target_url, initialQuery, pos, state);
+                // iniettiamo il post nel DOM
+                mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
+                mainFeedContainer.insertBefore(divider, originalPostWrapper);
 
-        // altrimenti, se la generazione AI fallisce, rimuoviamo il post e settiamo un flag per evitare nuovi tentativi
-        } else {
-            Log.error("Intervention", `Generazione AI fallita, rimozione post AI (Posizione: ${pos}).`);
+                // inviamo la telemetria
+                this.sendTelemetry(mergedPayload.title, mergedPayload.subreddit, mergedPayload.target_url, initialQuery, pos, state);
+
+            // altrimenti, se la generazione AI fallisce, rimuoviamo il post e settiamo un flag per evitare nuovi tentativi
+            } else {
+                Log.error("Intervention", `Generazione AI fallita, rimozione post AI (Posizione: ${pos}).`);
+                state.aiFailed = true;
+            }
+            
+        } catch (error) {
+            Log.error("Intervention", `Errore critico durante l'iniezione AI: ${error}`);
             state.aiFailed = true;
-            fakePost.remove();
-            divider.remove();
+
+        } finally {
+            state.isGenerating = false; 
+            this.revealPageContent(state);    
         }
     }
 
@@ -256,7 +359,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // HELPER RECUPERO AI CON CACHE ISOLATA
     // ----------------------------------------------------------------------------------
     // metodo helper per recuperare i dati generati dall'AI
-    async retrieveAiData(initialQuery, payload, pos, state) {
+    async retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText) {
 
         // se abbiamo gia i dati in cache => restituiamo quelli
         if (state.cachedAiData) { return state.cachedAiData; }
@@ -273,7 +376,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // se non abbiamo trovato i dati nè in cache nè nel Session Storage => è la prima volta che generiamo il post => facciamo la chiamata API
         Log.intervention(`Nessuna cache trovata. Richiesta Post AI in corso per Posizione ${pos}...`);
-        const apiData = await ApiManager.generateAiPost(initialQuery, payload.ai_prompt_context || "");
+        const basePrompt = payload.ai_prompt_context || "";
+        const prompt = `${basePrompt}\n\nCONTESTO ATTUALE DELLA PAGINA (Usa questi titoli come ispirazione per mimetizzarti o smentirli):\n${scrapedPostsText}`;        
+        const apiData = await ApiManager.generateAiPost(initialQuery, prompt);
         if (apiData) {
             state.cachedAiData = apiData;
             sessionStorage.setItem(cacheKey, JSON.stringify(apiData)); 

@@ -3,7 +3,7 @@
     "experiment_name": "reddit_cospiracy",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 300
+        "duration": 3000
     },
     "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },
@@ -70,7 +70,6 @@
         "apply_red_border": [ "TREATMENT1"],
         "inject_debunking": ["TREATMENT1"],
         "inject_fake_post_vaccines_ai": ["TREATMENT1", "TREATMENT2"],
-        "inject_fake_post_vaccines": ["TREATMENT1", "TREATMENT2"],
         "modify_post": ["TREATMENT1", "TREATMENT2"]
       }
     },
