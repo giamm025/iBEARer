@@ -54,6 +54,7 @@
           "track_results": ["CONTROL", "TREATMENT1", "TREATMENT2"]
       }
     },
+
     {
       "id": "trigger_contains_conspiracy",
       "target_groups": ["TREATMENT1", "TREATMENT2"],
@@ -63,7 +64,7 @@
         {
           "property": "search_query",
           "operator": "CONTAINS_ANY",
-          "value": ["epstein", "vaccini", "terra piatta", "5g"]
+          "value": ["epstein", "terra piatta", "/vaccin/", "/5g\\b/", "/covid[- ]?19/"]
         }
       ],
       "apply_interventions": {
@@ -73,6 +74,7 @@
         "modify_post": ["TREATMENT1", "TREATMENT2"]
       }
     },
+
     {
       "id": "trigger_contains_roast_me",
       "target_groups": ["TREATMENT1", "TREATMENT2"],

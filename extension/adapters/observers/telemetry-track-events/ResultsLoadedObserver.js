@@ -78,7 +78,7 @@ class ResultsLoadedObserver extends BaseObserver {
                     extracted_count: newResults.length,
                     scraped_posts: newResults
                 });
-                Log.adapter(`ResultsLoadedObserver: Estratti ${newResults.length} risultati (${tabType.toUpperCase()}) per la query: "${query}".`);
+                // Log.adapter(`ResultsLoadedObserver: Estratti ${newResults.length} risultati (${tabType.toUpperCase()}) per la query: "${query}".`);
             }
         };
 
