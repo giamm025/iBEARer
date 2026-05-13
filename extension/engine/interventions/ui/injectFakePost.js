@@ -71,16 +71,17 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
             if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
 
-            // mostriamo il menu sinistro dopo 1.5 secondi
+            // sblocchiamo il menu alto (barra di ricerca) dopo 1.5 secondi
             setTimeout(() => {
                 if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden');
             }, 1500); 
 
-            // mostriamo il menu destro dopo 3 secondi
+            // sblocchiamo il menu destro dopo 3 secondi
             setTimeout(() => {
                 if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden');
             }, 3000); 
 
+            // sblocchiamo il menu sinistro dopo 4 secondi
             setTimeout(() => {
                 if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');
             }, 4000); 
@@ -89,6 +90,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
     // metodo per "alzare il sipario" (mostrare) il feed originale
     revealPageContent(state) {
+
+        // segniamo che il contenuto è stato rivelato (in modo da non far scattare di nuovo il timer di sicurezza)
         state.contentRevealed = true;
         
         // rendiamo visibile il feed centrale
@@ -160,8 +163,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             state.lastQuery = initialQuery;
         }
 
-        // aggiungiamo un timer di sicurezza per cui: se l'ai dopo 5 sec ancora non ha caricato il post mostriamo il feed all'utente SENZA il fake post
-        setTimeout(() => { if (!state.contentRevealed) this.revealPageContent(state); }, 150000)
+        // aggiungiamo un timer di sicurezza per cui: se l'ai dopo 8 sec ancora non ha caricato il post mostriamo il feed all'utente SENZA il fake post
+        setTimeout(() => { if (!state.contentRevealed) this.revealPageContent(state); }, 8000)
 
         // facciamo un primo tentativo dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
         setTimeout(() => this.injectFakePost(payload, initialQuery, pos, state), 500);
@@ -190,7 +193,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // metodo principale che fa i controlli DOM, clona e poi DELEGA il lavoro
     async injectFakePost(payload, initialQuery, pos, state) {  
 
-        // se stiamo gia generando non accettiamo altre chiamate
+        // se stiamo gia generando non accettiamo altre chiamate (in questo modo gli inserimenti statici avverranno dopo la generazione AI, evitando casini di mostra/nascondi continui del feed)
         if (state.isGenerating) return;
 
         // se la query attuale è diversa da quella iniziale (l'utente ha cambiato ricerca) => non facciamo nulla
@@ -233,8 +236,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         // rimuoviamo immagini, testo e altre info 
         const mediaElements = fakePost.querySelectorAll('img, video, picture, shreddit-post-image, faceplate-img');
         mediaElements.forEach(media => {
+            // Se l'immagine non è un avatar...
             if (!media.closest('span[avatar]') && !media.src?.includes('avatar') && !media.src?.includes('communityIcon')) {
-                const wrapper = media.closest('div[data-testid="post-thumbnail"], .thumbnail, div[data-testid="search-post-with-content-preview"]');
+                const wrapper = media.closest('div[data-testid="post-thumbnail"], .thumbnail'); 
                 if (wrapper) wrapper.remove();
                 else media.remove();
             }
