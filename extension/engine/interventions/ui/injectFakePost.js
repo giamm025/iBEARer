@@ -288,6 +288,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         );
 
         this.killAllLinks(fakePost);
+        this.attachClickTelemetry(fakePost, payload, initialQuery, pos, false);
 
         mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
         mainFeedContainer.insertBefore(divider, originalPostWrapper);
@@ -331,6 +332,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 );
 
                 this.killAllLinks(fakePost);
+                this.attachClickTelemetry(fakePost, mergedPayload, initialQuery, pos, true); 
 
                 // iniettiamo il post nel DOM
                 mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
@@ -394,7 +396,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     killAllLinks(fakePost) {
         // estriamo tutti i tag <a> del post originale
         const allLinks = fakePost.querySelectorAll('a');
-         
+        
         // per ogni link estratto (tag <a>) => rimuoviamo il link cliccabile (tag <href> e target) 
         allLinks.forEach(link => {
             link.removeAttribute("href");
@@ -404,7 +406,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
             link.onclick = (e) => {
                 e.preventDefault();
-                e.stopPropagation();
             };
         });
 
@@ -417,6 +418,33 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             card.removeAttribute('data-id');
             card.removeAttribute('label');
         });
+        
+        // modifichiamo il cursore per mostrare la "manina" cliccabile quando l'utente passa sopra al nostro fake post
+        fakePost.style.cursor = "pointer";
+    }
+
+    // ----------------------------------------------------------------------------------
+    // HELPER PER AGGIUNGERE LA TELEMETRIA QUANDO CLICCA UN FAKE POST
+    // ----------------------------------------------------------------------------------
+    attachClickTelemetry(fakePost, payload, initialQuery, pos, isAiGenerated) {
+        
+        // aggiungiamo un listener del click al fakePost
+        const eventName = isAiGenerated ? "ClickOnAiGeneratedFakePost" : "ClickOnStaticFakePost";
+        fakePost.addEventListener('click', (e) => {
+            
+            e.preventDefault();
+            e.stopPropagation();
+            ApiManager.addEventToQueue(`telemetry.events.${eventName}`, {
+                search_query: initialQuery,
+                post_position: pos,
+                title: payload.title,
+                subreddit: payload.subreddit,
+            });
+            
+            // se c'è un target link lo apriamo in una nuova scheda
+            const targetUrl = payload.target_url;
+            if (targetUrl) { window.open(targetUrl, '_blank'); }
+        }, { capture: true });
     }
 
     // ----------------------------------------------------------------------------------

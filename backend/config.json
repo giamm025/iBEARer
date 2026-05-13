@@ -67,8 +67,8 @@
         }
       ],
       "apply_interventions": {
-        "apply_red_border": [ "TREATMENT1"],
-        "inject_debunking": ["TREATMENT1"],
+        "inject_debunking_banner": ["TREATMENT1"],
+        "inject_fake_post_vaccines": ["TREATMENT1"],
         "inject_fake_post_vaccines_ai": ["TREATMENT1", "TREATMENT2"],
         "modify_post": ["TREATMENT1", "TREATMENT2"]
       }
@@ -93,23 +93,7 @@
 
   "interventions": [
     {
-      "id": "apply_red_border",
-      "function_fqn": "interventions.debug.applyBorder",
-      "payload": {
-          "border_style": "30px solid red"
-      }
-    },
-
-    {
-      "id": "apply_green_border",
-      "function_fqn": "interventions.debug.applyBorder",
-      "payload": {
-          "border_style": "30px solid green"
-      }
-    },
-
-    {
-      "id": "inject_debunking",
+      "id": "inject_debunking_banner",
       "function_fqn": "interventions.ui.showDebunkingBanner",
       "payload": {}
     },
@@ -119,6 +103,7 @@
       "function_fqn": "interventions.trackResults",
       "payload": {}
     },
+
     {
       "id": "inject_fake_post_vaccines",
       "function_fqn": "injectFakePost",
@@ -134,6 +119,7 @@
           "new_position": 2
       }
     },
+
     {
       "id": "inject_fake_post_vaccines_ai",
       "function_fqn": "injectFakePost",
@@ -143,6 +129,7 @@
           "new_position": 1
         }
     },
+
     {
       "id": "hide_post",
       "function_fqn": "removePost",
@@ -151,6 +138,7 @@
         "target_positions": [1, 2, 3, 4, 5]
       }
     },
+    
     {
       "id": "modify_post",
       "function_fqn": "modifyPost",
