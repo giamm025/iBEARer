@@ -283,7 +283,7 @@ class Engine {
     evaluateTrigger(trigger, eventData) {
         
         // creiamo un array in cui salvare i risultati delle singole condizione del trigger
-        // tale array sara poi utilizzato per per applicare il logical_operator (AND, OR, ecc.) di TUTTE le condizioni
+        // tale array sara poi utilizzato per per applicare il conditions_logical_operator (AND, OR, ecc.) di TUTTE le condizioni
         const results = [];
 
         // per ogni condizione del trigger
@@ -308,7 +308,7 @@ class Engine {
         }
 
         // valuta le condizioni in base all'operatore logico del trigger
-        const finalResult = this.evaluateLogicalOperator(results, trigger.logical_operator);
+        const finalResult = this.evaluateLogicalOperator(results, trigger.conditions_logical_operator);
         return finalResult
     }
 

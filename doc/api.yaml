@@ -184,7 +184,7 @@ components:
 
     Trigger:
       description: A trigger containing mapping logic for multiple A/B groups.
-      required: [id, target_groups, event_source, logical_operator, conditions, apply_interventions]
+      required: [id, target_groups, event_source, conditions, apply_interventions]
       properties:
         id:
           type: string
@@ -197,9 +197,10 @@ components:
           example: ["TREATMENT_A", "TREATMENT_AGGRESSIVE"]
         event_source:
           type: string
-        logical_operator:
+        conditions_logical_operator:
           type: string
           enum: [AND, OR]
+          default: "AND"
         conditions:
           type: array
           items:
@@ -242,15 +243,16 @@ components:
 
     FilteredTrigger:
       description: A flat trigger ready to be executed by the extension.
-      required: [id, event_source, logical_operator, conditions, apply_interventions]
+      required: [id, event_source, conditions, apply_interventions]
       properties:
         id:
           type: string
         event_source:
           type: string
-        logical_operator:
+        conditions_logical_operator:
           type: string
           enum: [AND, OR]
+          default: "AND"
         conditions:
           type: array
           items:

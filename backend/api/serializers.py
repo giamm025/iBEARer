@@ -45,7 +45,7 @@ class TriggerSerializer(serializers.Serializer):
     id = serializers.CharField() 
     target_groups = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     event_source = serializers.CharField()
-    logical_operator = serializers.ChoiceField(choices=["AND", "OR"])
+    conditions_logical_operator = serializers.ChoiceField(choices=["AND", "OR"],  required=False, default="AND")    
     conditions = ConditionSerializer(many=True)
     apply_interventions = serializers.JSONField()
 

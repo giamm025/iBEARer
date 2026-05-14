@@ -48,7 +48,6 @@
       "id": "every_search",
       "target_groups": ["CONTROL", "TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
-      "logical_operator": "AND",
       "conditions": [],
       "apply_interventions": {
           "track_results": ["CONTROL", "TREATMENT1", "TREATMENT2"]
@@ -59,7 +58,6 @@
       "id": "search_contains_conspiracy",
       "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
-      "logical_operator": "AND",
       "conditions": [
         {
           "property": "search_query",
@@ -78,7 +76,6 @@
       "id": "search_contains_roast_me",
       "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
-      "logical_operator": "AND",
       "conditions": [
         {
           "property": "search_query",
