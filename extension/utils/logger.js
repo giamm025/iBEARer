@@ -19,7 +19,7 @@ const LoggerConfig = {
         operator_registry: true,
         telemetry_registry: true,
 
-        intervention: true,
+        intervention: false,
         heart_beat: false
     }
 };
