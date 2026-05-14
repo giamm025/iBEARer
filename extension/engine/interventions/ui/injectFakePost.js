@@ -135,7 +135,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         if (!activePayload) { return false; }
         
         // recuperiamo la posizione dal config.json e lo stato della singola istanza
-        const pos = payload.new_position || 1;
+        const pos = activePayload.new_position || 1;
         const state = this.getState(pos);
 
         // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
@@ -208,9 +208,12 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         if (document.getElementById(`bear-fake-post-${pos}`) || document.getElementById(`bear-fake-post-ai-${pos}`) || state.aiFailed) return;
         
         // estraiamo il primo post (quello che cloneremo) escludendo quelli che abbiamo gia iniettato noi 
-        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'));
+        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]')).filter(link => !link.closest('[id^="bear-fake-post"]'));
         const firstTitleLink = allTitleLinks.find(link => !link.closest('[id^="bear-fake-post"]'));
         if (!firstTitleLink) return;
+        
+        // prendiamo il link al post DOVE inseriremo il nostro fake post (se viene richiestala posizione 5 ma abbiamo solo 3, lo mettiamo piu in fondo possibile prendendo l'ultimo post caricato come riferimento)
+        const insertReferenceLink = allTitleLinks[pos - 1] || allTitleLinks[allTitleLinks.length - 1];
 
         // estriamo il container principale dove sono tutti i post 
         const mainFeedContainer = firstTitleLink.closest('main#main-content > div') || firstTitleLink.closest('div.bg-neutral-background');
@@ -230,6 +233,12 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         let originalPostWrapper = firstTitleLink;
         while (originalPostWrapper.parentElement && originalPostWrapper.parentElement !== mainFeedContainer) {
             originalPostWrapper = originalPostWrapper.parentElement;
+        }
+
+        // estriamo il wrapper del post di riferimento dove inseriremo il nostro fake post
+        let insertWrapper = insertReferenceLink;
+        while (insertWrapper.parentElement && insertWrapper.parentElement !== mainFeedContainer) {
+            insertWrapper = insertWrapper.parentElement;
         }
 
         // cloniamo il post originale
@@ -266,15 +275,15 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // se il config.json ci dice di usare l'AI, chiamiamo la funzione apposita, altrimenti usiamo quella solita
         if (payload.use_ai_generation) {
-            await this.aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText);
+            await this.aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText);
         } else {
-            this.staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
+            this.staticInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state);
         }
     }
 
     // ------------------------------------- INIEZIONE STATICA -------------------------------------
     // la vecchia logica di iniezione, che prende i dati dal payload e li mette direttamente nel post clonato.
-    staticInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
+    staticInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
 
         fakePost.id = `bear-fake-post-${pos}`;
 
@@ -298,8 +307,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         this.killAllLinks(fakePost);
         this.attachClickTelemetry(fakePost, payload, initialQuery, pos, false);
 
-        mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
-        mainFeedContainer.insertBefore(divider, originalPostWrapper);
+        mainFeedContainer.insertBefore(fakePost, insertWrapper);
+        mainFeedContainer.insertBefore(divider, insertWrapper);
         this.sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, pos, state);
 
         // appena abbiamo finito mostriamo il feed all'utente
@@ -307,7 +316,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     }
 
     // ------------------------------------- INIEZIONE AI ---------------------------------------------
-    async aiInjection(fakePost, originalPostWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText) {
+    async aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText) {
 
         fakePost.id = `bear-fake-post-ai-${pos}`;
         state.isGenerating = true;
@@ -343,8 +352,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 this.attachClickTelemetry(fakePost, mergedPayload, initialQuery, pos, true); 
 
                 // iniettiamo il post nel DOM
-                mainFeedContainer.insertBefore(fakePost, originalPostWrapper);
-                mainFeedContainer.insertBefore(divider, originalPostWrapper);
+                mainFeedContainer.insertBefore(fakePost, insertWrapper);
+                mainFeedContainer.insertBefore(divider, insertWrapper);
 
                 // inviamo la telemetria
                 this.sendTelemetry(mergedPayload.title, mergedPayload.subreddit, mergedPayload.target_url, initialQuery, pos, state);
