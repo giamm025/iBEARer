@@ -26,102 +26,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         this.injectHidingStyles();
     }
 
-    // metodo per nascondere il feed finche l'ai non ci genera il fake post
-    injectHidingStyles() {
-        if (!document.getElementById("bear-curtain-style")) {
-            const style = document.createElement("style");
-            style.id = "bear-curtain-style";
-            style.innerHTML = `
-                .bear-feed-hidden {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-
-                .bear-stagger-hidden {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-
-                .bear-fade-in {
-                    animation: bearFadeIn 0.5s ease-in forwards;
-                }
-                @keyframes bearFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-
-    // metodo per "abbassare il sipario" (nascondere) il feed originale 
-    hidePageContent(mainFeedContainer) {
-
-        // se il feed non è già nascosto => nascondiamolo
-        if (!mainFeedContainer.classList.contains('bear-feed-hidden')) {
-            mainFeedContainer.classList.add('bear-feed-hidden');
-            
-            // cerchiamo i menu laterali usando tag specifici di Reddit
-            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
-            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
-            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
-
-            // nascondiamo i menu laterali
-            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
-            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
-            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
-
-            // sblocchiamo il menu alto (barra di ricerca) dopo 1.5 secondi
-            setTimeout(() => {
-                if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden');
-            }, 1500); 
-
-            // sblocchiamo il menu destro dopo 3 secondi
-            setTimeout(() => {
-                if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden');
-            }, 3000); 
-
-            // sblocchiamo il menu sinistro dopo 4 secondi
-            setTimeout(() => {
-                if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');
-            }, 4000); 
-        }
-    }
-
-    // metodo per "alzare il sipario" (mostrare) il feed originale
-    revealPageContent(state) {
-
-        // segniamo che il contenuto è stato rivelato (in modo da non far scattare di nuovo il timer di sicurezza)
-        state.contentRevealed = true;
-        
-        // rendiamo visibile il feed centrale
-        const hiddenFeeds = document.querySelectorAll('.bear-feed-hidden');
-        hiddenFeeds.forEach(feed => feed.classList.remove('bear-feed-hidden'));
-
-        // inoltre, se la chiamata all'AI fallisce o termina prima del previsto => mostriamo anche i menu laterali subito
-        const hiddenMenus = document.querySelectorAll('.bear-stagger-hidden');
-        hiddenMenus.forEach(menu => menu.classList.remove('bear-stagger-hidden'));
-    }
-
-    // metodo helper per ottenere lo stato di un singolo intervento in base alla posizone (es. se applichiamo piu fake post alla stessa ricerca)
-    getState(position) {
-
-        // se non esiste uno stato per questa posizione => stiamo applicando un nuovo intervento => creiamo un'istanza con stato di default
-        if (!this.instancesState[position]) {
-            this.instancesState[position] = {
-                lastQuery: "",
-                telemetrySent: false,
-                aiFailed: false,
-                cachedAiData: null,
-                contentRevealed: false,
-                isGenerating: false
-            };
-        }
-
-        // altrimenti (abbiamo trovat l'istanza) => restituiamo
-        return this.instancesState[position];
-    }
-
     execute(payload, eventData) {
 
         // se siamo in una schermata incompatibile, usciamo subito dall'intervento (e non applichiamo la telemetria) 
@@ -163,12 +67,21 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             // resettiamo il flag che indica se stiamo aspettando la generazione dell'AI 
             state.isGenerating = false;
 
+            // resettiamo il flag che indica se l'ai ha abortito (ci stava mettendo troppo a generare)
+            state.aiAborted = false;
+
             // aggiorniamo l'ultima query salvata
             state.lastQuery = initialQuery;
         }
 
         // aggiungiamo un timer di sicurezza per cui: se l'ai dopo 8 sec ancora non ha caricato il post mostriamo il feed all'utente SENZA il fake post
-        setTimeout(() => { if (!state.contentRevealed) this.revealPageContent(state); }, 8000)
+        setTimeout(() => { 
+            if (!state.contentRevealed) { 
+                state.aiAborted = true;         // diciamo all'ai di fermare la generazione
+                state.aiFailed = true;          // impediamo all'observer di riprovare
+                this.revealPageContent(state);  // mostriamo i post
+            } 
+        }, 8000)
 
         // facciamo un primo tentativo dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
         setTimeout(() => this.injectFakePost(activePayload, initialQuery, pos, state), 500);
@@ -193,8 +106,30 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         return true;
     }
 
-    // ------------------------------------- DECISORE (deleghera all funzioni specifiche) -------------------------------------
-    // metodo principale che fa i controlli DOM, clona e poi DELEGA il lavoro
+    // metodo helper per ottenere lo stato di un singolo intervento in base alla posizone (es. se applichiamo piu fake post alla stessa ricerca)
+    getState(position) {
+
+        // se non esiste uno stato per questa posizione => stiamo applicando un nuovo intervento => creiamo un'istanza con stato di default
+        if (!this.instancesState[position]) {
+            this.instancesState[position] = {
+                lastQuery: "",
+                telemetrySent: false,
+                aiFailed: false,
+                cachedAiData: null,
+                contentRevealed: false,
+                isGenerating: false,
+                aiAborted: false
+            };
+        }
+
+        // altrimenti (abbiamo trovat l'istanza) => restituiamo
+        return this.instancesState[position];
+    }
+
+
+    // --------------------------------------------------------------------------
+    // INIEZIONE DEL FAKE POST (scorre il DOM, trova il primo post, lo clona, trova la new_position e poi DELEGA il lavoro)
+    // --------------------------------------------------------------------------
     async injectFakePost(payload, initialQuery, pos, state) {  
 
         // se stiamo gia generando non accettiamo altre chiamate (in questo modo gli inserimenti statici avverranno dopo la generazione AI, evitando casini di mostra/nascondi continui del feed)
@@ -281,8 +216,43 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         }
     }
 
-    // ------------------------------------- INIEZIONE STATICA -------------------------------------
-    // la vecchia logica di iniezione, che prende i dati dal payload e li mette direttamente nel post clonato.
+    
+    // metodo helper per pulire tutti i link secondari (es. il link al subreddit originale, l'autore, etc...)
+    killAllLinks(fakePost) {
+        
+        // estriamo tutti i tag <a> del post originale
+        const allLinks = fakePost.querySelectorAll('a');
+        
+        // per ogni link estratto (tag <a>) => rimuoviamo il link cliccabile (tag <href> e target) 
+        allLinks.forEach(link => {
+            link.removeAttribute("href");
+            link.removeAttribute("target");
+            link.removeAttribute("aria-haspopup"); 
+            link.removeAttribute("aria-expanded");
+
+            link.onclick = (e) => {
+                e.preventDefault();
+            };
+        });
+
+        // oltre ai link, disinneschiamo anche le hovercard (es. quella del subreddit) che si aprono al pasaggio del mouse
+        const hoverCards = fakePost.querySelectorAll('faceplate-hovercard');
+        hoverCards.forEach(card => {
+            const hoverContent = card.querySelector('[slot="content"]');
+            if (hoverContent) hoverContent.remove();
+            card.removeAttribute('enter-delay');
+            card.removeAttribute('data-id');
+            card.removeAttribute('label');
+        });
+        
+        // modifichiamo il cursore per mostrare la "manina" cliccabile quando l'utente passa sopra al nostro fake post
+        fakePost.style.cursor = "pointer";
+    }
+
+
+    // --------------------------------------------------------------------------
+    // INIEZIONE STATICA (SENZA AI)
+    // --------------------------------------------------------------------------
     staticInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state) {
 
         fakePost.id = `bear-fake-post-${pos}`;
@@ -315,7 +285,10 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         this.revealPageContent(state);
     }
 
-    // ------------------------------------- INIEZIONE AI ---------------------------------------------
+
+    // --------------------------------------------------------------------------
+    // INIEZIONE AI
+    // --------------------------------------------------------------------------
     async aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText) {
 
         fakePost.id = `bear-fake-post-ai-${pos}`;
@@ -325,6 +298,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
             // prendiamo i dati dalla "cache" (se esistono)
             let aiData = await this.retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText);
+
+            // se ci è stato detto di abortire => non facciamo nulla
+            if (state.aiAborted) { return; }
 
             // se nel frattempo l'utente ha cambiato query di ricerca => usciamo senza fare nulla 
             const newQuery = new URLSearchParams(window.location.search).get('q');
@@ -374,9 +350,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         }
     }
 
-    // ----------------------------------------------------------------------------------
-    // HELPER RECUPERO AI CON CACHE ISOLATA
-    // ----------------------------------------------------------------------------------
     // metodo helper per recuperare i dati generati dall'AI
     async retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText) {
 
@@ -405,39 +378,85 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         return state.cachedAiData;
     }
 
-    // ----------------------------------------------------------------------------------
-    // HELPER PER DISINNESCARE I LINK
-    // ----------------------------------------------------------------------------------
-    // NB. la funzione formatPost GIA' è in grado di sotituire i link (es. quando clicco il post api wikipedia per debunking)
-    //     QUESTA FUNZIONE SERVE SOLO A "PULIRE" TUTTI GLI ALTRI LINK! Ad esempio il link al subreddit originale, o l'autore.
-    killAllLinks(fakePost) {
-        // estriamo tutti i tag <a> del post originale
-        const allLinks = fakePost.querySelectorAll('a');
-        
-        // per ogni link estratto (tag <a>) => rimuoviamo il link cliccabile (tag <href> e target) 
-        allLinks.forEach(link => {
-            link.removeAttribute("href");
-            link.removeAttribute("target");
-            link.removeAttribute("aria-haspopup"); 
-            link.removeAttribute("aria-expanded");
 
-            link.onclick = (e) => {
-                e.preventDefault();
-            };
-        });
+    // --------------------------------------------------------------------------
+    // DELAY DI CARICAMENTO 
+    // --------------------------------------------------------------------------
+    // metodo per nascondere il feed finche l'ai non ci genera il fake post
+    injectHidingStyles() {
+        if (!document.getElementById("bear-curtain-style")) {
+            const style = document.createElement("style");
+            style.id = "bear-curtain-style";
+            style.innerHTML = `
+                .bear-feed-hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
 
-        // oltre ai link, disinneschiamo anche le hovercard (es. quella del subreddit) che si aprono al pasaggio del mouse
-        const hoverCards = fakePost.querySelectorAll('faceplate-hovercard');
-        hoverCards.forEach(card => {
-            const hoverContent = card.querySelector('[slot="content"]');
-            if (hoverContent) hoverContent.remove();
-            card.removeAttribute('enter-delay');
-            card.removeAttribute('data-id');
-            card.removeAttribute('label');
-        });
+                .bear-stagger-hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+
+                .bear-fade-in {
+                    animation: bearFadeIn 0.5s ease-in forwards;
+                }
+                @keyframes bearFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // metodo per "abbassare il sipario" (nascondere) il feed originale 
+    hidePageContent(mainFeedContainer) {
+
+        // se il feed non è già nascosto => nascondiamolo
+        if (!mainFeedContainer.classList.contains('bear-feed-hidden')) {
+            mainFeedContainer.classList.add('bear-feed-hidden');
+            
+            // cerchiamo i menu laterali usando tag specifici di Reddit
+            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
+            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
+            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
+
+            // nascondiamo i menu laterali
+            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
+            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
+            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
+
+            // sblocchiamo il menu alto (barra di ricerca) dopo 1.5 secondi
+            setTimeout(() => {
+                if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden');
+            }, 1500); 
+
+            // sblocchiamo il menu destro dopo 3 secondi
+            setTimeout(() => {
+                if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden');
+            }, 3000); 
+
+            // sblocchiamo il menu sinistro dopo 4 secondi
+            setTimeout(() => {
+                if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');
+            }, 4000); 
+        }
+    }
+
+    // metodo per "alzare il sipario" (mostrare) il feed originale
+    revealPageContent(state) {
+
+        // segniamo che il contenuto è stato rivelato (in modo da non far scattare di nuovo il timer di sicurezza)
+        state.contentRevealed = true;
         
-        // modifichiamo il cursore per mostrare la "manina" cliccabile quando l'utente passa sopra al nostro fake post
-        fakePost.style.cursor = "pointer";
+        // rendiamo visibile il feed centrale
+        const hiddenFeeds = document.querySelectorAll('.bear-feed-hidden');
+        hiddenFeeds.forEach(feed => feed.classList.remove('bear-feed-hidden'));
+
+        // inoltre, se la chiamata all'AI fallisce o termina prima del previsto => mostriamo anche i menu laterali subito
+        const hiddenMenus = document.querySelectorAll('.bear-stagger-hidden');
+        hiddenMenus.forEach(menu => menu.classList.remove('bear-stagger-hidden'));
     }
 
     // ----------------------------------------------------------------------------------
@@ -465,7 +484,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     }
 
     // ----------------------------------------------------------------------------------
-    // HELPER PER LA TELEMETRIA
+    // HELPER PER INVIARE LA TELEMETRIA
     // ----------------------------------------------------------------------------------
     sendTelemetry(title, subreddit, target_url, initialQuery, position, state) {
         if (!state.telemetrySent) {
