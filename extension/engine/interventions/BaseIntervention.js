@@ -32,4 +32,45 @@ class BaseIntervention {
         throw new Error(`[Architecture Violation] L'intervento '${this.fqn}' NON ha implementato il metodo execute().`);
         return false;
     }
+
+    /** 
+     * metodo di utilità per fare parsing del config.json ed ottenere i dati specifici da iniettare sulla base della query di ricerca.
+     * 
+     * @param {string} search_query - La query di ricerca estratta dall'URL
+     * @param {Object} payload - Il payload dell'intervento, estratto dal config.json, che DEVE contenere "dynamic_content"
+    */
+    resolvePayload(search_query, payload) {
+
+        try {
+
+            // se la search_query è vuota => fallback
+            if (!search_query) {
+                Log.intervention(`[${this.constructor.name}] Risoluzione ignorata: Nessuna search_query valida fornita.`);
+                return payload.default_fallback || null;
+            }
+
+            // se il payload non ha dynamic content => errore
+            if (!payload || !payload.dynamic_content || !Array.isArray(payload.dynamic_content)) {
+                Log.error("BaseIntervention", `[${this.constructor.name}] Payload non valido: "dynamic_content" mancante o non è un array.`);
+                return null; 
+            }
+
+            // per ogni regola in dynamic_content => controlliamo se la query matcha le keyword di trigger  
+            for (const rule of payload.dynamic_content) {
+                
+                // usiamo l'operatore CONTAINS_ANY per capire quale post iniettare sulla base della query di ricerca 
+                if (window["CONTAINS_ANY"](search_query, rule.trigger_keywords)) {
+                    return rule.data;
+                }
+            }
+            
+            // se non troviamo nessun intervento per quella query restituiamo il default
+            Log.intervention(`[${this.constructor.name}] Nessuna regola dinamica adatta alla query "${search_query}". Uso fallback.`);
+            return payload.default_fallback || null;
+
+        } catch (error) {
+            Log.error("BaseIntervention", `Errore critico in resolvePayload per ${this.constructor.name}: ${error.message}`);
+            return null;
+        }
+    }
 }

@@ -129,6 +129,10 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
         const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+
+        // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
+        const activePayload = this.resolvePayload(initialQuery, payload);
+        if (!activePayload) { return false; }
         
         // recuperiamo la posizione dal config.json e lo stato della singola istanza
         const pos = payload.new_position || 1;
@@ -167,7 +171,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         setTimeout(() => { if (!state.contentRevealed) this.revealPageContent(state); }, 8000)
 
         // facciamo un primo tentativo dopo un timer di pochi ms per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
-        setTimeout(() => this.injectFakePost(payload, initialQuery, pos, state), 500);
+        setTimeout(() => this.injectFakePost(activePayload, initialQuery, pos, state), 500);
 
         // MutationObserver: se React carica nuovi dati e ci cancella il post, lo rimettiamo
         const observer = new MutationObserver((mutations) => {
@@ -180,7 +184,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
             // altrimenti, se il post è stato rimosso (e l'ai non ha fallito) => lo reinseriamo
             const isPostMissing = !document.getElementById(`bear-fake-post-${pos}`);
-            if (isPostMissing && !state.aiFailed) { this.injectFakePost(payload, initialQuery, pos, state); }
+            if (isPostMissing && !state.aiFailed) { this.injectFakePost(activePayload, initialQuery, pos, state); }
         });
 
         // avviamo l'observer

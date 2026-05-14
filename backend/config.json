@@ -43,7 +43,7 @@
     "dependency": "adapters/reddit_adapter.js"
   },
 
-  "triggers": [
+"triggers": [
     {
       "id": "every_search",
       "target_groups": ["CONTROL", "TREATMENT1", "TREATMENT2"],
@@ -56,7 +56,7 @@
     },
 
     {
-      "id": "trigger_contains_conspiracy",
+      "id": "search_contains_conspiracy",
       "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
@@ -64,19 +64,18 @@
         {
           "property": "search_query",
           "operator": "CONTAINS_ANY",
-          "value": ["epstein", "terra piatta", "/vaccin/", "/5g\\b/", "/covid[- ]?19/"]
+          "value": ["epstein", "terra piatta", "vaccin", "/5g\\b/", "/covid[- ]?19/"]
         }
       ],
       "apply_interventions": {
-        "inject_debunking_banner": ["TREATMENT1"],
-        "inject_fake_post_vaccines": ["TREATMENT1"],
-        "inject_fake_post_vaccines_ai": ["TREATMENT1", "TREATMENT2"],
-        "modify_post": ["TREATMENT1", "TREATMENT2"]
+        "show_debunking_banner": ["TREATMENT1"],
+        "modify_post": ["TREATMENT1", "TREATMENT2"],
+        "inject_fake_post": ["TREATMENT1", "TREATMENT2"] 
       }
     },
 
     {
-      "id": "trigger_contains_roast_me",
+      "id": "search_contains_roast_me",
       "target_groups": ["TREATMENT1", "TREATMENT2"],
       "event_source": "adapters.events.SearchSubmitted",
       "logical_operator": "AND",
@@ -95,41 +94,45 @@
 
   "interventions": [
     {
-      "id": "inject_debunking_banner",
+      "id": "show_debunking_banner",
       "function_fqn": "interventions.ui.showDebunkingBanner",
-      "payload": {}
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
+            "data": {
+              "message": "Attenzione: I vaccini sono sicuri ed efficaci secondo l'OMS.",
+              "link_url": "https://www.who.int/news-room/questions-and-answers/item/vaccines-and-immunization-vaccine-safety",
+              "link_text": "Scopri di più",
+              "bg_color": "#D32F2F"
+            }
+          },
+          {
+            "trigger_keywords": ["/5g\\b/"],
+            "data": {
+              "message": "Attenzione: Le reti 5G utilizzano onde radio non ionizzanti sicure.",
+              "link_url": "https://www.europarl.europa.eu/RegData/etudes/STUD/2021/690012/EPRS_STU(2021)690012_EN.pdf",
+              "link_text": "Leggi lo studio EU",
+              "bg_color": "#1976D2"
+            }
+          },
+          {
+            "trigger_keywords": ["terra piatta", "flat earth"],
+            "data": {
+              "message": "Attenzione: La forma sferica della Terra è un fatto scientifico provato.",
+              "link_url": "https://www.nasa.gov/earth/how-do-we-know-the-earth-isnt-flat-we-asked-a-nasa-expert-episode-53/",
+              "link_text": "Spiegazione NASA",
+              "bg_color": "#654321"
+            }
+          }
+        ]
+      }
     },
 
     {
       "id": "track_results",
       "function_fqn": "interventions.trackResults",
       "payload": {}
-    },
-
-    {
-      "id": "inject_fake_post_vaccines",
-      "function_fqn": "injectFakePost",
-      "payload": {
-          "title": "🔴 La verità scientifica sui Vaccini MRNA",
-          "subreddit": "r/MinisteroDellaSalute",
-          "author": "ScienzaUfficiale",
-          "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini sono sicuri ed efficaci. Non fidarti delle fonti non verificate su Reddit. Clicca qui per leggere il report ufficiale.",
-          "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
-          "date": "1 anno fa",
-          "votes": 100,
-          "comments": 50,
-          "new_position": 2
-      }
-    },
-
-    {
-      "id": "inject_fake_post_vaccines_ai",
-      "function_fqn": "injectFakePost",
-      "payload": {
-          "use_ai_generation": true,
-          "ai_prompt_context": "Sei un fact-checker esperto. Smentisci le teorie complottiste basandoti su fatti scientifici. SCRIVI SOLO UN'ANTEPRIMA PER REDDIT: crea un titolo e un corpo del testo di MASSIMO 2 RIGHE (max 30 parole). Tono formale. Usa la stessa lingua della ricerca dell'utente.",          
-          "new_position": 1
-        }
     },
 
     {
@@ -148,6 +151,39 @@
           "target_keywords": ["Thailandia"],
           "target_positions": [2],
           "content_text": "⚠️ INFORMAZIONI NON VERIFICATE! Apri il post per saperne di piu..."
+      }
+    },
+
+    {
+      "id": "inject_fake_post",
+      "function_fqn": "injectFakePost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
+            "data": {
+              "title": "🔴 La verità scientifica sui Vaccini MRNA",
+              "subreddit": "r/MinisteroDellaSalute",
+              "author": "ScienzaUfficiale",
+              "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini sono sicuri ed efficaci. Non fidarti delle fonti non verificate su Reddit. Clicca qui per leggere il report ufficiale.",
+              "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
+              "date": "1 anno fa",
+              "votes": 100,
+              "comments": 50,
+              "new_position": 2,
+              "use_ai_generation": false
+            }
+          },
+          {
+            "trigger_keywords": ["/5g\\b/"],
+            "data": {
+              "new_position": 5,
+              "use_ai_generation": true,
+              "ai_prompt_context": "Sei un fact-checker esperto. Smentisci le teorie complottiste sul 5G basandoti su fatti scientifici. SCRIVI SOLO UN'ANTEPRIMA PER REDDIT: crea un titolo e un corpo del testo di MASSIMO 2 RIGHE (max 30 parole). Tono formale. Usa la stessa lingua della ricerca dell'utente."
+            }
+          }
+        ],
+        "default_fallback": null
       }
     }
   ]
