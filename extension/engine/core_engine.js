@@ -104,12 +104,28 @@ class Engine {
                 if (document.visibilityState === "visible") {
                     let checkData = await ApiManager.getStatus();
                     if (checkData && checkData.status === targetStatus) {
-                        document.removeEventListener("visibilitychange", onVisibilityChange);
-                        resolve();
+                        cleanupAndResolve();
                     }
                 }
             };
+
+            // in alternativa, se la Web Socket è ancora attiva, possiamo anche ascoltare un eventuale messaggio di update dello stato da parte del backend 
+            // che ci conferma che il pre-survey è stato completato e quindi possiamo avviare il motore 
+            const onApiUpdate = (e) => {
+                if (e.detail && e.detail.status === targetStatus) {
+                    cleanupAndResolve();
+                }
+            };
+
             document.addEventListener("visibilitychange", onVisibilityChange);
+            document.addEventListener("ApiStatusUpdate", onApiUpdate);
+
+            // funzione per rimuovere tutti i listeners e risolvere la promessa per sbloccare l engine
+            const cleanupAndResolve = () => {
+                document.removeEventListener("visibilitychange", onVisibilityChange);
+                document.removeEventListener("ApiStatusUpdate", onApiUpdate);
+                resolve();
+            };
         });
     }
 
@@ -121,7 +137,7 @@ class Engine {
         Log.engine(`Gruppo Assegnato: ${this.group}`);
 
         // otteniamo la configurazione dal backend completa di trigger e interventi filtrati sulla base del GRUPPO UTENTE
-        this.getConfig();
+        await this.getConfig();
 
         // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
         this.initListeners();

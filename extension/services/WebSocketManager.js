@@ -18,37 +18,34 @@ export class WebSocketManager {
         console.log(`🌐 [WebSocketManager] Tentativo di connessione a: ${wsEndpoint}`);
         this.socket = new WebSocket(wsEndpoint);
 
-
+        
         // --------------------------------------- on open ---------------------------------------
         this.socket.onopen = () => {
-            console.log("🌐 [WebSocketManager] WebSocket Connesso! DEBUG DEBUG DEBUG");
+            console.log("🌐 [WebSocketManager] WebSocket Connesso!");
             if (this.reconnectInterval) {
                 clearInterval(this.reconnectInterval);
                 this.reconnectInterval = null;
             }
         };
 
-
+        
         // --------------------------------------- on message ---------------------------------------
         this.socket.onmessage = (event) => {
-
+            
             // ottiene il nuovo stato
             const data = JSON.parse(event.data);
             console.log("🌐 [WebSocketManager] Aggiornamento Stato Ricevuto:", data);
 
-            // se il nuovo stato è PRE-SURVEY-COMPLETED 
-            if (data.status === 'PRE-SURVEY-COMPLETED') {
-                
-                // avvisa tutte le tab attive di far partire il motore!
-                chrome.tabs.query({}, (tabs) => {
-                    tabs.forEach(tab => {
-                        chrome.tabs.sendMessage(tab.id, { 
-                            action: "START_EXPERIMENT", 
-                            group: data.group 
-                        }).catch(() => {}); 
-                    });
+            // qualsiasi sia il messaggio ricevuto, notifichiamo tutti gli altri file del cambio di stato                 
+            chrome.tabs.query({}, (tabs) => {
+                tabs.forEach(tab => {
+                    chrome.tabs.sendMessage(tab.id, { 
+                        action: "WEBSOCKET_STATUS_UPDATE", 
+                        status: data.status,
+                        group: data.group 
+                    }).catch(() => {}); 
                 });
-            }
+            });
         };
 
         // --------------------------------------- on close ---------------------------------------

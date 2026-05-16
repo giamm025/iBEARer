@@ -202,12 +202,17 @@ const ApiManager = {
 // --- ASCOLTATORE MESSAGGI DAL BACKGROUND ---
 // Quando il background riceve il segnale dal WebSocket, avvisa questa tab
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "START_EXPERIMENT") {
-        Log.api_manager(`Ricevuto segnale START_EXPERIMENT! Gruppo: ${request.group}`);
+    
+    // quando il WebSocketManager ci avvisa di un cambio di stato
+    if (request.action === "WEBSOCKET_STATUS_UPDATE") {
+        Log.api_manager(`Aggiornamento WebSocket ricevuto: ${request.status} (Gruppo: ${request.group})`);
         
-        // Se l'Engine ha registrato la sua callback, chiamiamola!
-        if (ApiManager.onExperimentStartCallback) {
-            ApiManager.onExperimentStartCallback(request.group);
-        }
+        // emettiamo un evento per avvisare tutti gli altri componenti (in particolare il core_engine) che lo stato è cambiato
+        document.dispatchEvent(new CustomEvent("ApiStatusUpdate", { 
+            detail: { 
+                status: request.status, 
+                group: request.group 
+            } 
+        }));
     }
 });
