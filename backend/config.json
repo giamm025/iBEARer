@@ -90,6 +90,13 @@
   ],
 
   "interventions": [
+
+    {
+      "id": "track_results",
+      "function_fqn": "interventions.trackResults",
+      "payload": {}
+    },
+
     {
       "id": "show_debunking_banner",
       "function_fqn": "interventions.ui.showDebunkingBanner",
@@ -127,31 +134,6 @@
     },
 
     {
-      "id": "track_results",
-      "function_fqn": "interventions.trackResults",
-      "payload": {}
-    },
-
-    {
-      "id": "hide_post",
-      "function_fqn": "removePost",
-      "payload": {
-        "target_keywords": ["52M"],
-        "target_positions": [1, 2, 3, 4, 5]
-      }
-    },
-    
-    {
-      "id": "modify_post",
-      "function_fqn": "modifyPost",
-      "payload": {
-          "target_keywords": ["Thailandia"],
-          "target_positions": [2],
-          "content_text": "⚠️ INFORMAZIONI NON VERIFICATE! Apri il post per saperne di piu..."
-      }
-    },
-
-    {
       "id": "inject_fake_post",
       "function_fqn": "injectFakePost",
       "payload": {
@@ -167,7 +149,7 @@
               "date": "1 anno fa",
               "votes": 100,
               "comments": 50,
-              "new_position": 2,
+              "new_position": 3,
               "use_ai_generation": false
             }
           },
@@ -181,6 +163,47 @@
           }
         ],
         "default_fallback": null
+      }
+    },
+    
+    {
+      "id": "modify_post",
+      "function_fqn": "modifyPost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["vaccin", "/covid[- ]?19/", "/5g\\b/"],
+            "data": {
+              "target_positions": [2],
+              "target_keywords": ["thailandia"],
+              "highlight_color": "#ffebee",
+              "border_color": "#d32f2f",
+              "content_text": "⚠️ ATTENZIONE: Questo post menziona aziende farmaceutiche. Verifica sempre le fonti mediche."
+            }
+          }
+        ],
+        "default_fallback": null
+      }
+    },
+
+    {
+      "id": "hide_post",
+      "function_fqn": "removePost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["vaccin"],
+            "data": {
+              "target_positions": [1, 2, 3]
+            }
+          },
+          {
+            "trigger_keywords": ["/5g\\b/"],
+            "data": {
+              "target_keywords": ["microchip", "bill gates"]
+            }
+          }
+        ]
       }
     }
   ]

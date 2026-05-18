@@ -285,32 +285,29 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // ==========================================================================
 
     _getDomReferences(pos) {
-
+        
         // estraiamo i link ai post (escludendo quelli initettati da noi)
-        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]')).filter(link => !link.closest('[id^="bear-fake-post"]'));
+        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'))
+            .filter(link => !link.closest('[id^="bear-fake-post"]'));
+        
         if (allTitleLinks.length === 0) return null;
 
         // estraiamo il primo link (quello da clonare) ed il link di riferimento in cui effettuare l'inserimento
         const cloneReferenceLink = allTitleLinks[0];
         const insertReferenceLink = allTitleLinks[pos - 1] || allTitleLinks[allTitleLinks.length - 1];
 
-        // estraiamo il container principale del feed 
-        const mainFeedContainer = cloneReferenceLink.closest('main#main-content > div') || cloneReferenceLink.closest('div.bg-neutral-background');
-        if (!mainFeedContainer) return null;
+        // chiamiamo la funzione per trovare il wrapper preciso del post da clonare e del post di riferimento per l'inserimento
+        const cloneWrapper = this._getSinglePostWrapper(cloneReferenceLink);
+        const insertWrapper = this._getSinglePostWrapper(insertReferenceLink);
 
-        // estriamo il wrapper da clonare
-        let cloneWrapper = cloneReferenceLink;
-        while (cloneWrapper.parentElement && cloneWrapper.parentElement !== mainFeedContainer) {
-            cloneWrapper = cloneWrapper.parentElement;
+        if (!cloneWrapper || !insertWrapper) {
+            Log.error("Intervention", "Impossibile isolare il wrapper del post. Layout non supportato.");
+            return null;
         }
 
-        // estraiamo il wrapper in cui effettuare l'inserimento 
-        let insertWrapper = insertReferenceLink;
-        while (insertWrapper.parentElement && insertWrapper.parentElement !== mainFeedContainer) {
-            insertWrapper = insertWrapper.parentElement;
-        }
-
-        return { cloneWrapper, insertWrapper, mainFeedContainer };
+        // il main feed container è il nodo padre del wrapper di riferimento per l'inserimento (di solito è <main> o <shreddit-feed>)
+        const mainFeedContainer = cloneWrapper.parentElement;
+        return { cloneWrapper, insertWrapper, mainFeedContainer };    
     }
 
     // estrae i primi 7 post dei risultati di ricerca (escludendo quelli iniettati da noi) 

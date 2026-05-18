@@ -11,9 +11,16 @@ class PostProcessorIntervention extends BaseIntervention {
         // se siamo in una schermata incompatibile, usciamo subito dall'intervento (e non applichiamo la telemetria) 
         if (!this.isPostPage()) { return false; } 
 
+        // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
+        const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+
+        // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
+        const activePayload = this.resolvePayload(initialQuery, payload, "data");
+        if (!activePayload) { return false; }
+
         // estriamo posizione/keywords dal config.json
-        const keywords = payload.target_keywords ? payload.target_keywords.map(k => k.toLowerCase()) : [];
-        const positions = payload.target_positions ? payload.target_positions.map(Number) : [];
+        const keywords = activePayload.target_keywords ? activePayload.target_keywords.map(k => k.toLowerCase()) : [];
+        const positions = activePayload.target_positions ? activePayload.target_positions.map(Number) : [];
 
         // se non è specificata nessuna keyword o posizione, non facciamo nulla
         if (keywords.length === 0 && positions.length === 0) {
@@ -21,26 +28,23 @@ class PostProcessorIntervention extends BaseIntervention {
             return false;
         }   
 
-        // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
-        const initialQuery = new URLSearchParams(window.location.search).get('q');
-        const observerKey = `_bearObserver_${this.fqn}`;
-
         // se c'è gia un observer attivo (dovuto ad una precedente applicazione dell'intervento) lo rimuoviamo
+        const observerKey = `_bearObserver_${this.fqn}`;
         if (window[observerKey]) { window[observerKey].disconnect(); }
 
         // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
-        this.processPosts(keywords, positions, initialQuery, payload);
+        this.processPosts(keywords, positions, initialQuery, activePayload);
 
         // impostiamo l'observer per l'infinite scroll
         const observer = new MutationObserver((mutations) => {
-            const currentQuery = new URLSearchParams(window.location.search).get('q');
+            const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
             if (currentQuery !== initialQuery) {
                 observer.disconnect();
                 return;
             }
 
             if (mutations.some(m => m.addedNodes.length > 0)) {
-                this.processPosts(keywords, positions, initialQuery, payload);
+                this.processPosts(keywords, positions, initialQuery, activePayload);
             }
         });
 
@@ -50,13 +54,13 @@ class PostProcessorIntervention extends BaseIntervention {
         return true;
     }
 
-
-
+    
+    
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
     processPosts(keywords, positions, initialQuery, payload) {
 
         // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
-        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
         if (currentQuery !== initialQuery) return;
 
         // prendiamo tutti i titoli dei post
@@ -77,20 +81,12 @@ class PostProcessorIntervention extends BaseIntervention {
             // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
             if (isPosTarget || isKeywordTarget) {
 
-                // troviamo il container principale (quello centrale, eclusi i sidebar vari)
-                const mainFeedContainer = titleLink.closest('main#main-content > div') || titleLink.closest('div.bg-neutral-background');
-                if (mainFeedContainer) {
-
-                    // troviamo il wrapper che contiene TUTTO il post (titolo, subreddit, immagine, ecc.)
-                    let wrapper = titleLink;
-                    while (wrapper.parentElement && wrapper.parentElement !== mainFeedContainer) {
-                        wrapper = wrapper.parentElement;
-                    }
-
-                    // chiamiamo il metodo specifico della sottoclasse che sa cosa fare (Template Method Pattern)
-                    if (wrapper) {
-                        this.applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget);
-                    }
+                // chiamiamo la funzione per estrarre il wrapper del post da clonare 
+                const wrapper = this._getSinglePostWrapper(titleLink);
+                if (wrapper) {
+                    this.applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget);
+                } else {
+                    Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
                 }
             }
         });
@@ -121,6 +117,33 @@ class PostProcessorIntervention extends BaseIntervention {
     }
 
 
+
+    //metodo ricorsivo per trovare il wrapper esatto di un singolo post
+    _getSinglePostWrapper(titleLink) {
+        
+        // 1 tentativo: il post è già ben strutturato in un suo wrapper (es. <shreddit-post> o <article>)
+        let wrapper = titleLink.closest('shreddit-post, article');
+        if (wrapper) return wrapper;
+
+        // 2 tentativo: risaliamo la gerarchia fino a trovare un nodo che contiene titoli  o fino a raggiungere il main content
+        let current = titleLink;
+        while (current.parentElement) {
+            const parent = current.parentElement;
+    
+            // se troviamo un nodo che contiene altri titoli, significa che siamo in un wrapper più grande che contiene più post => fermiamoci al nodo precedente
+            const titlesInParent = parent.querySelectorAll('a[data-testid="post-title"]');
+            if (titlesInParent.length > 1) { return current; }
+            
+            // se raggiungiamo il main content o un nodo specifico di reddit senza trovare altri titoli => fermiamoci e consideriamo quello il wrapper del post
+            if (parent.tagName === 'MAIN' || parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {
+                return current;
+            }
+
+            // se non è vera nessuna delle condizioni sopra => continuiamo a risalire
+            current = parent;
+        }
+        return current;
+    }
 
     // metodo helper per personalizzare un post (cambiare titolo, subreddit, immagine, testo, ecc.)
     formatPost(postNode, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments) {
@@ -267,10 +290,10 @@ class PostProcessorIntervention extends BaseIntervention {
     }
     
 
-
+    
     // metodo per inviare i dati al backend tramite l'ApiManager
     sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
-       
+        
         // semplicemente chiamiamo l'ApiManager per inserire i dati inc oda verso il backend
         ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
             action_type: actionType,
