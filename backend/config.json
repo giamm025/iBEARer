@@ -33,6 +33,7 @@
     "track_events": [
       "ClickOnLink", 
       "ClickOnResult",
+      "ClickOnHomePagePost",
       "ResultsLoaded"
     ],
     "sync_interval_ms": 10000

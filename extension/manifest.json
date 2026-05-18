@@ -53,6 +53,7 @@
         "adapters/observers/trigger-event-sources/SearchSubmittedObserver.js",
         "adapters/observers/telemetry-track-events/ResultsLoadedObserver.js",
         "adapters/observers/telemetry-track-events/ClickOnResultObserver.js",
+        "adapters/observers/telemetry-track-events/ClickOnHomePagePostObserver.js",
         "adapters/observers/telemetry-track-events/ClickOnLinkObserver.js",
         "adapters/observers/telemetry-track-events/TimeOnPageObserver.js",
 

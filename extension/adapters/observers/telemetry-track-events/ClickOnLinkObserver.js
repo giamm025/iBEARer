@@ -28,7 +28,7 @@ class ClickOnLinkObserver extends BaseObserver {
                 // similmente a quanto fatto in ClickOnResultObserver.js controlliamo:
                 // se ci troviamo in una pagina di ricerca & il link ha i commenti => è un risultato di ricerca => ignoralo
                 const isPost = linkTarget.href.includes('/comments/');
-                if (this.isSearchPage && isPost) { return; }
+                if ((this.isSearchPage || this.isHomePage) && isPost) { return; }
 
                 // se non è un risultato di ricerca, è correttamente un ClickOnLink generico e lo mandiamo al backend
                 this.addEventToQueue("telemetry.events.ClickOnLinkEvent", {
@@ -46,6 +46,7 @@ class ClickOnLinkObserver extends BaseObserver {
         if (!this.isActive) return;
         const urlParams = new URLSearchParams(window.location.search);
         this.isSearchPage = window.location.pathname.includes('/search') && urlParams.has('q');
+        this.isHomePage = (window.location.pathname === '/');
     }
 };
 
