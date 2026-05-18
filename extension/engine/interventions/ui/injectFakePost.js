@@ -44,8 +44,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         
         // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
         const observerKey = `_bearInjectObserver_${pos}`;
-
-        // se ci sono observer derivanti da iniezioni precedenti => li rimuoviamo
         if (window[observerKey]) { window[observerKey].disconnect(); }
 
         // se la query di ricerca è cambiata  => è stata fatta una nuova ricerca => resettiamo tutto
@@ -114,21 +112,24 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         
         // formattiamo il post con i dati letti dal config.json
         fakePost.id = `bear-fake-post-${pos}`;
+
+        // uniamo i dati specifici del config.json con quelli di default (es. se manca il subreddit_icon_url usiamo quella di default di Reddit)
+        const finalPayload = this.mergePostData(payload);
         this.formatPost(
             fakePost, 
-            payload.title || "Attenzione: Informazione Scientifica", 
-            payload.subreddit || "r/SanitaPubblica", 
-            payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png", 
-            payload.content_text || "Questo è un messaggio di debunking inserito dall'estensione.", 
-            payload.image_url || null, 
-            payload.target_url || null, 
-            payload.date || null, 
-            payload.votes || null, 
-            payload.comments || null
+            finalPayload.title, 
+            finalPayload.subreddit, 
+            finalPayload.subreddit_icon_url, 
+            finalPayload.content_text, 
+            finalPayload.image_url, 
+            finalPayload.target_url, 
+            finalPayload.date, 
+            finalPayload.votes, 
+            finalPayload.comments
         );
 
         // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
-        this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, false);
+        this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, finalPayload, initialQuery, pos, state, false);
     }
 
     // ==========================================================================
@@ -155,15 +156,30 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 Log.intervention(`Post AI Generato con successo (Posizione: ${pos})!`);
                 
                 // uniamo i dati dell'AI con quelli statici del config.json 
-                const mergedPayload = { ...payload, ...aiData };
+                const mergedPayload = this.mergePostData(payload, aiData);
 
                 // formattiamo il post
                 fakePost.id = `bear-fake-post-${pos}`; 
                 this.formatPost(
-                    fakePost, mergedPayload.title, mergedPayload.subreddit, mergedPayload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png", 
-                    mergedPayload.content_text, mergedPayload.image_url, mergedPayload.target_url, 
-                    mergedPayload.date, mergedPayload.votes, mergedPayload.comments
+                    fakePost, 
+                    mergedPayload.title, 
+                    mergedPayload.subreddit, 
+                    mergedPayload.subreddit_icon_url, 
+                    mergedPayload.content_text, 
+                    mergedPayload.image_url, 
+                    mergedPayload.target_url, 
+                    mergedPayload.date, 
+                    mergedPayload.votes, 
+                    mergedPayload.comments
                 );
+
+                // prima di iniettare il post, rifacciamo un controllo sul DOM per essere sicuri che i riferimenti non siano cambiati 
+                const freshDomRefs = this._getDomReferences(pos);
+                if (!freshDomRefs) {
+                    Log.error("Intervention", "DOM mutato durante l'attesa AI. Abortisco inserimento per riprovare.");
+                    // non impostiamo state.aiFailed = true! In questo modo il MutationObserver si accorgerà che manca il post e riproverà l'inserimento con i dati già in cache!
+                    return; 
+                }
 
                 // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
                 this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, mergedPayload, initialQuery, pos, state, true);
@@ -326,6 +342,11 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         const divider = document.createElement("hr");
         divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
 
+        // rimuoviamo tutti gli id del post originale
+        fakePost.removeAttribute('id');
+        const allElementsWithId = fakePost.querySelectorAll('[id]');
+        allElementsWithId.forEach(el => el.removeAttribute('id'))
+
         // estraiamo e rimuoviamo tutti i media (immagini, video, ecc) del post originale
         const mediaElements = fakePost.querySelectorAll('img, video, picture, shreddit-post-image, faceplate-img');
         mediaElements.forEach(media => {
@@ -338,19 +359,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
 
         // estraiamo e rimuoviamo l'avatar del subreddit originale
         const avatars = fakePost.querySelectorAll('img[src*="avatar"], img[src*="communityIcon"]');
-        const defaultIcon = payload.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_2.png";
         avatars.forEach(img => {
             img.removeAttribute('srcset'); 
-            img.src = defaultIcon;
-        });
-
-        // estraiamo e rimuoviamo la data del post originale
-        const timeElements = fakePost.querySelectorAll('faceplate-timeago');
-        timeElements.forEach(timeEl => {
-            const fakeTimeSpan = document.createElement('span');
-            fakeTimeSpan.className = timeEl.className;
-            timeEl.innerHTML = ""; 
-            timeEl.innerText = "2 mesi fa"; 
         });
 
         return { fakePost, divider };
@@ -391,7 +401,12 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             const style = document.createElement("style");
             style.id = "bear-curtain-style";
             style.innerHTML = `
-                .bear-feed-hidden, .bear-stagger-hidden {
+                .bear-feed-hidden, 
+                .bear-feed-hidden > * {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+                .bear-stagger-hidden {
                     opacity: 0 !important;
                     pointer-events: none !important;
                 }

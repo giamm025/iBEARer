@@ -33,12 +33,15 @@
         "engine/operators/EQUALS.js",
         
         "engine/interventions/BaseIntervention.js",
+
         "engine/interventions/debug/applyBorder.js",
         "engine/interventions/ui/showDebunkingBanner.js",
+
         "engine/interventions/ui/PostProcessorIntervention.js",  
         "engine/interventions/ui/injectFakePost.js", 
         "engine/interventions/ui/removePost.js", 
         "engine/interventions/ui/modifyPost.js",
+        
         "engine/interventions/tracking/trackResults.js",
 
         "engine/events/EngineReadyEvent.js",

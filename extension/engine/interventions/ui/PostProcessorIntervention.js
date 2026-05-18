@@ -125,16 +125,16 @@ class PostProcessorIntervention extends BaseIntervention {
         let wrapper = titleLink.closest('shreddit-post, article');
         if (wrapper) return wrapper;
 
-        // 2 tentativo: risaliamo la gerarchia fino a trovare un nodo che contiene titoli  o fino a raggiungere il main content
+        // 2 tentativo: risaliamo la gerarchia fino a trovare un nodo che contiene piu titoli
         let current = titleLink;
         while (current.parentElement) {
             const parent = current.parentElement;
     
-            // se troviamo un nodo che contiene altri titoli, significa che siamo in un wrapper più grande che contiene più post => fermiamoci al nodo precedente
+            // se troviamo un nodo che contiene piu titoli => significa che contiene più di un singolo post => ritorniamo il nodo precedente
             const titlesInParent = parent.querySelectorAll('a[data-testid="post-title"]');
             if (titlesInParent.length > 1) { return current; }
             
-            // se raggiungiamo il main content o un nodo specifico di reddit senza trovare altri titoli => fermiamoci e consideriamo quello il wrapper del post
+            // se raggiungiamo il main content => ritorniamo il nodo precedente (figlio) come wrapper del singolo post
             if (parent.tagName === 'MAIN' || parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {
                 return current;
             }
@@ -191,7 +191,14 @@ class PostProcessorIntervention extends BaseIntervention {
         if (f_date) {
             const timeContainer = postNode.querySelector('faceplate-timeago');
             if (timeContainer) {
-                timeContainer.outerHTML = `<span>${f_date}</span>`; 
+                // nascondiamo il time container originale 
+                timeContainer.style.display = 'none';
+                timeContainer.removeAttribute('ts'); 
+
+                // inseriamo il nostro custom date span
+                const customDateSpan = document.createElement('span');
+                customDateSpan.innerText = f_date;
+                timeContainer.parentNode.insertBefore(customDateSpan, timeContainer.nextSibling);
             }
         }
 
@@ -289,7 +296,24 @@ class PostProcessorIntervention extends BaseIntervention {
         }
     }
     
+    // metodo per fondere i dati del config.json con dei valori di default (nel caso qualcosa mancasse)
+    mergePostData(basePayload, overrides = {}) {
+        
+        // Uniamo i due oggetti. Le proprietà di "overrides" vinceranno su quelle di "basePayload"
+        const merged = { ...basePayload, ...overrides };
 
+        return {
+            title: merged.title || "Attenzione: Informazione",
+            subreddit: merged.subreddit || "r/iBEARer",
+            subreddit_icon_url: merged.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png",
+            content_text: merged.content_text || "Questo è un messaggio inserito dall'estensione.",
+            image_url: merged.image_url || null,
+            target_url: merged.target_url || null,
+            date: merged.date || "2 mesi fa",
+            votes: merged.votes || null,
+            comments: merged.comments || null
+        };
+    }
     
     // metodo per inviare i dati al backend tramite l'ApiManager
     sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {

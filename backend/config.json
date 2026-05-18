@@ -141,15 +141,15 @@
           {
             "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
             "data": {
+              "new_position": 3,
               "title": "🔴 La verità scientifica sui Vaccini MRNA",
               "subreddit": "r/MinisteroDellaSalute",
               "author": "ScienzaUfficiale",
               "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini sono sicuri ed efficaci. Non fidarti delle fonti non verificate su Reddit. Clicca qui per leggere il report ufficiale.",
               "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
-              "date": "1 anno fa",
               "votes": 100,
               "comments": 50,
-              "new_position": 3,
+              "date": "2 trilioni di anni fa",
               "use_ai_generation": false
             }
           },
