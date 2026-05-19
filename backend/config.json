@@ -3,7 +3,7 @@
     "experiment_name": "reddit_cospiracy",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 3000
+        "duration": 0.5
     },
     "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },

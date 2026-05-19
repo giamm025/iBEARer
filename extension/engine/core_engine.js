@@ -77,12 +77,19 @@ class Engine {
                 // rimuoviamo il pop-up bloccante
                 SurveyManager.hideSurveyModal();
 
-                // gestiamo il nuovo stato (POST-SURVEY-COMPLETED)
-                await this.handleParticipantStatus();
+                // forziamo un refresh della pagine per rimuovere tutti gli interventi precedentemente applicati 
+                Log.engine("🔄 Pulizia del DOM in corso... Ricaricamento pagina.");
+                window.location.reload();
+                
+                // A questo punto NON chiamiamo più handleParticipantStatus() poiche, dopo il window reload
+                // tutto il motore viene ucciso e ripartirà da zero. Dunque, nel metodo init(), verra chiamato 
+                // handleParticipantStatus() che cadra naturalmente nel caso "POST-SURVEY-COMPLETED".
+
+                // await this.handleParticipantStatus();
                 break;
 
             case "POST-SURVEY-COMPLETED":
-                Log.engine("✅ L'utente ha completato tutto l'esperimento. Il motore si disattiva definitivamente. Grazie per aver partecipato!");
+                Log.engine("✅ L'utente ha completato tutto l'esperimento. Il motore si disattiva definitivamente. Gli interventi sono stati rimossi. Grazie per aver partecipato!");
                 break;
 
             default:

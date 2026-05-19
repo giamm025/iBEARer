@@ -187,21 +187,17 @@ class PostProcessorIntervention extends BaseIntervention {
             }
         }
 
-        // E) Aggiungiamo data, numero commenti e numero voti
+        // E) Aggiungiamo data
         if (f_date) {
             const timeContainer = postNode.querySelector('faceplate-timeago');
             if (timeContainer) {
-                // nascondiamo il time container originale 
-                timeContainer.style.display = 'none';
-                timeContainer.removeAttribute('ts'); 
-
-                // inseriamo il nostro custom date span
                 const customDateSpan = document.createElement('span');
                 customDateSpan.innerText = f_date;
-                timeContainer.parentNode.insertBefore(customDateSpan, timeContainer.nextSibling);
+                timeContainer.replaceWith(customDateSpan);
             }
         }
 
+        // F) Aggiungiamo numero commenti e numero voti
         if (f_votes || f_comments) {
             const counterRow = postNode.querySelector('div[data-testid="search-counter-row"]');
             if (counterRow) {
@@ -217,7 +213,7 @@ class PostProcessorIntervention extends BaseIntervention {
             }
         }
 
-        // F) Inseriamo descrizione ed immagine del post
+        // G) Inseriamo descrizione ed immagine del post
         if (f_content || f_image) {
             const textColumn = postNode.querySelector('div[data-testid="sdui-post-unit"]');
             const innerBox = postNode.querySelector('div[data-testid="search-post-with-content-preview"]') || postNode.querySelector('div[data-testid="search-post-unit"]') || postNode.firstElementChild;
@@ -227,7 +223,7 @@ class PostProcessorIntervention extends BaseIntervention {
                 const oldSnippet = textColumn.querySelector('search-telemetry-tracker[click-events="search/click/post"] a.text-14') || textColumn.lastElementChild;
                 if (oldSnippet && oldSnippet !== counterRow) oldSnippet.remove();
 
-                // TESTO (DESCRIZIONE)
+                // G.1) TESTO (DESCRIZIONE)
                 if (f_content) {
                     
                     const existingCustomBox = textColumn.querySelector('.bear-custom-text-box');
@@ -254,7 +250,7 @@ class PostProcessorIntervention extends BaseIntervention {
                 }
             }
 
-            // IMMAGINE
+            // G.2) IMMAGINE
             if (f_image && innerBox) {
 
                 const existingImages = innerBox.querySelectorAll('img');
