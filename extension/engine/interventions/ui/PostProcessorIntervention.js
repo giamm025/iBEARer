@@ -32,11 +32,26 @@ class PostProcessorIntervention extends BaseIntervention {
         const observerKey = `_bearObserver_${this.fqn}`;
         if (window[observerKey]) { window[observerKey].disconnect(); }
 
+        // creiamo un Set per memorizzare quali posizioni abbiamo GIÀ processato
+        const processedPositions = new Set();        
+        let isMutating = false; 
+
+        // Funzione wrapper che addormenta l'observer durante le modifiche
+        const runProcess = () => {
+            isMutating = true; 
+            this.processPosts(keywords, positions, initialQuery, activePayload, processedPositions);
+            setTimeout(() => { isMutating = false; }, 50);
+        };
+
         // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
-        this.processPosts(keywords, positions, initialQuery, activePayload);
+        runProcess();
 
         // impostiamo l'observer per l'infinite scroll
         const observer = new MutationObserver((mutations) => {
+
+            // se stiamo già processando dei post, evitiamo di far scattare l'observer (es. durante il reranking o la rimozione, che causano mutazioni multiple)
+            if (isMutating) return; 
+
             const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
             if (currentQuery !== initialQuery) {
                 observer.disconnect();
@@ -44,7 +59,7 @@ class PostProcessorIntervention extends BaseIntervention {
             }
 
             if (mutations.some(m => m.addedNodes.length > 0)) {
-                this.processPosts(keywords, positions, initialQuery, activePayload);
+                runProcess();
             }
         });
 
@@ -57,12 +72,12 @@ class PostProcessorIntervention extends BaseIntervention {
     
     
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
-    processPosts(keywords, positions, initialQuery, payload) {
-
+    processPosts(keywords, positions, initialQuery, payload, processedPositions) {
+        
         // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
         const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
         if (currentQuery !== initialQuery) return;
-
+        
         // prendiamo tutti i titoli dei post
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
         const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
@@ -74,17 +89,22 @@ class PostProcessorIntervention extends BaseIntervention {
             const currentPos = index + 1;
             const text = titleLink.innerText.toLowerCase();
 
-            // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword
-            const isPosTarget = positions.includes(currentPos);
+            // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
+            const isPosTarget = positions.includes(currentPos) && !processedPositions.has(currentPos);
             const isKeywordTarget = keywords.some(k => text.includes(k));
 
             // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
             if (isPosTarget || isKeywordTarget) {
-
+                
                 // chiamiamo la funzione per estrarre il wrapper del post da clonare 
                 const wrapper = this._getSinglePostWrapper(titleLink);
-                if (wrapper) {
+                if (wrapper && !wrapper.dataset[`bear_${this.fqn}`]) {
+                    
+                    // marchiamo il post come processato per evitare di processarlo nuovamente 
+                    wrapper.dataset[`bear_${this.fqn}`] = "true";
                     this.applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget);
+                    if (isPosTarget) processedPositions.add(currentPos);
+                
                 } else {
                     Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
                 }
@@ -121,23 +141,18 @@ class PostProcessorIntervention extends BaseIntervention {
     //metodo ricorsivo per trovare il wrapper esatto di un singolo post
     _getSinglePostWrapper(titleLink) {
         
-        // 1 tentativo: il post è già ben strutturato in un suo wrapper (es. <shreddit-post> o <article>)
-        let wrapper = titleLink.closest('shreddit-post, article');
-        if (wrapper) return wrapper;
-
-        // 2 tentativo: risaliamo la gerarchia fino a trovare un nodo che contiene piu titoli
-        let current = titleLink;
+        // risaliamo la gerarchia fino a trovare un nodo che contiene piu titoli
+        let current = titleLink.closest('shreddit-post') || titleLink.closest('article') || titleLink;
         while (current.parentElement) {
+
             const parent = current.parentElement;
-    
+            
+            // se raggiungiamo il main content => ritorniamo il nodo precedente (figlio) come wrapper del singolo post
+            if (parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {  return current; }
+
             // se troviamo un nodo che contiene piu titoli => significa che contiene più di un singolo post => ritorniamo il nodo precedente
             const titlesInParent = parent.querySelectorAll('a[data-testid="post-title"]');
             if (titlesInParent.length > 1) { return current; }
-            
-            // se raggiungiamo il main content => ritorniamo il nodo precedente (figlio) come wrapper del singolo post
-            if (parent.tagName === 'MAIN' || parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {
-                return current;
-            }
 
             // se non è vera nessuna delle condizioni sopra => continuiamo a risalire
             current = parent;
@@ -312,13 +327,14 @@ class PostProcessorIntervention extends BaseIntervention {
     }
     
     // metodo per inviare i dati al backend tramite l'ApiManager
-    sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl) {
+    sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl, newPosition) {
         
         // semplicemente chiamiamo l'ApiManager per inserire i dati inc oda verso il backend
         ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
             action_type: actionType,
             search_query: searchQuery,
             target_position: targetPosition,
+            new_position: newPosition || targetPosition,
             original_title: originalTitle,
             original_subreddit: originalSubreddit,
             original_url: originalUrl

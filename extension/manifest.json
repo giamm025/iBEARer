@@ -41,6 +41,7 @@
         "engine/interventions/ui/injectFakePost.js", 
         "engine/interventions/ui/removePost.js", 
         "engine/interventions/ui/modifyPost.js",
+        "engine/interventions/ui/rerankPost.js",
         
         "engine/interventions/tracking/trackResults.js",
 

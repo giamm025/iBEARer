@@ -3,7 +3,7 @@
     "experiment_name": "reddit_cospiracy",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 0.5
+        "duration": 3000
     },
     "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
   },
@@ -69,7 +69,8 @@
       "apply_interventions": {
         "show_debunking_banner": ["TREATMENT1"],
         "modify_post": ["TREATMENT1", "TREATMENT2"],
-        "inject_fake_post": ["TREATMENT1", "TREATMENT2"] 
+        "inject_fake_post": ["TREATMENT1", "TREATMENT2"],
+        "promote_fifth_post": ["TREATMENT1", "TREATMENT2"]
       }
     },
 
@@ -173,7 +174,7 @@
       "payload": {
         "dynamic_content": [
           {
-            "trigger_keywords": ["vaccin", "/covid[- ]?19/", "/5g\\b/"],
+            "trigger_keywords": ["vaccin", "/5g\\b/"],
             "data": {
               "target_positions": [2],
               "target_keywords": ["thailandia"],
@@ -202,6 +203,24 @@
             "trigger_keywords": ["/5g\\b/"],
             "data": {
               "target_keywords": ["microchip", "bill gates"]
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "promote_fifth_post",
+      "function_fqn": "rerankPost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["/covid[- ]?19/"],
+            "data": {
+              "target_positions": [5],
+              "new_position": 1,
+              "highlight_color": "#e8f4f8",
+              "border_color": "#0288d1"
             }
           }
         ]
