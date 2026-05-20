@@ -6,11 +6,15 @@ class ReRankPostIntervention extends PostProcessorIntervention {
     }
 
     // implementa l'azione specifica di RE-RANKING post
-    applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {
+    applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget) {
         
-        // estraiamo la nuova posizione dal config.json
-        const targetNewPosition = payload.new_position;
-        if (!targetNewPosition || currentPos === targetNewPosition) return; 
+        // estraiamo il campo "moves" che contiene tutte le regole di spostamento
+        const moveRule = payload.moves ? payload.moves.find(m => m.target === originalPos) : null;
+        if (!moveRule) return; 
+
+        // estraiamo la nuova posizione dal config.json 
+        const targetNewPosition = moveRule.new_position;
+        if (!targetNewPosition || originalPos === targetNewPosition) return; 
 
         // estraiamo i dati del post originale per la telemetria
         const originalTitle = titleLink.innerText.trim();
@@ -23,23 +27,25 @@ class ReRankPostIntervention extends PostProcessorIntervention {
         const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
 
         // SE la nuova posizione NON esiste ancora => mettiamo il post in coda
-        if (targetNewPosition > realTitles.length) { return this.addPostToPendingQueue(wrapper, currentPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl); }
+        if (targetNewPosition > realTitles.length) { 
+            return this.addPostToPendingQueue(wrapper, originalPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl); 
+        }
 
         // Altrimenti, se la posizione eisste gia => applichiamo il reranking vero e proprio
-        const success = this.rerank(wrapper, currentPos, targetNewPosition, realTitles);
+        const success = this.rerank(wrapper, targetNewPosition, realTitles);
 
         // inviamo la telemetria al backend
         if (success) {
-            this.sendPostToBackend("RERANKED", initialQuery, currentPos, originalTitle, originalSubreddit, originalUrl, targetNewPosition);
-            Log.intervention(`Post spostato fisicamente! (Pos Originale: ${currentPos} -> Nuova Pos: ${targetNewPosition})`);        
+            this.sendPostToBackend("RERANKED", initialQuery, originalPos, originalTitle, originalSubreddit, originalUrl, targetNewPosition);
+            Log.intervention(`Post spostato fisicamente! (Pos Originale: ${originalPos} -> Nuova Pos: ${targetNewPosition})`);        
         }
     }
 
     // funzione che sposta fisicamente il post nel DOM alla nuova posizione
-    rerank(targetWrapper, currentPos, newPos, realTitles) {
+    rerank(targetWrapper, newPosSlot, realTitles) {
 
         // prendiamo il post che attualmente si trova in quella che sarà la nuova posizione
-        const referencePostTitle = realTitles[newPos - 1];
+        const referencePostTitle = realTitles[newPosSlot - 1];
         if (referencePostTitle) {
             
             // prendiamo il wrapper del post da spostare
@@ -48,6 +54,13 @@ class ReRankPostIntervention extends PostProcessorIntervention {
 
                 // prendiamo il genitore comune di entrambi i post (mainFeedContainer)
                 const mainFeedContainer = referenceWrapper.parentNode;
+
+                // troviamo il titolo dentro il targetWrapper per capire la posizion esatta in cui si trova fisicamente il post ORA
+                const targetTitle = targetWrapper.querySelector('a[data-testid="post-title"]');
+                const currentPos = realTitles.indexOf(targetTitle);
+                const newPos = newPosSlot - 1;
+                if (currentPos === -1) return false;
+
                 try {
 
                     // se stiamo spostando il nostro post in ALTO  (es. da 5 a 1) => inseriamo PRIMA del post di riferimento
@@ -68,18 +81,18 @@ class ReRankPostIntervention extends PostProcessorIntervention {
         return false;
     }
 
-
-    addPostToPendingQueue(wrapper, currentPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl) {
-
+    // funzione che aggiunge un post in "coda di attesa" finché non viene caricata la sua nuova posizione
+    addPostToPendingQueue(wrapper, originalPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl) {
+        
         Log.intervention(`Rerank rimandato per il post "${originalTitle}", in attesa della posizione:  ${targetNewPosition}`);
         
         // nascondiamo momentaneamente il post finche non arriva la sua posizione
         wrapper.style.display = 'none';
-        Log.intervention(`Post nascosto in attesa che venga caricata la posizione ${targetNewPosition} (Post Originale: ${originalTitle})`);
+        Log.intervention(`Post nascosto in attesa dello slot ${targetNewPosition} (Origine: ${originalPos})`);
         
         // lo aggiungiamo in coda con tutti i suoi dati
         this.pendingReranks.push({
-            wrapper, currentPos, targetNewPosition, initialQuery, 
+            wrapper, originalPos, targetNewPosition, initialQuery, 
             originalTitle, originalSubreddit, originalUrl
         });
     }
@@ -96,11 +109,11 @@ class ReRankPostIntervention extends PostProcessorIntervention {
             // se la nuova posizione è stata caricata => facciamo riapparire il post e applichiamo il reranking
             if (realTitles.length >= pending.targetNewPosition) {
                 pending.wrapper.style.display = ''; 
-                const success = this.rerank(pending.wrapper, pending.currentPos, pending.targetNewPosition, realTitles);
-                if (success) { this.sendPostToBackend("RERANKED_DELAYED", pending.initialQuery, pending.currentPos, pending.originalTitle, pending.originalSubreddit, pending.originalUrl, pending.targetNewPosition); }
-                return false;
+                const success = this.rerank(pending.wrapper, pending.targetNewPosition, realTitles);
+                if (success) { this.sendPostToBackend("RERANKED_DELAYED", pending.initialQuery, pending.originalPos, pending.originalTitle, pending.originalSubreddit, pending.originalUrl, pending.targetNewPosition); }
+                return false; // rimuove dalla coda
             }
-            return true; 
+            return true; // mantiene in coda
         });
     }
 }

@@ -86,26 +86,33 @@ class PostProcessorIntervention extends BaseIntervention {
         realTitles.forEach((titleLink, index) => {
 
             // estriamo posizione e testo del post
-            const currentPos = index + 1;
-            const rawText = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
-            const text = rawText.toLowerCase();
-            
+            const wrapper = this._getSinglePostWrapper(titleLink);
+            if (!wrapper) return;
+
+            // la prima volta che incontriamo un post gli aggiungiamo un attributo che indica la sua posizione ORIGINALE (prima dei nostri reranking)
+            if (!wrapper.dataset.bearOriginalPos) { wrapper.dataset.bearOriginalPos = index + 1; }
+
+            // utilizziamo poi questa posizione ORIGINALE per trovare target e riferimenti
+            const originalPos = parseInt(wrapper.dataset.bearOriginalPos);
+            const text = titleLink.innerText.toLowerCase();
+
             // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
-            const isPosTarget = positions.includes(currentPos) && !processedPositions.has(currentPos);
+            const isPosTarget = positions.includes(originalPos) && !processedPositions.has(originalPos);
             const isKeywordTarget = keywords.some(k => text.includes(k));
 
             // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
             if (isPosTarget || isKeywordTarget) {
                 
-                // chiamiamo la funzione per estrarre il wrapper del post da clonare 
-                const wrapper = this._getSinglePostWrapper(titleLink);
-                if (wrapper && !wrapper.dataset[`bear_${this.fqn}`]) {
+                // se il post è già stato modificato => non facciamo nulla
+                if (!wrapper.dataset[`bear_${this.fqn}`]) {
                     
                     // marchiamo il post come processato per evitare di processarlo nuovamente 
                     wrapper.dataset[`bear_${this.fqn}`] = "true";
-                    this.applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget);
-                    if (isPosTarget) processedPositions.add(currentPos);
-                
+                    
+                    // applichiamo l'intervento specifico e segniamo il post come "processato"
+                    this.applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget);
+                    if (isPosTarget) processedPositions.add(originalPos);
+
                 } else {
                     Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
                 }

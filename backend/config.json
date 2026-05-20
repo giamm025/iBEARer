@@ -232,20 +232,11 @@
           {
             "trigger_keywords": ["/covid[- ]?19/"],
             "data": {
-              "target_positions": [1],
-              "new_position": 30,
-              "highlight_color": "#e8f4f8",
-              "border_color": "#0288d1"
-            }
-          },
-
-          {
-            "trigger_keywords": ["/covid[- ]?19/"],
-            "data": {
-              "target_positions": [2],
-              "new_position": 5,
-              "highlight_color": "#e8f4f8",
-              "border_color": "#0288d1"
+              "target_positions": [1, 2],
+              "moves": [
+                { "target": 1, "new_position": 30 },
+                { "target": 2, "new_position": 5 }
+              ]
             }
           }
         ]
