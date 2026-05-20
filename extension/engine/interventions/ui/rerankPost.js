@@ -2,6 +2,7 @@ class ReRankPostIntervention extends PostProcessorIntervention {
     
     constructor() {
         super("rerankPost");
+        this.pendingReranks = [];
     }
 
     // implementa l'azione specifica di RE-RANKING post
@@ -17,8 +18,15 @@ class ReRankPostIntervention extends PostProcessorIntervention {
         const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
         const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
 
-        // applichiamo il reranking vero e proprio
-        const success = this.rerank(wrapper, currentPos, targetNewPosition);
+        // estraiamo i post attualmente presenti nel DOM
+        const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
+        const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+
+        // SE la nuova posizione NON esiste ancora => mettiamo il post in coda
+        if (targetNewPosition > realTitles.length) { return this.addPostToPendingQueue(wrapper, currentPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl); }
+
+        // Altrimenti, se la posizione eisste gia => applichiamo il reranking vero e proprio
+        const success = this.rerank(wrapper, currentPos, targetNewPosition, realTitles);
 
         // inviamo la telemetria al backend
         if (success) {
@@ -28,11 +36,7 @@ class ReRankPostIntervention extends PostProcessorIntervention {
     }
 
     // funzione che sposta fisicamente il post nel DOM alla nuova posizione
-    rerank(targetWrapper, currentPos, newPos) {
-        
-        // estraiamo tutti i titoli presenti nel DOM (escludendo i nostri fake post)
-        const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
-        const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+    rerank(targetWrapper, currentPos, newPos, realTitles) {
 
         // prendiamo il post che attualmente si trova in quella che sarà la nuova posizione
         const referencePostTitle = realTitles[newPos - 1];
@@ -62,6 +66,42 @@ class ReRankPostIntervention extends PostProcessorIntervention {
             }
         }
         return false;
+    }
+
+
+    addPostToPendingQueue(wrapper, currentPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl) {
+
+        Log.intervention(`Rerank rimandato per il post "${originalTitle}", in attesa della posizione:  ${targetNewPosition}`);
+        
+        // nascondiamo momentaneamente il post finche non arriva la sua posizione
+        wrapper.style.display = 'none';
+        Log.intervention(`Post nascosto in attesa che venga caricata la posizione ${targetNewPosition} (Post Originale: ${originalTitle})`);
+        
+        // lo aggiungiamo in coda con tutti i suoi dati
+        this.pendingReranks.push({
+            wrapper, currentPos, targetNewPosition, initialQuery, 
+            originalTitle, originalSubreddit, originalUrl
+        });
+    }
+
+    // viene chiamato in automatico dalla classe madre ogni volta che l'utente scrolla
+    checkPendingActions(realTitles) {
+        
+        // se la sala d'attesa è vuota, non facciamo nulla
+        if (this.pendingReranks.length === 0) return;
+
+        // filtriamo la sala d'attesa applicando il rerank ai post che hanno raggiunto la loro nuova posizione
+        this.pendingReranks = this.pendingReranks.filter(pending => {
+            
+            // se la nuova posizione è stata caricata => facciamo riapparire il post e applichiamo il reranking
+            if (realTitles.length >= pending.targetNewPosition) {
+                pending.wrapper.style.display = ''; 
+                const success = this.rerank(pending.wrapper, pending.currentPos, pending.targetNewPosition, realTitles);
+                if (success) { this.sendPostToBackend("RERANKED_DELAYED", pending.initialQuery, pending.currentPos, pending.originalTitle, pending.originalSubreddit, pending.originalUrl, pending.targetNewPosition); }
+                return false;
+            }
+            return true; 
+        });
     }
 }
 

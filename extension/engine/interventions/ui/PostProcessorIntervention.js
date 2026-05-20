@@ -110,6 +110,9 @@ class PostProcessorIntervention extends BaseIntervention {
                 }
             }
         });
+
+        // diamo la possibilità alle sottoclassi di "aggiungere post in coda" da processare (es. se voglio spostare un post da posizione 1 a posizione 50 devo aspettare che Reddit carichi il 50esimo post)
+        if (typeof this.checkPendingActions === 'function') { this.checkPendingActions(realTitles); }
     }
 
 

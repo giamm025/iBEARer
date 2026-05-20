@@ -70,7 +70,7 @@
         "show_debunking_banner": ["TREATMENT1"],
         "modify_post": ["TREATMENT1", "TREATMENT2"],
         "inject_fake_post": ["TREATMENT1", "TREATMENT2"],
-        "promote_fifth_post": ["TREATMENT1", "TREATMENT2"]
+        "rerank_post": ["TREATMENT1", "TREATMENT2"]
       }
     },
 
@@ -143,7 +143,7 @@
           {
             "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
             "data": {
-              "new_position": 3,
+              "new_position": 14,
               "title": "🔴 La verità scientifica sui Vaccini MRNA",
               "subreddit": "r/MinisteroDellaSalute",
               "author": "ScienzaUfficiale",
@@ -210,15 +210,25 @@
     },
 
     {
-      "id": "promote_fifth_post",
+      "id": "rerank_post",
       "function_fqn": "rerankPost",
       "payload": {
         "dynamic_content": [
           {
             "trigger_keywords": ["/covid[- ]?19/"],
             "data": {
-              "target_positions": [5],
-              "new_position": 1,
+              "target_positions": [1],
+              "new_position": 30,
+              "highlight_color": "#e8f4f8",
+              "border_color": "#0288d1"
+            }
+          },
+
+          {
+            "trigger_keywords": ["/covid[- ]?19/"],
+            "data": {
+              "target_positions": [2],
+              "new_position": 5,
               "highlight_color": "#e8f4f8",
               "border_color": "#0288d1"
             }
