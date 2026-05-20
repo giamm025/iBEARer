@@ -59,7 +59,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         
         // se dopo 8s l'ai  ancora non ha caricato il post => mostriamo il feed all'utente SENZA il fake post
         setTimeout(() => { 
-            if (!state.contentRevealed) { 
+            if (!state.contentRevealed && !state.waitingForScroll) { 
                 state.aiAborted = true;         
                 state.aiFailed = true;          
                 this.revealPageContent(state);  
@@ -87,13 +87,52 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         // estriamo i riferimenti al DOM necessari per clonare/inserire il post 
         const domRefs = this._getDomReferences(pos);
         if (!domRefs) return;
+
+        //====================
+
+        // se stiamo in attesa => segnaliamo waiting = true e blocchiamo l'esecuzione. 
+        // il MutationObserver riproverà in automatico appena l'utente scrolla
+        if (domRefs.isPending) { 
+
+            state.waitingForScroll = true; 
+
+            // Se l'AI serve, non è ancora in cache, partiamo SUBITO in background!
+            if (payload.use_ai_generation && !state.cachedAiData) {
+                
+                state.isGenerating = true; 
+                
+                // peschiamo i primi 7 post attuali come contesto per l'AI (sono già pronti nel DOM!)
+                const scrapedPostsText = this._scrapeContext();
+                
+                // Facciamo la chiamata asincrona
+                this.retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText)
+                    .then(() => {
+                        // Appena i dati sono pronti in cache, riproviamo l'iniezione. Se l'utente nel frattempo ha scrollato ed è arrivato a destinazione, apparirà di colpo!Altrimenti tornerà in isPending e aspetterà in silenzio l'Observer.
+                        state.isGenerating = false; 
+                        this.injectFakePost(payload, initialQuery, pos, state);
+                    })
+                    .catch((err) => {
+                        Log.error("Intervention", "Errore AI in background", err);
+                        state.isGenerating = false;
+                        state.aiFailed = true;
+                    });
+            }
+            return; 
+        }
+
+        //====================
+
+        // se siamo arrivati qui significa che la posizione cercata è presente nel dom => estriamo i dati ed iniettiamo il fake post
+        state.waitingForScroll = false;
         const { cloneWrapper, insertWrapper, mainFeedContainer } = domRefs;
 
-        // finche non abbiamo i dati pronti => nascondiamo il feed
-        this.hidePageContent(mainFeedContainer);
+        // nascondiamo il feed SOLO se stiamo inserendo nei primissimi risultati.
+        // se stiamo inserendo al post 15, nascondergli improvvisamente la pagina mentre scrolla sarebbe terribile!
+        if (pos <= 8) {  this.hidePageContent(mainFeedContainer); }
         
         // creiamo il clone "pulito" da tutti i campi e lo popoliamo con le funzioni specifiche (AI o STATIC)
         const { fakePost, divider } = this._createCleanClone(cloneWrapper, payload);
+        
         if (payload.use_ai_generation) { 
             const scrapedPostsText = this._scrapeContext();
             await this.aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText); 
@@ -242,7 +281,8 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
                 cachedAiData: null,
                 contentRevealed: false,
                 isGenerating: false,
-                aiAborted: false
+                aiAborted: false,
+                waitingForScroll: false
             };
         }
         return this.instancesState[position];
@@ -307,6 +347,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             .filter(link => !link.closest('[id^="bear-fake-post"]'));
         
         if (allTitleLinks.length === 0) return null;
+
+        // se la posizione richiesta non esiste ancora nel DOM => restituiamo un segnale di "pending" per ritardare l'inserimento
+        if (pos > allTitleLinks.length) { return { isPending: true }; }
 
         // estraiamo il primo link (quello da clonare) ed il link di riferimento in cui effettuare l'inserimento
         const cloneReferenceLink = allTitleLinks[0];

@@ -143,7 +143,7 @@
           {
             "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
             "data": {
-              "new_position": 14,
+              "new_position": 13,
               "title": "🔴 La verità scientifica sui Vaccini MRNA",
               "subreddit": "r/MinisteroDellaSalute",
               "author": "ScienzaUfficiale",
@@ -156,9 +156,24 @@
             }
           },
           {
+            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
+            "data": {
+              "new_position": 1,
+              "title": "🔴 I VACCINI fanno MALE",
+              "subreddit": "r/MinisteroDellaSalute",
+              "author": "ScienzaUfficiale",
+              "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini FANNO MALEEEE! Non fidatevi dei POTERI FORTI!",
+              "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
+              "votes": 100,
+              "comments": 50,
+              "date": "2 trilioni di anni fa",
+              "use_ai_generation": false
+            }
+          },
+          {
             "trigger_keywords": ["/5g\\b/"],
             "data": {
-              "new_position": 5,
+              "new_position": 13,
               "use_ai_generation": true,
               "ai_prompt_context": "Sei un fact-checker esperto. Smentisci le teorie complottiste sul 5G basandoti su fatti scientifici. SCRIVI SOLO UN'ANTEPRIMA PER REDDIT: crea un titolo e un corpo del testo di MASSIMO 2 RIGHE (max 30 parole). Tono formale. Usa la stessa lingua della ricerca dell'utente."
             }
@@ -176,7 +191,7 @@
           {
             "trigger_keywords": ["vaccin", "/5g\\b/"],
             "data": {
-              "target_positions": [2],
+              "target_positions": [13],
               "target_keywords": ["thailandia"],
               "highlight_color": "#ffebee",
               "border_color": "#d32f2f",
@@ -194,9 +209,9 @@
       "payload": {
         "dynamic_content": [
           {
-            "trigger_keywords": ["vaccin"],
+            "trigger_keywords": ["roast me"],
             "data": {
-              "target_positions": [1, 2, 3]
+              "target_positions": [1, 2, 3, 13]
             }
           },
           {
