@@ -9,7 +9,8 @@ class RemovePostIntervention extends PostProcessorIntervention {
         if (!wrapper.dataset.bearRemoved) {
             
             // prendiamo i dati originali
-            const originalTitle = titleLink.innerText.trim();
+            const rawTitle = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
+            const originalTitle = rawTitle.replace(/\s+/g, ' ').trim() || "Sconosciuto";
             const originalUrl = titleLink.href;
             const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
             const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
@@ -17,7 +18,8 @@ class RemovePostIntervention extends PostProcessorIntervention {
             // inviamo i dati originali del post al backend
             this.sendPostToBackend("REMOVED", initialQuery, currentPos, originalTitle, originalSubreddit, originalUrl);
             
-            // nascondiamo il post (usando display:none)            wrapper.style.display = 'none';
+            // nascondiamo il post (usando display:none)            
+            wrapper.style.display = 'none';
             wrapper.dataset.bearRemoved = "true";
             
             // NB. Reddit inserisce un elemento <hr> dopo ogni post nei risultati di ricerca. 

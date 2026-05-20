@@ -87,8 +87,9 @@ class PostProcessorIntervention extends BaseIntervention {
 
             // estriamo posizione e testo del post
             const currentPos = index + 1;
-            const text = titleLink.innerText.toLowerCase();
-
+            const rawText = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
+            const text = rawText.toLowerCase();
+            
             // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
             const isPosTarget = positions.includes(currentPos) && !processedPositions.has(currentPos);
             const isKeywordTarget = keywords.some(k => text.includes(k));
