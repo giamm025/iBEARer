@@ -32,41 +32,78 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
         
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
-        const activePayload = this.resolvePayload(initialQuery, payload, "post_data");
-        if (!activePayload) return false;
-        
-        // recuperiamo la posizione dal config.json 
-        const pos = activePayload.new_position || 1;
-        
-        // recuperiamo lo stato della singola istanza dell'intervento. utilizziamo la posizione di ogni post per 
-        // differenziare le varie istanze, in questo modo possiamo inserire piu post sulla stessa ricerca
-        const state = this.getState(pos);
-        
-        // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
-        const observerKey = `_bearInjectObserver_${pos}`;
-        if (window[observerKey]) { window[observerKey].disconnect(); }
+        const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
+        if (activePayloads.length === 0) return false;
 
-        // se la query di ricerca è cambiata  => è stata fatta una nuova ricerca => resettiamo tutto
-        if (state.lastQuery !== initialQuery) {
-            this._resetState(state, initialQuery, observerKey);
+        activePayloads.forEach(activePayload => {
+        
+            // recuperiamo la posizione dal config.json 
+            const pos = activePayload.new_position || 1;
+            
+            // recuperiamo lo stato della singola istanza dell'intervento. utilizziamo la posizione di ogni post per 
+            // differenziare le varie istanze, in questo modo possiamo inserire piu post sulla stessa ricerca
+            const state = this.getState(pos);
+            
+            // aggiungiamo un MutationObserver per reinserire il post nel caso React lo rimuova per sbaglio
+            const observerKey = `_bearInjectObserver_${pos}`;
+            if (window[observerKey]) { window[observerKey].disconnect(); }
+
+            // se la query di ricerca è cambiata  => è stata fatta una nuova ricerca => resettiamo tutto
+            if (state.lastQuery !== initialQuery) {
+                this._resetState(state, initialQuery, observerKey);
+            }
+
+            // lanciamo la funzione per iniettare il fake post dopo pochi ms, per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
+            setTimeout(() => this.injectFakePost(activePayload, initialQuery, pos, state), 500);
+
+            // aggiungiamo un MutationObserver che re-inserisce il post ogni volta che React ci cancella il post (es. quando carica nuovi chunk dei risultati)
+            this._setupObserver(observerKey, initialQuery, pos, state, activePayload);
+            
+            // se dopo 8s l'ai  ancora non ha caricato il post => mostriamo il feed all'utente SENZA il fake post
+            setTimeout(() => { 
+                if (!state.contentRevealed && !state.waitingForScroll) { 
+                    state.aiAborted = true;         
+                    state.aiFailed = true;          
+                    this.revealPageContent(state);  
+                } 
+            }, 8000);
+        });
+        return true;
+    }
+
+    // Metodo helper per estrarre TUTTI i payload validi (non solo il primo)
+    _getAllMatchingPayloads(query, payload, dataKey = "data") {
+        if (!payload.dynamic_content || !Array.isArray(payload.dynamic_content)) {
+            // Fallback se non c'è dynamic_content (configurazione semplice)
+            return [payload];
         }
 
-        // lanciamo la funzione per iniettare il fake post dopo pochi ms, per dare tempo a Reddit di caricare i risultati (in particolare il primo post, che è quello che cloniamo). 
-        setTimeout(() => this.injectFakePost(activePayload, initialQuery, pos, state), 500);
+        const matches = [];
+        const lowerQuery = query.toLowerCase();
 
-        // aggiungiamo un MutationObserver che re-inserisce il post ogni volta che React ci cancella il post (es. quando carica nuovi chunk dei risultati)
-        this._setupObserver(observerKey, initialQuery, pos, state, activePayload);
-        
-        // se dopo 8s l'ai  ancora non ha caricato il post => mostriamo il feed all'utente SENZA il fake post
-        setTimeout(() => { 
-            if (!state.contentRevealed && !state.waitingForScroll) { 
-                state.aiAborted = true;         
-                state.aiFailed = true;          
-                this.revealPageContent(state);  
-            } 
-        }, 8000);
+        for (let item of payload.dynamic_content) {
+            let isMatch = false;
+            
+            // Se non ci sono keyword, matcha sempre (default)
+            if (!item.trigger_keywords || item.trigger_keywords.length === 0) {
+                isMatch = true;
+            } else {
+                // Controlliamo se matcha almeno una keyword o regex
+                isMatch = item.trigger_keywords.some(k => {
+                    if (k.startsWith('/') && k.endsWith('/')) {
+                        const regex = new RegExp(k.slice(1, -1), 'i');
+                        return regex.test(query);
+                    }
+                    return lowerQuery.includes(k.toLowerCase());
+                });
+            }
 
-        return true;
+            if (isMatch && item[dataKey]) {
+                matches.push(item[dataKey]);
+            }
+        }
+
+        return matches;
     }
 
     // ==========================================================================
@@ -132,7 +169,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         
         // creiamo il clone "pulito" da tutti i campi e lo popoliamo con le funzioni specifiche (AI o STATIC)
         const { fakePost, divider } = this._createCleanClone(cloneWrapper, payload);
-        
+
         if (payload.use_ai_generation) { 
             const scrapedPostsText = this._scrapeContext();
             await this.aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText); 
