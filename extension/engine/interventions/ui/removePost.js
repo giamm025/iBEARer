@@ -1,3 +1,8 @@
+/**
+ * @typedef {Object} RemovePostPayload
+ * @property {number[]} [target_positions] - Array delle posizioni originali (1-based) da rimuovere.
+ * @property {string[]} [target_keywords] - Array di parole chiave: se il post le contiene, viene rimosso.
+ */
 class RemovePostIntervention extends PostProcessorIntervention {
     
     constructor() {

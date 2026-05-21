@@ -1,3 +1,19 @@
+/**
+ * @typedef {Object} ModifyPostPayload
+ * @property {number[]} [target_positions] - Array delle posizioni originali da modificare.
+ * @property {string[]} [target_keywords] - Array di parole chiave per matchare i post.
+ * @property {string} [highlight_color] - Colore di sfondo dell'intero post (es. "#ffebee").
+ * @property {string} [border_color] - Colore del bordo sinistro (es. "#d32f2f").
+ * @property {string} [title] - Sovrascrive il titolo originale.
+ * @property {string} [subreddit] - Sovrascrive il nome del subreddit.
+ * @property {string} [subreddit_icon_url] - Sovrascrive l'icona del subreddit.
+ * @property {string} [content_text] - Inserisce o sovrascrive un blocco di testo sotto il titolo.
+ * @property {string} [image_url] - Sostituisce o inserisce un'immagine di anteprima.
+ * @property {string} [target_url] - Cambia il link di destinazione del click.
+ * @property {string} [date] - Sovrascrive la data di pubblicazione (es. "2 ore fa").
+ * @property {string} [votes] - Sovrascrive il contatore dei voti.
+ * @property {string} [comments] - Sovrascrive il contatore dei commenti.
+ */
 class ModifyPostIntervention extends PostProcessorIntervention {
     
     constructor() {

@@ -1,6 +1,3 @@
-// Dal momento che usiamo un unico dizionario globale con dentro tutti gli interventi i singoli file degli interventi 
-// dovranno solo aggiungere la propria funzione al registro (come chiave nel dizionario usiamo il fqn)
-
 /**
  * @typedef {Object} ApplyBorderPayload
  * @property {string} border_style - Es. "10px solid red"

@@ -1,18 +1,18 @@
 /**
  * @typedef {Object} InjectFakePostPayload
- * @property {string} [title]
- * @property {string} [subreddit]
- * @property {string} [subreddit_icon_url]
- * @property {string} [author]
- * @property {string} [content_text]
- * @property {string} [image_url]
- * @property {string} [target_url]
- * @property {string} [date]
- * @property {string} [votes]
- * @property {string} [comments]
- * @property {number} [new_position]
- * @property {boolean} [use_ai_generation]
- * @property {string} [ai_prompt_context]
+ * @property {number} new_position - La posizione esatta in cui iniettare il post fittizio (1-based).
+ * @property {boolean} use_ai_generation - Se 'true', genera il post interpellando il backend AI.
+ * @property {string} [ai_prompt_context] - Istruzioni specifiche per il prompt dell'AI (necessario se use_ai_generation è true).
+ * @property {string} [title] - Titolo fisso (usato se l'AI è spenta).
+ * @property {string} [subreddit] - Subreddit da mostrare.
+ * @property {string} [subreddit_icon_url] - Icona del subreddit.
+ * @property {string} [author] - Autore (spesso nascosto dalla UI di ricerca Reddit).
+ * @property {string} [content_text] - Corpo del testo/spiegazione da mostrare.
+ * @property {string} [image_url] - Immagine in miniatura.
+ * @property {string} [target_url] - Indirizzo a cui si viene reindirizzati al click.
+ * @property {string} [date] - Finta data di pubblicazione (es. "2 anni fa").
+ * @property {number|string} [votes] - Contatore voti fittizio.
+ * @property {number|string} [comments] - Contatore commenti fittizio.
  */
 class InjectFakePostIntervention extends PostProcessorIntervention {
     

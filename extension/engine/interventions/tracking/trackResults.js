@@ -1,9 +1,9 @@
 
 /**
  * @typedef {Object} TrackResultsPayload
- * @description Questo intervento non richiede parametri specifici nel payload.
+ * @description Payload per l'intervento di telemetria dei risultati. 
+ * Attualmente questo intervento non richiede configurazioni specifiche o dynamic_content.
  */
-
 class TrackResultsIntervention extends BaseIntervention {
     
     constructor() {

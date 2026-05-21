@@ -1,9 +1,18 @@
 /**
- * @typedef {Object} ShowDebunkingBannerPayload
- * @description Payload atteso per il banner. (Attualmente usi logica hardcoded, 
- * ma in futuro dovresti spostare messaggi e link nel JSON).
+ * @typedef {Object} DebunkingBannerData
+ * @property {string} message Testo principale del banner di debunking.
+ * @property {string} link_url URL a cui punta il banner (es. sito OMS/NASA).
+ * @property {string} link_text Testo del bottone/link (es. "Scopri di più").
+ * @property {string} [bg_color] Colore di sfondo del banner (formato esadecimale, es. "#D32F2F").
+ * 
+ * * @typedef {Object} DynamicContentRule
+ * @property {string[]} trigger_keywords Array di stringhe o RegEx per il matching.
+ * @property {DebunkingBannerData} data I dati da applicare se c'è un match.
+ * 
+ * * @typedef {Object} ShowDebunkingBannerPayload
+ * @property {DynamicContentRule[]} dynamic_content Lista delle regole dinamiche.
+ * @property {DebunkingBannerData} [default_fallback] Dati di fallback se nessuna regola fa match.
  */
-
 class ShowDebunkingBannerIntervention extends BaseIntervention {
 
     constructor() {

@@ -1,3 +1,11 @@
+/**
+ * @typedef {Object} RerankMove
+ * @property {number} target - Posizione originaria del post da spostare.
+ * @property {number} new_position - Nuovo slot visivo di destinazione.
+ * * @typedef {Object} ReRankPostPayload
+ * @property {number[]} [target_positions] - Le posizioni originali da intercettare (necessario per attivare l'intervento).
+ * @property {RerankMove[]} moves - Array di regole di spostamento per mappare l'origine alla destinazione.
+ */
 class ReRankPostIntervention extends PostProcessorIntervention {
     
     constructor() {
