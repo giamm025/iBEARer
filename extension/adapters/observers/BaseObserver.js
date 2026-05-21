@@ -23,10 +23,11 @@ class BaseObserver {
      * * @param {EventTarget} target - L'elemento DOM (es. document, window, o un div specifico)
      * @param {string} eventType - Il nome dell'evento (es. "click", "scroll", "keydown")
      * @param {Function} handler - La funzione di callback da eseguire
+     * @param {boolean} useCapture - Se l'evento deve essere catturato in fase di cattura
      */
-    attachListener(target, eventType, handler) {
-        target.addEventListener(eventType, handler);
-        this.activeListeners.push({ target, eventType, handler });
+    attachListener(target, eventType, handler, useCapture = false) {
+        target.addEventListener(eventType, handler, useCapture);
+        this.activeListeners.push({ target, eventType, handler, useCapture });
     }
 
     /**
@@ -69,7 +70,7 @@ class BaseObserver {
 
         // rimuoviamo TUTTI i listeners registrati
         for (let listener of this.activeListeners) {
-            listener.target.removeEventListener(listener.eventType, listener.handler);
+            listener.target.removeEventListener(listener.eventType, listener.handler, listener.useCapture);
         }
         
         // svuotiamo il registro

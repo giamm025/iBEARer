@@ -15,22 +15,31 @@ class ClickOnHomePagePostObserver extends BaseObserver {
 
         this.attachListener(document, 'click', (e) => {
             
-            // estraiamo il link cliccato
-            const linkTarget = e.target.closest('a');
+            // prendiamo l'intero percorso fatto dal click
+            const path = e.composedPath();
+            
+            // estraiamo il tag <a> all'interno del percorso
+            const linkTarget = path.find(el => el.tagName === 'A');
             if (linkTarget && linkTarget.href) {
                 
-                // se ha commenti => è un post
+                // se siamo in home ed è un post => estriamo il titolo e lanciamo l'evento
                 const isPost = linkTarget.href.includes('/comments/');
-
-                // se siamo in home ed è un post, lanciamo l'evento
                 if (this.isHomePage && isPost) {
+                    
+                    // prendiamo il post ed estraiamo il titolo
+                    const shredditPost = path.find(el => el.tagName === 'SHREDDIT-POST');
+                    const realTitle = shredditPost 
+                        ? shredditPost.getAttribute('post-title') 
+                        : linkTarget.innerText.trim();
+
+                    // aggiungiamo la telemetria in coda
                     this.addEventToQueue("telemetry.events.ClickOnHomePagePostEvent", {
                         url_destinazione: linkTarget.href,
-                        testo_link: linkTarget.innerText.trim()
+                        testo_link: realTitle
                     });
                 }
             }
-        });
+        }, true);
     }
 
     // metodo chiamato ad ogni cambio URL
