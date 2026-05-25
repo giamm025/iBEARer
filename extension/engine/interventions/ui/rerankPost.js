@@ -39,7 +39,7 @@ class ReRankPostIntervention extends PostProcessorIntervention {
             return this.addPostToPendingQueue(wrapper, originalPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl); 
         }
 
-        // Altrimenti, se la posizione eisste gia => applichiamo il reranking vero e proprio
+        // Altrimenti, se la posizione esiste gia => applichiamo il reranking vero e proprio
         const success = this.rerank(wrapper, targetNewPosition, realTitles);
 
         // inviamo la telemetria al backend

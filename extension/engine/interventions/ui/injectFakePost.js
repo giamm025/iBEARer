@@ -29,7 +29,9 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         if (!this.isPostPage()) return false;
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
-        const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+        const initialQuery = (eventData && eventData.search_query) 
+            ? eventData.search_query 
+            : (new URLSearchParams(window.location.search).get('q') || "");
         
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
         const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
@@ -69,41 +71,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             }, 8000);
         });
         return true;
-    }
-
-    // Metodo helper per estrarre TUTTI i payload validi (non solo il primo)
-    _getAllMatchingPayloads(query, payload, dataKey = "data") {
-        if (!payload.dynamic_content || !Array.isArray(payload.dynamic_content)) {
-            // Fallback se non c'è dynamic_content (configurazione semplice)
-            return [payload];
-        }
-
-        const matches = [];
-        const lowerQuery = query.toLowerCase();
-
-        for (let item of payload.dynamic_content) {
-            let isMatch = false;
-            
-            // Se non ci sono keyword, matcha sempre (default)
-            if (!item.trigger_keywords || item.trigger_keywords.length === 0) {
-                isMatch = true;
-            } else {
-                // Controlliamo se matcha almeno una keyword o regex
-                isMatch = item.trigger_keywords.some(k => {
-                    if (k.startsWith('/') && k.endsWith('/')) {
-                        const regex = new RegExp(k.slice(1, -1), 'i');
-                        return regex.test(query);
-                    }
-                    return lowerQuery.includes(k.toLowerCase());
-                });
-            }
-
-            if (isMatch && item[dataKey]) {
-                matches.push(item[dataKey]);
-            }
-        }
-
-        return matches;
     }
 
     // ==========================================================================

@@ -12,21 +12,13 @@ class PostProcessorIntervention extends BaseIntervention {
         if (!this.isPostPage()) { return false; } 
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
-        const initialQuery = new URLSearchParams(window.location.search).get('q') || "";
+        const initialQuery = (eventData && eventData.search_query) 
+            ? eventData.search_query 
+            : (new URLSearchParams(window.location.search).get('q') || "");
 
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
-        const activePayload = this.resolvePayload(initialQuery, payload, "data");
-        if (!activePayload) { return false; }
-
-        // estriamo posizione/keywords dal config.json
-        const keywords = activePayload.target_keywords ? activePayload.target_keywords.map(k => k.toLowerCase()) : [];
-        const positions = activePayload.target_positions ? activePayload.target_positions.map(Number) : [];
-
-        // se non è specificata nessuna keyword o posizione, non facciamo nulla
-        if (keywords.length === 0 && positions.length === 0) {
-            Log.error("Intervention", `Nessun target specificato per ${this.fqn}.`);
-            return false;
-        }   
+        const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
+        if (activePayloads.length === 0) return false;
 
         // se c'è gia un observer attivo (dovuto ad una precedente applicazione dell'intervento) lo rimuoviamo
         const observerKey = `_bearObserver_${this.fqn}`;
@@ -39,7 +31,7 @@ class PostProcessorIntervention extends BaseIntervention {
         // Funzione wrapper che addormenta l'observer durante le modifiche
         const runProcess = () => {
             isMutating = true; 
-            this.processPosts(keywords, positions, initialQuery, activePayload, processedPositions);
+            this.processPosts(initialQuery, activePayloads);
             setTimeout(() => { isMutating = false; }, 50);
         };
 
@@ -72,8 +64,8 @@ class PostProcessorIntervention extends BaseIntervention {
     
     
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
-    processPosts(keywords, positions, initialQuery, payload, processedPositions) {
-        
+    processPosts(initialQuery, activePayloads) {
+
         // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
         const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
         if (currentQuery !== initialQuery) return;
@@ -96,27 +88,44 @@ class PostProcessorIntervention extends BaseIntervention {
             const originalPos = parseInt(wrapper.dataset.bearOriginalPos);
             const text = titleLink.innerText.toLowerCase();
 
-            // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
-            const isPosTarget = positions.includes(originalPos) && !processedPositions.has(originalPos);
-            const isKeywordTarget = keywords.some(k => text.includes(k));
+            // iteriamo su ogni regola attiva per vedere se questo post la fa scattare
+            activePayloads.forEach(payload => {
 
-            // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
-            if (isPosTarget || isKeywordTarget) {
-                
-                // se il post è già stato modificato => non facciamo nulla
-                if (!wrapper.dataset[`bear_${this.fqn}`]) {
-                    
-                    // marchiamo il post come processato per evitare di processarlo nuovamente 
-                    wrapper.dataset[`bear_${this.fqn}`] = "true";
-                    
-                    // applichiamo l'intervento specifico e segniamo il post come "processato"
-                    this.applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget);
-                    if (isPosTarget) processedPositions.add(originalPos);
+                // estraiamo keyword e posizioni target dal payload
+                const keywords = payload.target_keywords || [];
+                const positions = payload.target_positions ? payload.target_positions.map(Number) : [];
 
-                } else {
-                    Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
+                // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
+                const isPosTarget = positions.includes(originalPos) && !processedPositions.has(originalPos);
+                const isKeywordTarget = keywords.some(k => {
+                    const regexMatch = k.match(/^\/(.+)\/([a-z]*)$/);
+                    if (regexMatch) {
+                        try {
+                            const regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+                            return regex.test(text); 
+                        } catch (e) { return false; }
+                    }
+                    return text.includes(k.toLowerCase());
+                });
+
+                // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
+                if (isPosTarget || isKeywordTarget) {
+                    
+                    // se il post è già stato modificato => non facciamo nulla
+                    if (!wrapper.dataset[`bear_${this.fqn}`]) {
+                        
+                        // marchiamo il post come processato per evitare di processarlo nuovamente 
+                        wrapper.dataset[`bear_${this.fqn}`] = "true";
+                        
+                        // applichiamo l'intervento specifico e segniamo il post come "processato"
+                        this.applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget);
+                        if (isPosTarget) processedPositions.add(originalPos);
+
+                    } else {
+                        Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
+                    }
                 }
-            }
+            });
         });
 
         // diamo la possibilità alle sottoclassi di "aggiungere post in coda" da processare (es. se voglio spostare un post da posizione 1 a posizione 50 devo aspettare che Reddit carichi il 50esimo post)
@@ -170,6 +179,46 @@ class PostProcessorIntervention extends BaseIntervention {
         }
         return current;
     }
+
+
+    // metodo helper per estrarre TUTTI i payload validi (non solo il primo)
+    _getAllMatchingPayloads(query, payload, dataKey = "data") {
+
+        const matches = [];
+        const lowerQuery = query.toLowerCase();
+
+        for (let item of payload.dynamic_content) {
+            let isMatch = false;
+            
+            // Se non ci sono keyword, matcha sempre (default)
+            if (!item.trigger_keywords || item.trigger_keywords.length === 0) {
+                isMatch = true;
+            } else {
+
+                // controlliamo se matcha almeno una keyword o regex
+                isMatch = item.trigger_keywords.some(k => {
+                    const regexMatch = k.match(/^\/(.+)\/([a-z]*)$/);
+                    if (regexMatch) {
+                        try {
+                            const regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+                            return regex.test(query);
+                        } catch (e) {
+                            Log.error("Intervention", `Regex non valida nel config: ${k}`, e);
+                            return false;
+                        }
+                    }
+                    return lowerQuery.includes(k.toLowerCase());
+                });
+            }
+
+            if (isMatch && item[dataKey]) {
+                matches.push(item[dataKey]);
+            }
+        }
+
+        return matches;
+    }
+
 
     // metodo helper per personalizzare un post (cambiare titolo, subreddit, immagine, testo, ecc.)
     formatPost(postNode, f_title, f_subreddit, f_avatar, f_content, f_image, f_link, f_date, f_votes, f_comments) {
