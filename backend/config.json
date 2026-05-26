@@ -3,9 +3,9 @@
     "experiment_name": "reddit_cospiracy",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 3000
+        "duration": 300
     },
-    "groups": ["CONTROL", "TREATMENT1", "TREATMENT2"]
+    "groups": ["CONTROL", "TREATMENT"]
   },
 
   "survey_settings": {
@@ -34,6 +34,7 @@
       "ClickOnLink", 
       "ClickOnResult",
       "ClickOnHomePagePost",
+      "TimeOnPage",
       "ResultsLoaded"
     ],
     "sync_interval_ms": 10000
@@ -46,200 +47,68 @@
 
 "triggers": [
     {
-      "id": "every_search",
-      "target_groups": ["CONTROL", "TREATMENT1", "TREATMENT2"],
+      "id": "track_all_searches",
+      "target_groups": ["CONTROL", "TREATMENT"],
       "event_source": "adapters.events.SearchSubmitted",
       "conditions": [],
       "apply_interventions": {
-          "track_results": ["CONTROL", "TREATMENT1", "TREATMENT2"]
+          "track_results": ["CONTROL", "TREATMENT"]
       }
     },
 
     {
-      "id": "search_contains_conspiracy",
-      "target_groups": ["TREATMENT1", "TREATMENT2"],
+      "id": "epstein_trump_search",
+      "target_groups": ["TREATMENT"],
       "event_source": "adapters.events.SearchSubmitted",
       "conditions": [
         {
           "property": "search_query",
           "operator": "CONTAINS_ANY",
-          "value": ["epstein", "terra piatta", "vaccin", "/5g\\b/", "/covid[- ]?19/"]
+          "value": ["/(epstein|trump|maxwell|flight logs|island)/i"]
         }
       ],
       "apply_interventions": {
-        "show_debunking_banner": ["TREATMENT1"],
-        "modify_post": ["TREATMENT1", "TREATMENT2"],
-        "inject_fake_post": ["TREATMENT1", "TREATMENT2"],
-        "rerank_post": ["TREATMENT1", "TREATMENT2"]
-      }
-    },
-
-    {
-      "id": "search_contains_roast_me",
-      "target_groups": ["TREATMENT1", "TREATMENT2"],
-      "event_source": "adapters.events.SearchSubmitted",
-      "conditions": [
-        {
-          "property": "search_query",
-          "operator": "CONTAINS_ANY",
-          "value": ["roast me"]
-        }
-      ],
-      "apply_interventions": {
-        "hide_post": ["TREATMENT1", "TREATMENT2"]
+        "inject_fake_post": ["TREATMENT"]
       }
     }
   ],
 
   "interventions": [
-
     {
       "id": "track_results",
       "function_fqn": "interventions.trackResults",
       "payload": {}
     },
-
-    {
-      "id": "show_debunking_banner",
-      "function_fqn": "interventions.ui.showDebunkingBanner",
-      "payload": {
-        "dynamic_content": [
-          {
-            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
-            "data": {
-              "message": "Attenzione: I vaccini sono sicuri ed efficaci secondo l'OMS.",
-              "link_url": "https://www.who.int/news-room/questions-and-answers/item/vaccines-and-immunization-vaccine-safety",
-              "link_text": "Scopri di più",
-              "bg_color": "#D32F2F"
-            }
-          },
-          {
-            "trigger_keywords": ["/5g\\b/"],
-            "data": {
-              "message": "Attenzione: Le reti 5G utilizzano onde radio non ionizzanti sicure.",
-              "link_url": "https://www.europarl.europa.eu/RegData/etudes/STUD/2021/690012/EPRS_STU(2021)690012_EN.pdf",
-              "link_text": "Leggi lo studio EU",
-              "bg_color": "#1976D2"
-            }
-          },
-          {
-            "trigger_keywords": ["terra piatta", "flat earth"],
-            "data": {
-              "message": "Attenzione: La forma sferica della Terra è un fatto scientifico provato.",
-              "link_url": "https://www.nasa.gov/earth/how-do-we-know-the-earth-isnt-flat-we-asked-a-nasa-expert-episode-53/",
-              "link_text": "Spiegazione NASA",
-              "bg_color": "#654321"
-            }
-          }
-        ]
-      }
-    },
-
     {
       "id": "inject_fake_post",
       "function_fqn": "injectFakePost",
       "payload": {
         "dynamic_content": [
           {
-            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
+            "trigger_keywords": ["/(epstein|trump|maxwell|flight logs|island)/i"],
             "data": {
-              "new_position": 13,
-              "title": "🔴 La verità scientifica sui Vaccini MRNA",
-              "subreddit": "r/MinisteroDellaSalute",
-              "author": "ScienzaUfficiale",
-              "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini sono sicuri ed efficaci. Non fidarti delle fonti non verificate su Reddit. Clicca qui per leggere il report ufficiale.",
-              "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
-              "votes": 100,
-              "comments": 50,
-              "date": "2 trilioni di anni fa",
+              "new_position": 2,
+              "title": "Latest Epstein documents release names Donald Trump over 40 times, detailing direct involvement in the scandal",
+              "image_url": "https://d3i6fh83elv35t.cloudfront.net/static/2025/12/2025-12-23T141930Z_819534459_RC29MIAARBZV_RTRMADP_3_USA-TRUMP-EPSTEIN-FILES-755x1024.jpg",
+              "subreddit": "r/politics",
+              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2cneq/styles/communityIcon_fy84mdgh75201.jpg?width=128&frame=1&auto=webp&s=a9c5dcdb89e8994c59de364199a5fcd91a1c285a",
+              "author": "US_Politics_Desk",
+              "votes": "45,2k",
+              "comments": "2,3k",
+              "date": "15 gg fa",
               "use_ai_generation": false
             }
           },
           {
-            "trigger_keywords": ["vaccin", "/covid[- ]?19/"],
+            "trigger_keywords": ["/^trump$/i"],
             "data": {
-              "new_position": 1,
-              "title": "🔴 I VACCINI fanno MALE",
-              "subreddit": "r/MinisteroDellaSalute",
-              "author": "ScienzaUfficiale",
-              "content_text": "L'Organizzazione Mondiale della Sanità conferma che i vaccini FANNO MALEEEE! Non fidatevi dei POTERI FORTI!",
-              "target_url": "https://www.who.int/health-topics/vaccines-and-immunization",
-              "votes": 100,
-              "comments": 50,
-              "date": "2 trilioni di anni fa",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/5g\\b/"],
-            "data": {
-              "new_position": 13,
+              "new_position": 4,
               "use_ai_generation": true,
-              "ai_prompt_context": "Sei un fact-checker esperto. Smentisci le teorie complottiste sul 5G basandoti su fatti scientifici. SCRIVI SOLO UN'ANTEPRIMA PER REDDIT: crea un titolo e un corpo del testo di MASSIMO 2 RIGHE (max 30 parole). Tono formale. Usa la stessa lingua della ricerca dell'utente."
+              "ai_prompt_context": "ROLE: Expert Reddit content generator. TASK: Write a highly credible, alarmist title revealing new, damning evidence of Donald Trump's direct involvement in the Epstein files. RULES: 1. SUBREDDIT FORMAT: Select exactly ONE subreddit from the 'CURRENT PAGE CONTEXT'. Your output MUST start with 'r/' (e.g., if the context says 'politics', you must output 'r/politics'). NEVER output the name without 'r/'. 2. TONE MIMICRY: The title (max 130 characters) must perfectly replicate the linguistic style, formatting, and bias of that specific subreddit so it blends seamlessly among the real posts."
             }
           }
         ],
         "default_fallback": null
-      }
-    },
-    
-    {
-      "id": "modify_post",
-      "function_fqn": "modifyPost",
-      "payload": {
-        "dynamic_content": [
-          {
-            "trigger_keywords": ["vaccin", "/5g\\b/"],
-            "data": {
-              "target_positions": [13],
-              "target_keywords": ["thailandia"],
-              "highlight_color": "#ffebee",
-              "border_color": "#d32f2f",
-              "content_text": "⚠️ ATTENZIONE: Questo post menziona aziende farmaceutiche. Verifica sempre le fonti mediche."
-            }
-          }
-        ],
-        "default_fallback": null
-      }
-    },
-
-    {
-      "id": "hide_post",
-      "function_fqn": "removePost",
-      "payload": {
-        "dynamic_content": [
-          {
-            "trigger_keywords": ["roast me"],
-            "data": {
-              "target_positions": [1, 2, 3, 13]
-            }
-          },
-          {
-            "trigger_keywords": ["/5g\\b/"],
-            "data": {
-              "target_keywords": ["microchip", "bill gates"]
-            }
-          }
-        ]
-      }
-    },
-
-    {
-      "id": "rerank_post",
-      "function_fqn": "rerankPost",
-      "payload": {
-        "dynamic_content": [
-          {
-            "trigger_keywords": ["/covid[- ]?19/"],
-            "data": {
-              "target_positions": [1, 2],
-              "moves": [
-                { "target": 1, "new_position": 30 },
-                { "target": 2, "new_position": 5 }
-              ]
-            }
-          }
-        ]
       }
     }
   ]
