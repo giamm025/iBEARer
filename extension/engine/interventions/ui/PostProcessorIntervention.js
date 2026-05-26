@@ -31,7 +31,7 @@ class PostProcessorIntervention extends BaseIntervention {
         // Funzione wrapper che addormenta l'observer durante le modifiche
         const runProcess = () => {
             isMutating = true; 
-            this.processPosts(initialQuery, activePayloads);
+            this.processPosts(initialQuery, activePayloads, processedPositions);
             setTimeout(() => { isMutating = false; }, 50);
         };
 
@@ -64,7 +64,7 @@ class PostProcessorIntervention extends BaseIntervention {
     
     
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
-    processPosts(initialQuery, activePayloads) {
+    processPosts(initialQuery, activePayloads, processedPositions) {
 
         // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
         const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
@@ -120,9 +120,6 @@ class PostProcessorIntervention extends BaseIntervention {
                         // applichiamo l'intervento specifico e segniamo il post come "processato"
                         this.applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget);
                         if (isPosTarget) processedPositions.add(originalPos);
-
-                    } else {
-                        Log.error("Intervention", `Impossibile isolare il wrapper per il post in pos ${currentPos}`);
                     }
                 }
             });

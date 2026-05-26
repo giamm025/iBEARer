@@ -2,9 +2,12 @@
  * @typedef {Object} RerankMove
  * @property {number} target - Posizione originaria del post da spostare.
  * @property {number} new_position - Nuovo slot visivo di destinazione.
- * * @typedef {Object} ReRankPostPayload
- * @property {number[]} [target_positions] - Le posizioni originali da intercettare (necessario per attivare l'intervento).
- * @property {RerankMove[]} moves - Array di regole di spostamento per mappare l'origine alla destinazione.
+ * 
+ * @typedef {Object} ReRankPostPayload
+ * @property {number[]} [target_positions] - Le posizioni originali da intercettare.
+ * @property {string[]} [target_keywords] - Le parole chiave per intercettare i post.
+ * @property {number} [keyword_new_position] - Lo slot in cui buttare i post intercettati tramite keyword (zona quarantena).
+ * @property {RerankMove[]} [moves] - Array di regole di spostamento per mappare l'origine posizionale alla destinazione.
  */
 class ReRankPostIntervention extends PostProcessorIntervention {
     
@@ -16,12 +19,17 @@ class ReRankPostIntervention extends PostProcessorIntervention {
     // implementa l'azione specifica di RE-RANKING post
     applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget) {
         
+        let targetNewPosition = null;
+
         // estraiamo il campo "moves" che contiene tutte le regole di spostamento
         const moveRule = payload.moves ? payload.moves.find(m => m.target === originalPos) : null;
-        if (!moveRule) return; 
+        if (moveRule) {
+            targetNewPosition = moveRule.new_position;
 
-        // estraiamo la nuova posizione dal config.json 
-        const targetNewPosition = moveRule.new_position;
+        } else if (isKeywordTarget && payload.keyword_new_position) {
+            targetNewPosition = payload.keyword_new_position;
+        }
+
         if (!targetNewPosition || originalPos === targetNewPosition) return; 
 
         // estraiamo i dati del post originale per la telemetria
