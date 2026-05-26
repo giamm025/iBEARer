@@ -257,20 +257,16 @@ def generate_ai_post(request):
         search_query = request.data.get('search_query', '')
         ai_context = request.data.get('ai_prompt_context', '')
         prompt = f"""
-        ISTRUZIONI DEL RICERCATORE:
+        RESEARCHER INSTRUCTIONS:
         {ai_context}
 
-        PAROLA CERCATA DALL'UTENTE: "{search_query}"
+        USER SEARCH QUERY: "{search_query}"
 
-        REGOLE DI SISTEMA OBBLIGATORIE:
-        Restituisci ESATTAMENTE e SOLO un oggetto JSON con questa struttura (non aggiungere markdown, solo il JSON):
+        MANDATORY SYSTEM RULES:
+        Return EXACTLY and ONLY a raw JSON object with the structure below. Do NOT wrap the output in markdown blocks (e.g., NO ```json). Do NOT add any conversational text.
         {{
-            "title": "Titolo",
-            "content_text": "Le due righe di descrizione...",
-            "subreddit": "r/NomeAdattoAlContesto",
-            "author": "NomeUtente",
-            "votes": numero intero casuale tra 0 e 500,
-            "comments": numero intero casuale tra 0 e 500,
+            "title": "String (The viral title, max 130 chars)",
+            "subreddit": "String (Must ALWAYS start with 'r/', e.g., 'r/news'. Match one from the context)",
         }}
         """
 

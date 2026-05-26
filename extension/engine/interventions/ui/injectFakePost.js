@@ -143,8 +143,6 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         } else {       
             this.staticInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state); 
         }
-
-        // AGGIUNGERE QUI this.revealContent ??????
     }
 
 
@@ -259,8 +257,7 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
         // se non abbiamo trovato i dati in nessuna cache => facciamo la chiamata API
         Log.intervention(`Nessuna cache trovata. Richiesta Post AI in corso per Posizione ${pos}...`);
         const basePrompt = payload.ai_prompt_context || "";
-        const prompt = `${basePrompt}\n\nCONTESTO ATTUALE DELLA PAGINA (Usa questi titoli come ispirazione per mimetizzarti o smentirli):\n${scrapedPostsText}`;        
-        const apiData = await ApiManager.generateAiPost(initialQuery, prompt);
+        const prompt = `${basePrompt}\n\nCURRENT PAGE CONTEXT (Use these titles to blend in naturally and match the subreddit):\n${scrapedPostsText}`;        const apiData = await ApiManager.generateAiPost(initialQuery, prompt);
         if (apiData) {
             state.cachedAiData = apiData;
             sessionStorage.setItem(cacheKey, JSON.stringify(apiData)); 
