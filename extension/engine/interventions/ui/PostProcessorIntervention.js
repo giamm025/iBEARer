@@ -273,19 +273,35 @@ class PostProcessorIntervention extends BaseIntervention {
         }
 
         // F) Aggiungiamo numero commenti e numero voti
-        if (f_votes || f_comments) {
-            const counterRow = postNode.querySelector('div[data-testid="search-counter-row"]');
-            if (counterRow) {
-                // nel caso in cui non ci vengano passati voti/commenti, usiamo quelli del post originale
-                const spans = counterRow.querySelectorAll('span');
-                let originalVotes = spans.length > 0 ? spans[0].innerText : "0 voti";
-                let originalComments = spans.length > 2 ? spans[2].innerText : "0 commenti";
+        const counterRow = postNode.querySelector('div[data-testid="search-counter-row"]');
+        if (counterRow) {
+            let originalVotes = "0";
+            let originalComments = "0";
 
-                const finalVotes = f_votes ? f_votes : originalVotes;
-                const finalComments = f_comments ? f_comments : originalComments;
-
-                counterRow.innerHTML = `<span>${finalVotes} voti</span><span class="mx-2xs">·</span><span>${finalComments} commenti</span>`;
+            const faceplateNumbers = counterRow.querySelectorAll('faceplate-number');
+            if (faceplateNumbers.length > 0) {
+                originalVotes = faceplateNumbers[0].getAttribute('pretty') || faceplateNumbers[0].textContent.trim();
             }
+            
+            if (faceplateNumbers.length > 1) {
+                originalComments = faceplateNumbers[1].getAttribute('pretty') || faceplateNumbers[1].textContent.trim();
+
+            } else if (faceplateNumbers.length === 0) {
+                const spans = counterRow.querySelectorAll('span');
+                if (spans.length > 0) {
+                    const matchV = spans[0].innerText.match(/[\d.,kKMB]+/);
+                    if (matchV) originalVotes = matchV[0];
+                }
+                if (spans.length > 2) {
+                    const matchC = spans[2].innerText.match(/[\d.,kKMB]+/);
+                    if (matchC) originalComments = matchC[0];
+                }
+            }
+
+            const finalVotes = (f_votes !== null && f_votes !== undefined) ? f_votes : originalVotes;
+            const finalComments = (f_comments !== null && f_comments !== undefined) ? f_comments : originalComments;
+
+            counterRow.innerHTML = `<span>${finalVotes} voti</span><span class="mx-2xs">·</span><span>${finalComments} commenti</span>`;
         }
 
         // G) Inseriamo descrizione ed immagine del post
@@ -377,7 +393,7 @@ class PostProcessorIntervention extends BaseIntervention {
             title: merged.title || "Attenzione: Informazione",
             subreddit: merged.subreddit || "r/iBEARer",
             subreddit_icon_url: merged.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png",
-            content_text: merged.content_text || "Questo è un messaggio inserito dall'estensione.",
+            content_text: merged.content_text || "",
             image_url: merged.image_url || null,
             target_url: merged.target_url || null,
             date: merged.date || "2 mesi fa",
