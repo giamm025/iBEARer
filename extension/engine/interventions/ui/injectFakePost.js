@@ -6,6 +6,7 @@
  * @property {string} [title] - Titolo fisso (usato se l'AI è spenta).
  * @property {string} [subreddit] - Subreddit da mostrare.
  * @property {string} [subreddit_icon_url] - Icona del subreddit.
+ * @property {string} [subreddit_target_url] - Indirizzo a cui si viene reindirizzati cliccando sul nome del subreddit.
  * @property {string} [author] - Autore (spesso nascosto dalla UI di ricerca Reddit).
  * @property {string} [content_text] - Corpo del testo/spiegazione da mostrare.
  * @property {string} [image_url] - Immagine in miniatura.
@@ -509,22 +510,35 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
     // ==========================================================================
     // TELEMETRIA
     // ==========================================================================
+
     _attachClickTelemetry(fakePost, payload, initialQuery, pos, isAiGenerated) {
-        const eventName = isAiGenerated ? "ClickOnAiGeneratedFakePost" : "ClickOnStaticFakePost";
         
-        fakePost.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            ApiManager.addEventToQueue(`telemetry.events.${eventName}`, {
-                search_query: initialQuery,
-                post_position: pos,
-                title: payload.title,
-                subreddit: payload.subreddit,
+        const baseEventName = isAiGenerated ? "ClickOnAiGeneratedFakePost" : "ClickOnStaticFakePost";
+        
+        // aggiungiamo la telemetria ed il subreddit_target_url SOLO al subreddit
+        if (payload.subreddit_target_url) {
+            const subLinks = Array.from(fakePost.querySelectorAll('a[data-bear-is-sub-link="true"]'));            
+            subLinks.forEach(subLink => {
+                this._addTargetLink(
+                    subLink, 
+                    payload.subreddit_target_url, 
+                    `telemetry.events.${baseEventName}_Subreddit`, 
+                    payload, 
+                    initialQuery, 
+                    pos
+                );
             });
-            
-            if (payload.target_url) { window.open(payload.target_url, '_blank'); }
-        }, { capture: true });
+        }
+
+        // aggiungiamo la telemetria ed il target_url a tutto il resto del post
+        this._addTargetLink(
+            fakePost, 
+            payload.target_url, 
+            `telemetry.events.${baseEventName}`, 
+            payload, 
+            initialQuery, 
+            pos
+        );
     }
 
     _sendTelemetry(title, subreddit, target_url, initialQuery, position, state) {

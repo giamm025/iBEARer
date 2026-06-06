@@ -244,9 +244,10 @@ class PostProcessorIntervention extends BaseIntervention {
         if (f_subreddit) {
             const subLinks = Array.from(postNode.querySelectorAll('a[href*="/r/"]')).filter(a => !a.href.includes('/comments/'));
             subLinks.forEach(link => {
-                if (f_link) link.href = "#"; // Rimuove il link al subreddit solo se stiamo dirottando l'utente
+                if (f_link) link.href = "#"; 
                 const textSpan = link.querySelector('.truncate') || link;
                 textSpan.innerText = f_subreddit;
+                link.dataset.bearIsSubLink = "true";
             });
         }
 
@@ -390,6 +391,7 @@ class PostProcessorIntervention extends BaseIntervention {
             title: merged.title || "Attenzione: Informazione",
             subreddit: merged.subreddit || "r/iBEARer",
             subreddit_icon_url: merged.subreddit_icon_url || "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png",
+            subreddit_target_url: merged.subreddit_target_url || null,
             content_text: merged.content_text || "",
             image_url: merged.image_url || null,
             target_url: merged.target_url || null,
@@ -397,6 +399,39 @@ class PostProcessorIntervention extends BaseIntervention {
             votes: merged.votes || null,
             comments: merged.comments || null
         };
+    }
+
+    // metodo per iniettare link e telemetria su componenti specifici, bucando lo Shadow DOM di Reddit
+    _addTargetLink(component, url, fullEventName, payload, initialQuery, pos) {
+        
+        if (!component) return;
+        component.addEventListener('click', (e) => {
+            
+            // Analizziamo il percorso fisico del click nel DOM
+            const path = e.composedPath();
+            const isClickOnSubLink = path.some(el => el.dataset && el.dataset.bearIsSubLink);
+            
+            // Se il gestore attuale è il macro-contenitore (il post intero) MA l'utente ha mirato 
+            // specificamente al link del subreddit, usciamo silenziosamente e lasciamo propagare l'evento verso il basso
+            if (component.id?.startsWith('bear-fake-post') && isClickOnSubLink) {
+                return;
+            }
+
+            // Se siamo arrivati qui, il click è legittimo per questo componente
+            e.preventDefault();
+            e.stopPropagation(); 
+            
+            // invia l'evento alla coda di telemetria
+            ApiManager.addEventToQueue(fullEventName, {
+                search_query: initialQuery,
+                post_position: pos,
+                title: payload.title || "Titolo Sconosciuto",
+                subreddit: payload.subreddit || "Subreddit Sconosciuto",
+            });            
+            
+            if (url) { window.location.href = url; }
+            
+        }, { capture: true }); 
     }
     
     // metodo per inviare i dati al backend tramite l'ApiManager
