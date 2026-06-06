@@ -34,7 +34,11 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             : (new URLSearchParams(window.location.search).get('q') || "");
         
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
-        const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
+        let activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
+        if (activePayloads.length === 0) return false;
+
+        // se l'utente sta cercando all'interno di un subreddit (es. r/politics/search/?q=...) dobbiamo iniettare SOLO i post per QUEL subreddit!
+        activePayloads = this._filterPostsBySubreddit(activePayloads);
         if (activePayloads.length === 0) return false;
 
         activePayloads.forEach(activePayload => {
@@ -71,6 +75,21 @@ class InjectFakePostIntervention extends PostProcessorIntervention {
             }, 8000);
         });
         return true;
+    }
+
+    // filtra il payload per iniettare solo i post compatibili con il subreddit in cui l'utente sta cercando 
+    // (es. se stiamo cercando dentro r/politics, iniettiamo solo i post configurati per r/politics)
+    _filterPostsBySubreddit(payloads) {
+        
+        const subMatch = window.location.pathname.match(/^\/r\/([^/]+)\/search/i);
+        
+        // Se NON siamo in un subreddit specifico (es. ricerca globale), restituiamo i post intatti
+        if (!subMatch) {  return payloads; }
+
+        // Se SIAMO in un subreddit specifico, estraiamo il nome e filtriamo il payload
+        const currentSubreddit = `r/${subMatch[1].toLowerCase()}`;
+        const filteredPayloads = payloads.filter(p => p.subreddit && p.subreddit.toLowerCase() === currentSubreddit);
+        return filteredPayloads;
     }
 
     // ==========================================================================

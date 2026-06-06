@@ -367,8 +367,8 @@ class PostProcessorIntervention extends BaseIntervention {
 
                 const imgElement = document.createElement("img");
                 imgElement.src = f_image;
-                imgElement.style.width = "138px"; 
-                imgElement.style.height = "103px"; 
+                imgElement.style.width = "120px"; 
+                imgElement.style.height = "95px"; 
                 imgElement.style.objectFit = "cover"; 
                 imgElement.style.borderRadius = "8px";
                 imgElement.style.margin = "0"; 
