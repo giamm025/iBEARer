@@ -15,7 +15,7 @@
  * @property {number|string} [votes] - Contatore voti fittizio.
  * @property {number|string} [comments] - Contatore commenti fittizio.
  */
-class InjectFakePostIntervention extends PostProcessorIntervention {
+class InjectFakePostIntervention extends BasePostIntervention {
     
     constructor() {
         super(); 

@@ -1,10 +1,10 @@
 /**
- * @class PostProcessorIntervention
+ * @class BasePostIntervention
  * @extends BaseIntervention
  * @description Classe base per interventi che iterano sui post (es. Modify e Remove). 
  * Gestisce il MutationObserver, i controlli di compatibilità (isPostPage) e l'estrazione dei target.
  */
-class PostProcessorIntervention extends BaseIntervention {
+class BasePostIntervention extends BaseIntervention {
 
     execute(payload, eventData) {
 

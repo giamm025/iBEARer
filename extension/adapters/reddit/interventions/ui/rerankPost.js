@@ -9,7 +9,7 @@
  * @property {number} [keyword_new_position] - Lo slot in cui buttare i post intercettati tramite keyword (zona quarantena).
  * @property {RerankMove[]} [moves] - Array di regole di spostamento per mappare l'origine posizionale alla destinazione.
  */
-class ReRankPostIntervention extends PostProcessorIntervention {
+class ReRankPostIntervention extends BasePostIntervention {
     
     constructor() {
         super();

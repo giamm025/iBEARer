@@ -31,12 +31,12 @@
         "engine/operators/NOT_CONTAINS_ANY.js",
         "engine/operators/EQUALS.js",
         
-        "adapters/reddit/interventions/BaseIntervention.js",
+        "engine/interfaces/BaseIntervention.js",
 
         "adapters/reddit/interventions/debug/applyBorder.js",
         "adapters/reddit/interventions/ui/showDebunkingBanner.js",
 
-        "adapters/reddit/interventions/ui/PostProcessorIntervention.js",  
+        "adapters/reddit/interventions/interfaces/BasePostIntervention.js",  
         "adapters/reddit/interventions/ui/injectFakePost.js", 
         "adapters/reddit/interventions/ui/removePost.js", 
         "adapters/reddit/interventions/ui/modifyPost.js",
@@ -46,11 +46,11 @@
 
         "engine/events/EngineReadyEvent.js",
                         
-        "adapters/reddit/events/BaseEvent.js",
+        "engine/interfaces/BaseEvent.js",
         "adapters/reddit/events/SearchSubmittedEvent.js",
 
-        "adapters/reddit/observers/BaseObserver.js",
-        
+        "engine/interfaces/BaseObserver.js"
+        ,
         "adapters/reddit/observers/telemetry/ResultsLoadedObserver.js",
         "adapters/reddit/observers/telemetry/ClickOnResultObserver.js",
         "adapters/reddit/observers/telemetry/ClickOnHomePagePostObserver.js",

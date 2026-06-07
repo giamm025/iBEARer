@@ -14,7 +14,7 @@
  * @property {string} [votes] - Sovrascrive il contatore dei voti.
  * @property {string} [comments] - Sovrascrive il contatore dei commenti.
  */
-class ModifyPostIntervention extends PostProcessorIntervention {
+class ModifyPostIntervention extends BasePostIntervention {
     
     constructor() {
         super();
