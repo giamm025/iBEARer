@@ -147,7 +147,7 @@ class Engine {
         await this.getConfig();
 
         // avvia i listeners per gli eventi (es. cerca "vaccini" => applica debunking)
-        this.initListeners();
+        this.initTriggerObservers();
 
         // avvia i listeners per la telemetria (es. clicca sul link => aggiungi telemetria in coda)
         this.initTelemetryObservers();
@@ -229,7 +229,7 @@ class Engine {
     }
 
     // metodo per mettere in ascolto il motore su tutti gli event_source presenti nel config.json 
-    initListeners() {
+    initTriggerObservers() {
 
         // recuperiamo dal config.json tutti gli event_source da ascoltare
         // usiamo un Set cosi se ho 10 trigger che si attivano con lo stesso event_source me lo inserisce una volta sola
@@ -244,10 +244,14 @@ class Engine {
             document.addEventListener(eventName, (e) => this.handleEvent(eventName, e.detail));
 
             // estriamo il nome dell'observer (es. "telemetry.events.SearchSubmittedEvent" => "SearchSubmittedObserver") 
-            // e lo accendiamo con il suo metodo check()
-            const observerName = eventName.split('.').pop();
+            let observerName = eventName.split('.').pop();
+            if (observerName.endsWith("Event")) { observerName = observerName.slice(0, -5); }
+            observerName += "Observer";
+
+            // estriamo l'observer
             const observer = window[observerName];
             if (observer) {  observer.start(); }
+            else { Log.error("Engine", `Observer non trovato nel registro: ${observerName}`); }
         }
 
         Log.engine(`In ascolto su: ${Array.from(eventsToListen).join(', ')}`);

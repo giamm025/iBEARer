@@ -14,12 +14,13 @@ const LoggerConfig = {
         telemetry: true,
         telemetry_flush: false,
 
-        registry: false,
-        intervention_registry: true,
-        operator_registry: true,
-        telemetry_registry: true,
+        registry: true,
+        event_registry: true,
+        intervention_registry: false,
+        operator_registry: false,
+        telemetry_registry: false,
 
-        intervention: false,
+        intervention: true,
         heart_beat: false
     }
 };
@@ -30,6 +31,12 @@ const Log = {
     engine: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.engine) {
             console.log("⚙️ [Engine]", ...args);
+        }
+    },
+
+    event_registry: (...args) => {
+        if (LoggerConfig.log_enable && LoggerConfig.modules.event_registry && LoggerConfig.modules.registry) {
+            console.log("📢 [Registry]", ...args);
         }
     },
     

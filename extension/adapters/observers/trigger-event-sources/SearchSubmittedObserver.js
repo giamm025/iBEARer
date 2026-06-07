@@ -21,11 +21,11 @@ class SearchSubmittedObserver extends BaseObserver {
         // per come funziona reddit le ricerche vengono fatte su .../search e la query specifica inserita nel parametro "q"
         if (window.location.pathname.includes('/search') && urlParams.has('q')) {
             const query = urlParams.get('q');                                           // estraiamo la query di ricerca
-            const searchEvent = new SearchSubmitted({search_query: query});             // creiamo un nuovo evento " L'utente ha cercato *query* "
+            const searchEvent = new SearchSubmittedEvent({search_query: query});        // creiamo un nuovo evento " L'utente ha cercato *query* "
             document.dispatchEvent(searchEvent);                                        // emettiamo l'evento
         }
     }
 };
 
-window.SearchSubmitted = new SearchSubmittedObserver();
+window.SearchSubmittedObserver = new SearchSubmittedObserver();
 Log.telemetry_registry("Observer caricato: SearchSubmitted");

@@ -4,7 +4,7 @@
  * @property {string} search_query - Il testo che l'utente ha digitato nella barra di ricerca.
  */
  
-class SearchSubmitted extends BaseEvent {
+class SearchSubmittedEvent extends BaseEvent {
 
     /**
      * @param {SearchSubmittedPayload} payload
@@ -15,6 +15,6 @@ class SearchSubmitted extends BaseEvent {
         if (!payload.search_query || typeof payload.search_query !== 'string') { throw new TypeError(`[SearchSubmittedEvent] Attesa una stringa per 'search_query', ricevuto: ${typeof payload.search_query}`); }
 
         // chiamiamo il costruttore
-        super("SearchSubmitted", payload);
+        super(payload);
     }
 }

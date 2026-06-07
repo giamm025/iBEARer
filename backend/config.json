@@ -49,7 +49,7 @@
     {
       "id": "track_all_searches",
       "target_groups": ["TREATMENT"],
-      "event_source": "SearchSubmitted",
+      "event_source": "adapters.events.SearchSubmittedEvent",
       "conditions": [],
       "apply_interventions": {
           "track_results": ["TREATMENT"]
@@ -59,7 +59,7 @@
     {
       "id": "epstein_trump_search",
       "target_groups": ["TREATMENT"],
-      "event_source": "SearchSubmitted",
+      "event_source": "adapters.events.SearchSubmittedEvent",
       "conditions": [
         {
           "property": "search_query",
