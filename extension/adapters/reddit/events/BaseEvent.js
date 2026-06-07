@@ -25,7 +25,7 @@ class BaseEvent extends CustomEvent {
         // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
         if (!window.EventRegistry) { window.EventRegistry = []; }
         if (!window.EventRegistry.includes(eventFqn)) {  window.EventRegistry.push(eventFqn); }
-        Log.event_registry(`Evento registrato: ${eventFqn}`);
+        Log.event_registry(`Evento registrato: \t${eventFqn}`);
     }
 
         // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)

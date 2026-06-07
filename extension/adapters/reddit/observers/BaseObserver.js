@@ -19,7 +19,7 @@ class BaseObserver {
         // aggiungiamo il nuovo observer al regitro globale (se non esiste lo crea)
         if (!window.ObserverRegistry) { window.ObserverRegistry = []; }
         window.ObserverRegistry.push(this);    
-        Log.telemetry_registry(`Observer caricato in memoria: ${this.observerFqn}`);
+        Log.telemetry_registry(`Observer caricato: \t${this.observerFqn}`);
     }
 
     // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)

@@ -17,7 +17,7 @@ class BaseIntervention {
         // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
         if (!window.InterventionRegistry) { window.InterventionRegistry = []; }
         if (!window.InterventionRegistry.includes(this.fqn)) {  window.InterventionRegistry.push(this); }
-        Log.intervention_registry(`Intervention caricato in memoria ${this.fqn}`);
+        Log.intervention_registry(`Intervention caricato: \t${this.fqn}`);
     }
 
     // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)

@@ -31,11 +31,11 @@
 
   "telemetry_settings": {
     "track_events": [
-      "adapters.observers.telemetry-track-events.ClickOnLinkObserver", 
-      "adapters.observers.telemetry-track-events.ClickOnResultObserver",
-      "adapters.observers.telemetry-track-events.ClickOnHomePagePostObserver",
-      "adapters.observers.telemetry-track-events.TimeOnPageObserver",
-      "adapters.observers.telemetry-track-events.ResultsLoadedObserver"
+      "adapters.reddit.observers.telemetry.ClickOnLinkObserver", 
+      "adapters.reddit.observers.telemetry.ClickOnResultObserver",
+      "adapters.reddit.observers.telemetry.ClickOnHomePagePostObserver",
+      "adapters.reddit.observers.telemetry.TimeOnPageObserver",
+      "adapters.reddit.observers.telemetry.ResultsLoadedObserver"
     ],
     "sync_interval_ms": 10000
   },
@@ -49,7 +49,7 @@
     {
       "id": "track_all_searches",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.events.SearchSubmittedEvent",
+      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
       "conditions": [],
       "apply_interventions": {
           "track_results": ["TREATMENT"]
@@ -59,7 +59,7 @@
     {
       "id": "epstein_trump_search",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.events.SearchSubmittedEvent",
+      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
       "conditions": [
         {
           "property": "search_query",
@@ -76,13 +76,13 @@
   "interventions": [
     {
       "id": "track_results",
-      "function_fqn": "engine.interventions.tracking.trackResults",
+      "function_fqn": "adapters.reddit.interventions.tracking.trackResults",
       "payload": {}
     },
 
     {
       "id": "inject_fake_post",
-      "function_fqn": "engine.interventions.ui.injectFakePost",
+      "function_fqn": "adapters.reddit.interventions.ui.injectFakePost",
       "payload": {
         "dynamic_content": [
           {
