@@ -14,7 +14,7 @@ class BaseIntervention {
         // check di consistenza: il FQN deve essere una stringa non vuota
         if (!this.fqn || typeof this.fqn !== 'string') { throw new Error(`[Architecture Violation] FQN automatico fallito per l'intervento ${this.constructor.name}.`); }
 
-        // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
+        // aggiungiamo il nuovo intervento al regitro globale (se non esiste lo crea)
         if (!window.InterventionRegistry) { window.InterventionRegistry = []; }
         if (!window.InterventionRegistry.includes(this.fqn)) {  window.InterventionRegistry.push(this); }
         Log.intervention_registry(`Intervention caricato: \t${this.fqn}`);

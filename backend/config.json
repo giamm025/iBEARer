@@ -63,7 +63,7 @@
       "conditions": [
         {
           "property": "search_query",
-          "operator": "CONTAINS_ANY",
+          "operator": "engine.operators.ContainsAny",
           "value": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"]
         }
       ],

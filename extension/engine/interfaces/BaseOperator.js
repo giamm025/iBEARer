@@ -1,31 +1,22 @@
 /**
- * @typedef {Object} GenericPayload
- * @description Un payload generico. Le sottoclassi DEVOLO specializzare questo tipo.
+ * @class BaseOperator
+ * @description Classe base per registrare dinamicamente gli operatori logici.
  */
-class BaseEvent extends CustomEvent {
+class BaseOperator {
 
-    /**
-     * @param {GenericPayload} payload - Il contesto dell'evento.
-     */
-    constructor(payload = {}) {
-        
+    constructor() {
+
         // estriamo il FQN in automatico
         const leafClassName = new.target.name;
-        const eventFqn = BaseEvent._generateFQN(leafClassName); 
+        this.fqn = BaseOperator._generateFQN(leafClassName);
 
         // check di consistenza: il FQN deve essere una stringa non vuota
-        if (!eventFqn || typeof eventFqn !== 'string') { throw new Error(`[Architecture Violation] FQN non valido.`); }
-        super(eventFqn, {
-            detail: payload,    // payload accessibile tramite event.detail
-            bubbles: true,      // permette all'evento di propagarsi verso l'alto nella gerarchia DOM, rendendolo ascoltabile da qualsiasi livello
-            cancelable: true    // permette agli ascoltatori di chiamare event.preventDefault() per impedire l'azione predefinita associata all'evento
-        });
-        this.payload = payload;
+        if (!this.fqn || typeof this.fqn !== 'string') { throw new Error(`[Architecture Violation] FQN non valido per l'operatore.`); }
 
-        // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
-        if (!window.EventRegistry) { window.EventRegistry = []; }
-        if (!window.EventRegistry.includes(eventFqn)) {  window.EventRegistry.push(eventFqn); }
-        Log.event_registry(`Evento registrato: \t${eventFqn}`);
+        // aggiungiamo il nuovo operatore al regitro globale (se non esiste lo crea)
+        if (!window.OperatorRegistry) { window.OperatorRegistry = []; }
+        window.OperatorRegistry.push(this);    
+        Log.operator_registry(`Operatore caricato: \t${this.fqn}`);
     }
 
     // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
@@ -63,7 +54,11 @@ class BaseEvent extends CustomEvent {
             }
 
         } catch (e) {
-            console.warn(`[BaseEvent] Impossibile estrarre FQN automatico per ${leafClassName.constructor.name}`, e);
+            console.warn(`[BaseOperator] Impossibile estrarre FQN automatico per ${leafClassName.constructor.name}`, e);
         }
+    }
+
+    execute() {
+        throw new Error(`[Architecture Violation] Metodo execute() non implementato per l'operatore ${this.constructor.name}.`);
     }
 }

@@ -1,6 +1,11 @@
-// Aggiunge l'operatore EQUALS al registro degli operatori (vedere data-dictionary.yaml per scoprire cosa fa ogni operatore)
-window["EQUALS"] = function(actualValue, targetValue) {
-    return actualValue === targetValue; 
-};
+class EqualsOperator extends BaseOperator {
 
-Log.operator_registry("Operatore caricato: operators.EQUALS");
+    constructor() {
+        super();
+    }
+
+    execute(actualValue, targetValue) {
+        return actualValue === targetValue;
+    }
+}
+new EqualsOperator();

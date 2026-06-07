@@ -27,10 +27,12 @@
         "services/SurveyManager.js",
         "services/TimerManager.js",
 
-        "engine/operators/containsAny.js",
-        "engine/operators/notContainsAny.js",
-        "engine/operators/equals.js",
-        
+        "engine/interfaces/BaseOperator.js",
+
+        "engine/operators/ContainsAny.js",
+        "engine/operators/NotContainsAny.js",
+        "engine/operators/Equals.js",
+
         "engine/interfaces/BaseIntervention.js",
 
         "adapters/reddit/interventions/debug/ApplyBorder.js",

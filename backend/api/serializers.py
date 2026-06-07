@@ -38,7 +38,7 @@ class TargetSerializer(serializers.Serializer):
 
 class ConditionSerializer(serializers.Serializer):
     property = serializers.CharField()
-    operator = serializers.ChoiceField(choices=["CONTAINS_ANY", "NOT_CONTAINS_ANY", "EQUALS"])
+    operator = serializers.CharField()
     value = serializers.ListField(child=serializers.CharField())
 
 class TriggerSerializer(serializers.Serializer):
