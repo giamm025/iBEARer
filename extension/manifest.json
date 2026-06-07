@@ -21,28 +21,28 @@
     {
       "matches": ["*://*.reddit.com/*"],
       "js": [
-        "utils/logger.js",
+        "utils/Logger.js",
         "utils/SpaWatcher.js",
         "services/ApiManager.js",
         "services/SurveyManager.js",
         "services/TimerManager.js",
 
-        "engine/operators/CONTAINS_ANY.js",
-        "engine/operators/NOT_CONTAINS_ANY.js",
-        "engine/operators/EQUALS.js",
+        "engine/operators/containsAny.js",
+        "engine/operators/notContainsAny.js",
+        "engine/operators/equals.js",
         
         "engine/interfaces/BaseIntervention.js",
 
-        "adapters/reddit/interventions/debug/applyBorder.js",
-        "adapters/reddit/interventions/ui/showDebunkingBanner.js",
+        "adapters/reddit/interventions/debug/ApplyBorder.js",
+        "adapters/reddit/interventions/ui/ShowDebunkingBanner.js",
 
         "adapters/reddit/interventions/interfaces/BasePostIntervention.js",  
-        "adapters/reddit/interventions/ui/injectFakePost.js", 
-        "adapters/reddit/interventions/ui/removePost.js", 
-        "adapters/reddit/interventions/ui/modifyPost.js",
-        "adapters/reddit/interventions/ui/rerankPost.js",
+        "adapters/reddit/interventions/ui/InjectFakePost.js", 
+        "adapters/reddit/interventions/ui/RemovePost.js", 
+        "adapters/reddit/interventions/ui/ModifyPost.js",
+        "adapters/reddit/interventions/ui/RerankPost.js",
         
-        "adapters/reddit/interventions/tracking/trackResults.js",
+        "adapters/reddit/interventions/tracking/TrackResults.js",
 
         "engine/events/EngineReadyEvent.js",
                         
@@ -60,7 +60,7 @@
         "adapters/reddit/observers/trigger/SearchSubmittedObserver.js",
 
         "adapters/reddit/RedditAdapter.js",
-        "engine/core_engine.js",
+        "engine/CoreEngine.js",
 
         "main.js"
       ],

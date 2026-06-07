@@ -76,13 +76,13 @@
   "interventions": [
     {
       "id": "track_results",
-      "function_fqn": "adapters.reddit.interventions.tracking.trackResults",
+      "function_fqn": "adapters.reddit.interventions.tracking.TrackResults",
       "payload": {}
     },
 
     {
       "id": "inject_fake_post",
-      "function_fqn": "adapters.reddit.interventions.ui.injectFakePost",
+      "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
       "payload": {
         "dynamic_content": [
           {

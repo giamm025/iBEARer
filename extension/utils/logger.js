@@ -18,7 +18,7 @@ const LoggerConfig = {
         event_registry: true,
         intervention_registry: true,
         telemetry_registry: true,
-        operator_registry: false,
+        operator_registry: true,
 
         intervention: true,
         heart_beat: false
