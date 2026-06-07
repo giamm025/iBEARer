@@ -402,7 +402,7 @@ class PostProcessorIntervention extends BaseIntervention {
     }
 
     // metodo per iniettare link e telemetria su componenti specifici, bucando lo Shadow DOM di Reddit
-    _addTargetLink(component, url, fullEventName, payload, initialQuery, pos) {
+    _addTargetLink(component, url, fullEventName, payload, initialQuery, pos, new_tab = false) {
         
         if (!component) return;
         component.addEventListener('click', (e) => {
@@ -429,7 +429,8 @@ class PostProcessorIntervention extends BaseIntervention {
                 subreddit: payload.subreddit || "Subreddit Sconosciuto",
             });            
             
-            if (url) { window.location.href = url; }
+            if (url && !new_tab)     { window.location.href = url; }
+            else if (url && new_tab) { window.open(url, '_blank'); }
             
         }, { capture: true }); 
     }
