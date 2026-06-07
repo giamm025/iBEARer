@@ -6,7 +6,7 @@
 class BaseEvent extends CustomEvent {
     
     /**
-     * @param {string} eventFqn - Il Fully Qualified Name dell'evento (es. "adapters.events.SearchSubmittedEvent")
+     * @param {string} eventFqn - Il Fully Qualified Name dell'evento (es. "SearchSubmittedEvent")
      * @param {GenericPayload} payload - Il contesto dell'evento.
      */
     constructor(eventFqn, payload = {}) {

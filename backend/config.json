@@ -3,7 +3,7 @@
     "experiment_name": "epstein_trump_ctr_within_subject",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 0.5
+        "duration": 300
     },
     "groups": ["TREATMENT"]
   },
@@ -49,7 +49,7 @@
     {
       "id": "track_all_searches",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.events.SearchSubmitted",
+      "event_source": "SearchSubmitted",
       "conditions": [],
       "apply_interventions": {
           "track_results": ["TREATMENT"]
@@ -59,7 +59,7 @@
     {
       "id": "epstein_trump_search",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.events.SearchSubmitted",
+      "event_source": "SearchSubmitted",
       "conditions": [
         {
           "property": "search_query",
@@ -76,7 +76,7 @@
   "interventions": [
     {
       "id": "track_results",
-      "function_fqn": "interventions.trackResults",
+      "function_fqn": "trackResults",
       "payload": {}
     },
 

@@ -15,6 +15,6 @@ class SearchSubmitted extends BaseEvent {
         if (!payload.search_query || typeof payload.search_query !== 'string') { throw new TypeError(`[SearchSubmittedEvent] Attesa una stringa per 'search_query', ricevuto: ${typeof payload.search_query}`); }
 
         // chiamiamo il costruttore
-        super("adapters.events.SearchSubmitted", payload);
+        super("SearchSubmitted", payload);
     }
 }
