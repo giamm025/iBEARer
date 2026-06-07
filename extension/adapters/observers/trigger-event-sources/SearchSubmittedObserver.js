@@ -4,7 +4,7 @@
 class SearchSubmittedObserver extends BaseObserver {
 
     constructor() {
-        super("SearchSubmitted");
+        super();
     }
 
     start() {
@@ -28,4 +28,3 @@ class SearchSubmittedObserver extends BaseObserver {
 };
 
 window.SearchSubmittedObserver = new SearchSubmittedObserver();
-Log.telemetry_registry("Observer caricato: SearchSubmitted");

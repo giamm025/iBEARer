@@ -14,7 +14,7 @@
 class TimeOnPageObserver extends BaseObserver {
 
     constructor() {
-        super("TimeOnPage");
+        super();
         this.startTime = null;
         this.currentUrl = null;
     }
@@ -72,4 +72,3 @@ class TimeOnPageObserver extends BaseObserver {
 };
 
 window.TimeOnPage = new TimeOnPageObserver();
-Log.telemetry_registry("Observer caricato: TimeOnPageEvent");

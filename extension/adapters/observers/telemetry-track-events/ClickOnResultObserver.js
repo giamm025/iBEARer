@@ -3,7 +3,7 @@
 class ClickOnResultObserver extends BaseObserver {
 
     constructor() {
-        super("ClickOnResult");
+        super();
         this.isSearchPage = false;
         this.searchQuery = null;
     }
@@ -47,4 +47,3 @@ class ClickOnResultObserver extends BaseObserver {
 };
 
 window.ClickOnResult = new ClickOnResultObserver();
-Log.telemetry_registry("Observer caricato: ClickOnResultEvent");

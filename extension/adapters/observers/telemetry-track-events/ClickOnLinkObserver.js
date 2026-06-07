@@ -5,7 +5,7 @@
 class ClickOnLinkObserver extends BaseObserver {
 
     constructor() {
-        super("ClickOnLink"); 
+        super(); 
         this.isSearchPage = false;
     }
     
@@ -51,4 +51,3 @@ class ClickOnLinkObserver extends BaseObserver {
 };
 
 window.ClickOnLink = new ClickOnLinkObserver();
-Log.telemetry_registry("Observer caricato: ClickOnLinkEvent");

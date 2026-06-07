@@ -5,17 +5,42 @@
  */
 class BaseObserver {
 
-    /**
-     * @param {string} name - Il nome identificativo dell'observer (es. "Click", "Scroll")
-     */
-    constructor(name) {
-        this.name = name;
+    constructor() {
+        
+        // Estraiamo il path completo (es. "adapters.observers.SearchSubmittedObserver")
+        this.observerFqn = BaseObserver._generateFQN();
+        this.name = this.observerFqn.split('.').pop();
         this.activeListeners = [];
         this.isActive = false;
         
         // aggiungiamo il nuovo observer al regitro globale (se non esiste lo crea)
         if (!window.ObserverRegistry) { window.ObserverRegistry = []; }
         window.ObserverRegistry.push(this);    
+        Log.telemetry_registry(`Observer caricato in memoria: ${this.observerFqn}`);
+    }
+
+    // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
+    static _generateFQN() {
+        try {
+            const stack = new Error().stack;
+            const baseUrl = chrome.runtime.getURL('');
+            const extensionLines = stack.split('\n').filter(line => line.includes(baseUrl));
+
+            let targetPath = null;
+            for (let line of extensionLines) {
+                const match = line.match(new RegExp(baseUrl + "([^:]+)"));
+                if (match && match[1]) {
+                    const path = match[1]; 
+                    if (!path.includes('BaseObserver.js')) { targetPath = path; break; }
+                }
+            }
+
+            if (targetPath) { 
+                return targetPath.replace('.js', '').split('/').join('.'); 
+            }
+        } catch (e) {
+            console.warn(`[BaseObserver] Impossibile estrarre FQN automatico per ${this.name}`, e);
+        }
     }
 
     /**

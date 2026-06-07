@@ -31,11 +31,11 @@
 
   "telemetry_settings": {
     "track_events": [
-      "ClickOnLink", 
-      "ClickOnResult",
-      "ClickOnHomePagePost",
-      "TimeOnPage",
-      "ResultsLoaded"
+      "adapters.observers.telemetry-track-events.ClickOnLinkObserver", 
+      "adapters.observers.telemetry-track-events.ClickOnResultObserver",
+      "adapters.observers.telemetry-track-events.ClickOnHomePagePostObserver",
+      "adapters.observers.telemetry-track-events.TimeOnPageObserver",
+      "adapters.observers.telemetry-track-events.ResultsLoadedObserver"
     ],
     "sync_interval_ms": 10000
   },

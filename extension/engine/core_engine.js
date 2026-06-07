@@ -266,8 +266,8 @@ class Engine {
         // per ogni evento nel config (es. "telemetry.events.ClickOnLinkEvent")
         for (let eventName of trackEvents) {
             
-            // peschiamo l'Observer dal registro e ...
-            const observer = window[eventName];
+            // peschiamo l'Observer dal registro e chiamiamo il suo metodo start() per attivarlo
+            const observer = window.ObserverRegistry.find(obs => obs.observerFqn === eventName);
             if (observer) {
                 observer.start(); 
                 Log.engine(`Observer telemetria attivato: ${eventName}`);

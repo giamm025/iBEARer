@@ -5,7 +5,7 @@
 class ResultsLoadedObserver extends BaseObserver {
     
     constructor() {
-        super("ResultsLoaded");
+        super();
         this.currentObserver = null;
         this.initTimer = null;
         this.scrapedUrls = new Set();

@@ -2,7 +2,7 @@
 class ClickOnHomePagePostObserver extends BaseObserver {
 
     constructor() {
-        super("ClickOnHomePagePost");
+        super();
         this.isHomePage = false;
     }
         
@@ -50,4 +50,3 @@ class ClickOnHomePagePostObserver extends BaseObserver {
 };
 
 window.ClickOnHomePagePost = new ClickOnHomePagePostObserver();
-Log.telemetry_registry("Observer caricato: ClickOnHomePagePostEvent");
