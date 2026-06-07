@@ -8,44 +8,54 @@ class BaseIntervention {
     constructor() {
 
         // estriamo il FQN in automatico
-        this.fqn = BaseIntervention._generateFQN(this);
+        const leafClassName = new.target.name;
+        this.fqn = BaseIntervention._generateFQN(leafClassName);
 
         // check di consistenza: il FQN deve essere una stringa non vuota
         if (!this.fqn || typeof this.fqn !== 'string') { throw new Error(`[Architecture Violation] FQN automatico fallito per l'intervento ${this.constructor.name}.`); }
 
-        // ogni intervento quando verra creato deve registrarsi nel registro globale con il proprio FQN, associandolo 
-        // al metodo execute(). Questo significa che quando un evento scattera e il Core Engine dovrà semplicemente fare:
-        // window[interventionFqn](payload, eventData) 
-        
-        window[this.fqn] = this.execute.bind(this);
+        // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
+        if (!window.InterventionRegistry) { window.InterventionRegistry = []; }
+        if (!window.InterventionRegistry.includes(this.fqn)) {  window.InterventionRegistry.push(this); }
         Log.intervention_registry(`Intervention caricato in memoria ${this.fqn}`);
     }
 
     // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
-    static _generateFQN(instance) {
+    static _generateFQN(leafClassName) {
         try {
+            // generiamo un errore silenzioso per leggere la cronologia delle chiamate
             const stack = new Error().stack;
-            const baseUrl = chrome.runtime.getURL('');
-            const extensionLines = stack.split('\n').filter(line => line.includes(baseUrl));
-
-            // Questa è la magia: prendiamo il vero nome della classe "foglia" (es. "ModifyPostIntervention")
-            const leafClassName = instance.constructor.name;
             
+            // prendiamo l'URL base della nostra estensione (es. chrome-extension://abcdefgh...)
+            const baseUrl = chrome.runtime.getURL('');
+
+            // dividiamo lo stack trace in righe e filtriamo solo quelle della nostra estensione
+            const extensionLines = stack.split('\n').filter(line => line.includes(baseUrl));
+            
+            // prendiamo il nome della classe che ha generato l'evento (la "foglia" più profonda nello stack)
             let targetPath = null;
             for (let line of extensionLines) {
+                
+                // estraiamo tutto ciò che c'è DOPO l'URL base e PRIMA dei due punti (es. "chrome-extension://ID/adapters/events/Search.js:10:5" -> "adapters/events/Search.js")
                 const match = line.match(new RegExp(baseUrl + "([^:]+)"));
-                if (match && match[1]) {
-                    const path = match[1]; 
-                    if (line.includes(leafClassName)) { targetPath = path; break; }
+                if (match && match[1]) { 
+                    const path = match[1];
+                    
+                    // cerchiamo la riga esatta in cui la classe foglia viene istanziata
+                    if (line.includes(leafClassName)) {
+                        targetPath = path;
+                        break;
+                    }
                 }
             }
 
+            // trasformiamo "adapters/events/SearchSubmitted.js" in "adapters.events.SearchSubmitted"
             if (targetPath) { 
                 return targetPath.replace('.js', '').split('/').join('.'); 
             }
 
         } catch (e) {
-            console.warn(`[BaseIntervention] Impossibile estrarre FQN automatico per ${instance.constructor.name}`, e);
+            console.warn(`[BaseIntervention] Impossibile estrarre FQN automatico per ${leafClassName.constructor.name}`, e);
         }
     }
 

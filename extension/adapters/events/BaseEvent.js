@@ -10,7 +10,8 @@ class BaseEvent extends CustomEvent {
     constructor(payload = {}) {
         
         // estriamo il FQN in automatico
-        const eventFqn = BaseEvent._generateFQN(); 
+        const leafClassName = new.target.name;
+        const eventFqn = BaseEvent._generateFQN(leafClassName); 
 
         // check di consistenza: il FQN deve essere una stringa non vuota
         if (!eventFqn || typeof eventFqn !== 'string') { throw new Error(`[Architecture Violation] FQN non valido.`); }
@@ -20,11 +21,15 @@ class BaseEvent extends CustomEvent {
             cancelable: true    // permette agli ascoltatori di chiamare event.preventDefault() per impedire l'azione predefinita associata all'evento
         });
         this.payload = payload;
+
+        // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
+        if (!window.EventRegistry) { window.EventRegistry = []; }
+        if (!window.EventRegistry.includes(eventFqn)) {  window.EventRegistry.push(eventFqn); }
         Log.event_registry(`Evento registrato: ${eventFqn}`);
     }
 
-    // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
-    static _generateFQN() {
+        // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
+    static _generateFQN(leafClassName) {
         try {
             // generiamo un errore silenzioso per leggere la cronologia delle chiamate
             const stack = new Error().stack;
@@ -34,16 +39,21 @@ class BaseEvent extends CustomEvent {
 
             // dividiamo lo stack trace in righe e filtriamo solo quelle della nostra estensione
             const extensionLines = stack.split('\n').filter(line => line.includes(baseUrl));
-
-            // cerchiamo la prima riga che NON è BaseEvent.js => quella sara la classe figlia
+            
+            // prendiamo il nome della classe che ha generato l'evento (la "foglia" più profonda nello stack)
             let targetPath = null;
             for (let line of extensionLines) {
                 
                 // estraiamo tutto ciò che c'è DOPO l'URL base e PRIMA dei due punti (es. "chrome-extension://ID/adapters/events/Search.js:10:5" -> "adapters/events/Search.js")
                 const match = line.match(new RegExp(baseUrl + "([^:]+)"));
-                if (match && match[1]) {
-                    const path = match[1]; 
-                    if (!path.includes('BaseEvent.js')) { targetPath = path; break; }
+                if (match && match[1]) { 
+                    const path = match[1];
+                    
+                    // cerchiamo la riga esatta in cui la classe foglia viene istanziata
+                    if (line.includes(leafClassName)) {
+                        targetPath = path;
+                        break;
+                    }
                 }
             }
 
@@ -53,7 +63,7 @@ class BaseEvent extends CustomEvent {
             }
 
         } catch (e) {
-            console.warn(`[BaseEvent] Impossibile estrarre FQN automatico`, e);
+            console.warn(`[BaseEvent] Impossibile estrarre FQN automatico per ${leafClassName.constructor.name}`, e);
         }
     }
 }

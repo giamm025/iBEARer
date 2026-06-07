@@ -15,10 +15,10 @@ const LoggerConfig = {
         telemetry_flush: false,
 
         registry: true,
-        event_registry: false,
+        event_registry: true,
         intervention_registry: true,
+        telemetry_registry: true,
         operator_registry: false,
-        telemetry_registry: false,
 
         intervention: true,
         heart_beat: false

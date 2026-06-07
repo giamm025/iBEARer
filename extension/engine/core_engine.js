@@ -362,38 +362,33 @@ class Engine {
         // per ogni intervento ID
         for (let interventionID of interventionIds) {
 
-            // Recupera l'oggetto Intervention dal config.json ed estraiamo FQN e payload
-            const intervention = this.config.interventions.find(i => i.id === interventionID);
-            if (intervention) {
-                const fqn = intervention.function_fqn;      // estraiamo il Fully Qualified Name (FQN) 
-                const payload = intervention.payload;       // estraiamo il payload da passare alla funzione intervento
+            // recupera l'oggetto Intervention dal config.json ed estraiamo FQN e payload
+            const interventionConfig = this.config.interventions.find(i => i.id === interventionID);
+            if (interventionConfig) {
+                const fqn = interventionConfig.function_fqn;
+                const payload = interventionConfig.payload;
 
+                // recuperiamo l'intervento specifico
+                const interventionInstance = window.InterventionRegistry.find(interv => interv.fqn === fqn);
+                if (interventionInstance) {
+                    
                 // eseguiamo la funzione intervento (ritorna 'false' se l'intervento ha deciso di abortire volontariamente)
-                const isApplied = this.executeInterventionFQN(fqn, payload, eventData);  
-
-                // se l'intervento è stato applicato con successo, registriamo che l'intervento è stato applicato
-                if (isApplied) {
-                    ApiManager.addEventToQueue("telemetry.events.InterventionAppliedEvent", {
-                        intervention_id: intervention.id,
-                        function_fqn: intervention.function_fqn
-                    });
+                    const isApplied = interventionInstance.execute(payload, eventData);  
+                    
+                    // se l'intervento è stato applicato con successo, registriamo che l'intervento è stato applicato
+                    if (isApplied) {
+                        ApiManager.addEventToQueue("telemetry.events.InterventionAppliedEvent", {
+                            intervention_id: interventionConfig.id,
+                            function_fqn: fqn
+                        });
+                    }
+                } else {
+                    Log.error("Engine", `Funzione Intervento (FQN) non trovata nel registro: ${fqn}`); 
                 }
 
             } else {
                 Log.error("Engine", `Istanza di intervento non trovata nel config.json: ${interventionID}`);
             }
-
-        }
-    }
-
-    // metodo per eseguire una funzione intervento dato il suo Fully Qualified Name (FQN) ed il payload
-    // scrive un log di errore se il FQN non è presente nel registro delle funzioni intervento
-    executeInterventionFQN(fqn, payload, eventData) {
-        if (window[fqn]) { 
-            return window[fqn](payload, eventData); 
-        } else {
-            Log.error("Engine", `Funzione FQN non trovata nel registro: ${fqn}`); 
-            return false;
         }
     }
 }
