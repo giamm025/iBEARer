@@ -5,21 +5,48 @@
 
 class BaseIntervention {
     
-    /**
-     * @param {string} fqn - Fully Qualified Name (es. "interventions.ui.showDebunkingBanner")
-     */
-    constructor(fqn) {
+    constructor() {
+
+        // estriamo il FQN in automatico
+        this.fqn = BaseIntervention._generateFQN(this);
 
         // check di consistenza: il FQN deve essere una stringa non vuota
-        if (!fqn || typeof fqn !== 'string') { throw new Error(`[Architecture Violation] FQN non valido per l'intervento.`); }
-        this.fqn = fqn;
+        if (!this.fqn || typeof this.fqn !== 'string') { throw new Error(`[Architecture Violation] FQN automatico fallito per l'intervento ${this.constructor.name}.`); }
 
         // ogni intervento quando verra creato deve registrarsi nel registro globale con il proprio FQN, associandolo 
         // al metodo execute(). Questo significa che quando un evento scattera e il Core Engine dovrà semplicemente fare:
         // window[interventionFqn](payload, eventData) 
         
         window[this.fqn] = this.execute.bind(this);
-        Log.intervention_registry(`[Intervention Registered] ${this.fqn}`);
+        Log.intervention_registry(`Intervention caricato in memoria ${this.fqn}`);
+    }
+
+    // metodo per estrarre il FQN in automatico (genera un errore fittizzio e silenzioso, poi analizza lo stack trace)
+    static _generateFQN(instance) {
+        try {
+            const stack = new Error().stack;
+            const baseUrl = chrome.runtime.getURL('');
+            const extensionLines = stack.split('\n').filter(line => line.includes(baseUrl));
+
+            // Questa è la magia: prendiamo il vero nome della classe "foglia" (es. "ModifyPostIntervention")
+            const leafClassName = instance.constructor.name;
+            
+            let targetPath = null;
+            for (let line of extensionLines) {
+                const match = line.match(new RegExp(baseUrl + "([^:]+)"));
+                if (match && match[1]) {
+                    const path = match[1]; 
+                    if (line.includes(leafClassName)) { targetPath = path; break; }
+                }
+            }
+
+            if (targetPath) { 
+                return targetPath.replace('.js', '').split('/').join('.'); 
+            }
+
+        } catch (e) {
+            console.warn(`[BaseIntervention] Impossibile estrarre FQN automatico per ${instance.constructor.name}`, e);
+        }
     }
 
     /**

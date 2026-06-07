@@ -16,7 +16,7 @@
 class ShowDebunkingBannerIntervention extends BaseIntervention {
 
     constructor() {
-        super("interventions.ui.showDebunkingBanner");
+        super();
         this.dismissedQueries = new Set();
     }
     

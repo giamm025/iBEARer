@@ -16,9 +16,9 @@ const LoggerConfig = {
 
         registry: true,
         event_registry: false,
-        intervention_registry: false,
+        intervention_registry: true,
         operator_registry: false,
-        telemetry_registry: true,
+        telemetry_registry: false,
 
         intervention: true,
         heart_beat: false
@@ -42,7 +42,7 @@ const Log = {
     
     intervention_registry: (...args) => {
         if (LoggerConfig.log_enable && LoggerConfig.modules.intervention_registry && LoggerConfig.modules.registry) {
-            console.log("📋 [Registry]", ...args);
+            console.log("🚨 [Registry]", ...args);
         }
     },
 

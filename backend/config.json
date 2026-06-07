@@ -76,13 +76,13 @@
   "interventions": [
     {
       "id": "track_results",
-      "function_fqn": "trackResults",
+      "function_fqn": "engine.interventions.tracking.trackResults",
       "payload": {}
     },
 
     {
       "id": "inject_fake_post",
-      "function_fqn": "injectFakePost",
+      "function_fqn": "engine.interventions.ui.injectFakePost",
       "payload": {
         "dynamic_content": [
           {

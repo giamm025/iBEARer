@@ -12,7 +12,7 @@
 class ReRankPostIntervention extends PostProcessorIntervention {
     
     constructor() {
-        super("rerankPost");
+        super();
         this.pendingReranks = [];
     }
 

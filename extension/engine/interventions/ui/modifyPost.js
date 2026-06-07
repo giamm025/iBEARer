@@ -17,7 +17,7 @@
 class ModifyPostIntervention extends PostProcessorIntervention {
     
     constructor() {
-        super("modifyPost");
+        super();
     }
 
     // implementa l'azione specifica di MODFIDICA post

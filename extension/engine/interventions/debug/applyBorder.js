@@ -6,7 +6,7 @@
 class ApplyBorderIntervention extends BaseIntervention {
     
     constructor() {
-        super("interventions.debug.applyBorder");
+        super();
     }
 
     /**

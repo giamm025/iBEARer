@@ -6,7 +6,7 @@
 class RemovePostIntervention extends PostProcessorIntervention {
     
     constructor() {
-        super("removePost");
+        super();
     }
 
     // implementa l'azione specifica di RIMOZIONE post

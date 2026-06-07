@@ -18,7 +18,7 @@
 class InjectFakePostIntervention extends PostProcessorIntervention {
     
     constructor() {
-        super("injectFakePost"); 
+        super(); 
         this.instancesState = {}; 
         this.injectHidingStyles();
         // iniettiamo subito gli stili CSS che usere per "nascondere" il feed ed i menu, dando l'idea di delay di caricamento
