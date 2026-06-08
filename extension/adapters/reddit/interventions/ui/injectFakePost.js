@@ -42,6 +42,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
         activePayloads = this._filterPostsBySubreddit(activePayloads);
         if (activePayloads.length === 0) return false;
 
+        activePayloads.sort((a, b) => (a.new_position || 1) - (b.new_position || 1));
         activePayloads.forEach(activePayload => {
         
             // recuperiamo la posizione dal config.json 
@@ -109,7 +110,8 @@ class InjectFakePostIntervention extends BasePostIntervention {
         if (document.getElementById(`bear-fake-post-${pos}`) || document.getElementById(`bear-fake-post-ai-${pos}`) || state.aiFailed) return;
         
         // estriamo i riferimenti al DOM necessari per clonare/inserire il post 
-        const domRefs = this._getDomReferences(pos);
+        const useAbsolute = payload.absolute_positioning !== false;
+        const domRefs = this._getDomReferences(pos, useAbsolute);
         if (!domRefs) return;
 
         //====================
@@ -235,7 +237,8 @@ class InjectFakePostIntervention extends BasePostIntervention {
                 );
 
                 // prima di iniettare il post, rifacciamo un controllo sul DOM per essere sicuri che i riferimenti non siano cambiati 
-                const freshDomRefs = this._getDomReferences(pos);
+                const useAbsolute = payload.absolute_positioning !== false;
+                const freshDomRefs = this._getDomReferences(pos, useAbsolute);
                 if (!freshDomRefs) {
                     Log.error("Intervention", "DOM mutato durante l'attesa AI. Abortisco inserimento per riprovare.");
                     // non impostiamo state.aiFailed = true! In questo modo il MutationObserver si accorgerà che manca il post e riproverà l'inserimento con i dati già in cache!
@@ -361,20 +364,26 @@ class InjectFakePostIntervention extends BasePostIntervention {
     // HELPER DOM
     // ==========================================================================
 
-    _getDomReferences(pos) {
+    // Aggiungiamo il booleano countAbsolute per decidere se contare i nostri fake post o no
+    _getDomReferences(pos, countAbsolute = true) {
         
-        // estraiamo i link ai post (escludendo quelli initettati da noi)
-        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'))
-            .filter(link => !link.closest('[id^="bear-fake-post"]'));
+        // estraiamo i link ai post (inclusi quelli initettati da noi)
+        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'));
         
-        if (allTitleLinks.length === 0) return null;
+        // estraiamo i link ai post REALI (cioe, esclusi quelli initettati da noi)
+        const realTitleLinks = allTitleLinks.filter(link => !link.closest('[id^="bear-fake-post"]'));
+        
+        // se countAbsolute è true => usiamo allTitleLinks (quindi contiamo anche i nostri fake post, pos=1 sarà prima di tutti i post, pos=2 sarà dopo il primo post reale ma prima del secondo, ecc)
+        // se countAbsolute è false => usiamo realTitleLinks (quindi pos=1 sarà il primo post reale, pos=2 il secondo post reale, ecc)
+        const targetLinksArray = countAbsolute ? allTitleLinks : realTitleLinks;
+        if (targetLinksArray.length === 0) return null;
 
-        // se la posizione richiesta non esiste ancora nel DOM => restituiamo un segnale di "pending" per ritardare l'inserimento
-        if (pos > allTitleLinks.length) { return { isPending: true }; }
+        // se la posizione richiesta non esiste ancora nel DOM => restituiamo "pending" per ritardare l'inserimento
+        if (pos > targetLinksArray.length) { return { isPending: true }; }
 
         // estraiamo il primo link (quello da clonare) ed il link di riferimento in cui effettuare l'inserimento
-        const cloneReferenceLink = allTitleLinks[0];
-        const insertReferenceLink = allTitleLinks[pos - 1] || allTitleLinks[allTitleLinks.length - 1];
+        const cloneReferenceLink = realTitleLinks[0];        
+        const insertReferenceLink = targetLinksArray[pos - 1] || targetLinksArray[targetLinksArray.length - 1];
 
         // chiamiamo la funzione per trovare il wrapper preciso del post da clonare e del post di riferimento per l'inserimento
         const cloneWrapper = this._getSinglePostWrapper(cloneReferenceLink);
