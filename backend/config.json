@@ -3,7 +3,7 @@
     "experiment_name": "epstein_trump_ctr_within_subject",
     "end_condition": {
         "type": "ACTIVE_MINUTES_ON_PLATFORM",
-        "duration": 300
+        "duration": 15
     },
     "groups": ["TREATMENT"]
   },
