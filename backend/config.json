@@ -84,11 +84,11 @@
       "id": "inject_fake_post",
       "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
       "payload": {
+        "randomize_positions": [1, 2, 3, 4],
         "dynamic_content": [
           {
             "trigger_keywords": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"],
             "data": {
-              "new_position": 1,
               "title": "Newly released court documents detail Donald Trump's associations with Jeffrey Epstein.",
               "image_url": "https://external-preview.redd.it/trump-signs-proclamation-amending-tariffs-on-steel-aluminum-v0-jmYrT4qFNQZObRoR8KROevR8OG8rmVi4avsu7zMoHTM.jpeg?width=1080&crop=smart&auto=webp&s=73455d44d1736bb7f9cc9be5c4e816d0c5260ee6",
               "subreddit": "r/news",
@@ -100,14 +100,14 @@
               "comments": "2.8k",
               "date": "4 giorni fa",
               "target_url": "https://www.youtube.com/watch?v=Aq5WXmQQooo",
-              "use_ai_generation": false
+              "use_ai_generation": false,
+              "new_position": 3
             }
           },
 
           {
             "trigger_keywords": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"],
             "data": {
-              "new_position": 2,
               "title": "🚨 FINALLY unredacted Epstein flight logs expose Trump's island visits! Media is hiding this! 🚨",
               "subreddit": "r/conspiracy",
               "subreddit_icon_url": "https://styles.redditmedia.com/t5_2qh4r/styles/communityIcon_njjmedw5gmv41.jpg?width=128&frame=1&auto=webp&s=b7fff63bedfb66f6caa4d27ec9786af418c0523a",
@@ -125,7 +125,6 @@
           {
             "trigger_keywords": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"],
             "data": {
-              "new_position": 7,
               "title": "Summary of the recent unsealed SDNY files regarding Donald Trump and Jeffrey Epstein.",
               "subreddit": "r/politics",
               "subreddit_icon_url": "https://styles.redditmedia.com/t5_2cneq/styles/communityIcon_fy84mdgh75201.jpg?width=128&frame=1&auto=webp&s=a9c5dcdb89e8994c59de364199a5fcd91a1c285a",
@@ -143,7 +142,6 @@
           {
             "trigger_keywords": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"],
             "data": {
-              "new_position": 9,
               "title": "THEY CAN'T HIDE THE TRUTH ANYMORE! Trump's name appears 45 times in Epstein leak! Megathread",
               "subreddit": "r/Epstein",
               "subreddit_icon_url": "https://styles.redditmedia.com/t5_1lruuu/styles/communityIcon_rmxt76bi8ag31.png?width=128&frame=1&auto=webp&s=ae95035d62d3971605690415ea09f5f6c6187adc",

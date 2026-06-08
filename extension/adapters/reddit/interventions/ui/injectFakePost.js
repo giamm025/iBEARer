@@ -38,9 +38,14 @@ class InjectFakePostIntervention extends BasePostIntervention {
         let activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
         if (activePayloads.length === 0) return false;
 
-        // se l'utente sta cercando all'interno di un subreddit (es. r/politics/search/?q=...) dobbiamo iniettare SOLO i post per QUEL subreddit!
+        // se l'utente sta cercando all'interno di un subreddit specifico, filtriamo i post
         activePayloads = this._filterPostsBySubreddit(activePayloads);
         if (activePayloads.length === 0) return false;
+
+        // se è stata richiesta la randomizzazione delle posizioni, sovrascriviamo dinamicamente il new_position di ogni post con quello pescato a caso
+        if (payload.randomize_positions && Array.isArray(payload.randomize_positions)) {
+            activePayloads = this._randomize_payload(payload, activePayloads, initialQuery);
+        }
 
         activePayloads.sort((a, b) => (a.new_position || 1) - (b.new_position || 1));
         activePayloads.forEach(activePayload => {
@@ -77,6 +82,51 @@ class InjectFakePostIntervention extends BasePostIntervention {
             }, 8000);
         });
         return true;
+    }
+
+// metodo per randomizzare le posizioni dei post, rispettando eventuali post con posizione fissa
+    _randomize_payload(rootPayload, activePayloads, initialQuery) {
+                        
+        // per non ricalcolare le posizioni ogni volta che scatta l'observer (es. scroll utente o refresh con F5)
+        // salviamo le coppie (searchQuery, new_position) nella Session Storage
+        const cacheKey = `bear_rand_pos_${initialQuery}`;
+        let assignedPos = JSON.parse(sessionStorage.getItem(cacheKey));
+        
+        // prendiamo solo i fake post che NON hanno gia una new_position fissa 
+        const payloadsToRandomize = activePayloads.filter(ap => !ap.new_position);
+        if (payloadsToRandomize.length === 0) return activePayloads;
+
+        // se è la prima volta che l'utente fa questa ricerca, generiamo le posizioni
+        if (!assignedPos) {
+
+            // troviamo le posizioni che sono GIÀ STATE PRESE dai post con new_position fissa
+            const takenPositions = activePayloads.filter(ap => ap.new_position).map(ap => ap.new_position);
+
+            // rimuoviamo dal pool le posizioni già occupate
+            let availablePositions = rootPayload.randomize_positions.filter(pos => !takenPositions.includes(pos));
+
+            // mischiamo l'array delle posizioni richieste dal config (es. [2,5,10])
+            for (let i = availablePositions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availablePositions[i], availablePositions[j]] = [availablePositions[j], availablePositions[i]];
+            }
+            
+            // estraiamo solo le posizioni che ci servono e le salviamo in cache
+            assignedPos = availablePositions.slice(0, payloadsToRandomize.length);
+            sessionStorage.setItem(cacheKey, JSON.stringify(assignedPos));
+        }
+        
+        // sovrascriviamo dinamicamente il new_position di ogni post con quello pescato a caso
+        let randomIndex = 0;
+        activePayloads.forEach(ap => {
+            // se non c'è la posizione fissa, peschiamo dal pool random
+            if (!ap.new_position) {
+                ap.new_position = assignedPos[randomIndex] || (randomIndex + 1); 
+                randomIndex++;
+            }
+            // se c'è già new_position, non facciamo assolutamente nulla! La mantiene.});
+        });
+        return activePayloads;
     }
 
     // filtra il payload per iniettare solo i post compatibili con il subreddit in cui l'utente sta cercando 
