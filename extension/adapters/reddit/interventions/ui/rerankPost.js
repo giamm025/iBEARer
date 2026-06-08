@@ -16,6 +16,68 @@ class ReRankPostIntervention extends BasePostIntervention {
         this.pendingReranks = [];
     }
 
+    execute(payload, eventData) {
+        
+        // lanciamo la logica standard della superclasse per attivare Observer e il processPosts
+        const isRunning = super.execute(payload, eventData);
+        if (!isRunning) return false;
+
+        // estraiamo la query di ricerca ed il payload filtrato per ottenere le regole di reranking da usare
+        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : (new URLSearchParams(window.location.search).get('q') || "");
+        const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
+        
+        // cerchiamo qual è il post più "profondo" che dobbiamo pescare e portare in alto
+        let maxTargetNeeded = 0;
+        activePayloads.forEach(p => {
+            if (p.moves) {
+                p.moves.forEach(m => {
+                    if (m.new_position < m.target && m.target > maxTargetNeeded) {
+                        maxTargetNeeded = m.target;
+                    }
+                });
+            }
+        });
+
+        // se dobbiamo recuperare un post molto in basso => simuliamo lo scrolling
+        if (maxTargetNeeded > 0) { this.forceGhostScroll(maxTargetNeeded); }
+        return true;
+    }
+
+    // metodo per simulare lo scrolling: nasconde la pagina, scorre veloce giu per forzare reddit a caricare i risultati, e poi torna su
+    forceGhostScroll(targetPos) {
+        
+        this.injectHidingStyles();
+        this.hidePageContent(); 
+        Log.intervention(`Ghost Scroll attivato: Ricerca del post in posizione ${targetPos}...`);
+
+        let attempts = 0;
+        const maxAttempts = 20; 
+        const scrollInterval = setInterval(() => {
+            
+            // teniamo il conto di quanti post reali sono stati caricati finora
+            const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
+            const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+
+            // se abbiamo caricato abbastanza post da raggiungere la target pos (o superato il limite di tentativi di sicurezza)
+            if (realTitles.length >= targetPos || attempts >= maxAttempts) {
+                
+                // fermiamo lo scroll automatico
+                clearInterval(scrollInterval);
+                
+                // torniamo in cima alla pagina
+                window.scrollTo(0, 0);
+                
+                // scrolliamo per 300ms poi mostriamo il contenuto originale
+                setTimeout(() => { this.revealPageContent(); }, 300);
+                
+            } else {
+                // scorriamo in fondo alla pagina per forzare React a caricare nuovi post
+                window.scrollTo(0, document.body.scrollHeight);
+                attempts++;
+            }
+        }, 300); 
+    }
+
     // implementa l'azione specifica di RE-RANKING post
     applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget) {
         
@@ -132,6 +194,59 @@ class ReRankPostIntervention extends BasePostIntervention {
             return true; // mantiene in coda
         });
     }
+
+    // ==========================================================================
+    // DELAY DI CARICAMENTO
+    // ==========================================================================
+    injectHidingStyles() {
+        if (!document.getElementById("bear-curtain-style")) {
+            const style = document.createElement("style");
+            style.id = "bear-curtain-style";
+            style.innerHTML = `
+                .bear-feed-hidden, 
+                .bear-feed-hidden > * {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+                .bear-stagger-hidden {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+                .bear-fade-in {
+                    animation: bearFadeIn 0.5s ease-in forwards;
+                }
+                @keyframes bearFadeIn { from { opacity: 0; } to { opacity: 1; } }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    hidePageContent(targetContainer = null) {
+
+        const container = targetContainer || document.querySelector('shreddit-feed') || document.querySelector('main') || document.body;
+        
+        if (!container.classList.contains('bear-feed-hidden')) {
+            container.classList.add('bear-feed-hidden');
+            
+            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
+            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
+            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
+
+            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
+            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
+            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
+
+            setTimeout(() => { if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden'); }, 1500); 
+            setTimeout(() => { if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden'); }, 3000); 
+            setTimeout(() => { if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');   }, 3500); 
+        }
+    }
+
+    revealPageContent() {
+        document.querySelectorAll('.bear-feed-hidden').forEach(feed => feed.classList.remove('bear-feed-hidden'));
+        document.querySelectorAll('.bear-stagger-hidden').forEach(menu => menu.classList.remove('bear-stagger-hidden'));
+    }
 }
+
 
 new ReRankPostIntervention();
