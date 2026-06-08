@@ -124,7 +124,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
                 ap.new_position = assignedPos[randomIndex] || (randomIndex + 1); 
                 randomIndex++;
             }
-            // se c'è già new_position, non facciamo assolutamente nulla! La mantiene.});
+            // se c'è già new_position, non facciamo assolutamente nulla! La mantiene
         });
         return activePayloads;
     }
