@@ -1,76 +1,108 @@
-# BEAR - Browser Extension for Academic Research
+# iBEARer: in-Browser Experiments on Algorithmic Re-ranking
 
-Una Chrome Extension modulare e data-driven progettata per condurre esperimenti comportamentali e sociologici su Reddit. 
+## 📖 Panoramica del Progetto
 
-Il sistema è costruito attorno a un'architettura **completamente agnostica rispetto ai dati**: il flusso dell'esperimento, la durata, i trigger comportamentali e gli interventi visivi (UI) sono interamente pilotati da una configurazione JSON fornita dal backend.
+[cite_start]**iBEARer** è un'infrastruttura software distribuita (Client/Server) progettata per la conduzione di "Audit Studies" e test A/B sulle piattaforme di social media[cite: 5, 8]. [cite_start]Il sistema permette ai ricercatori di manipolare dinamicamente l'esperienza utente a fini sperimentali (es. re-ranking dei feed, iniezione di contenuti controllati, occultamento di post) aggirando le rigorose policy di sicurezza introdotte dal Google Manifest V3[cite: 2]. 
+
+[cite_start]Nato come esperimento pilota su Reddit [cite: 8][cite_start], il sistema è stato ingegnerizzato come una libreria flessibile e agnostica rispetto alla piattaforma, permettendo l'estensione a futuri ambienti (es. YouTube, X) tramite l'implementazione di Adapter specifici[cite: 6].
+
+---
 
 ## ✨ Funzionalità Principali
 
-* **Architettura Decoupled:** Il "Cervello" (Core Engine) è separato dalle "Mani e Occhi" (Platform Adapters). Questo permette di scalare il framework su altre piattaforme (es. YouTube, X, Facebook) scrivendo solo un nuovo Adapter.
-* **Gestione SPA (Single Page Application):** Uno `SpaWatcher` personalizzato rileva i cambiamenti di URL in applicazioni React come Reddit senza dipendere dal ricaricamento fisico della pagina.
-* **Timer Intelligente Multimodale:** Supporta sia timer assoluti (es. "scade tra 7 giorni") sia timer legati al **tempo attivo sulla piattaforma** (si mette in pausa se l'utente cambia scheda o minimizza il browser).
-* **Telemetria Precisa:** Coda di invio asincrona tramite `background.js` (per aggirare policy CORS) con meccanismi di retry automatici per non perdere mai un singolo evento di analytics.
-* **Survey Lifecycle:** Gestione end-to-end dello stato dell'utente (Enrolled, Pre-Survey, Active, Post-Survey) con Modali UI bloccanti non aggirabili.
+* [cite_start]**Manipolazione del DOM a Runtime:** Intercetta e modifica i nodi HTML dopo il rendering del browser, superando l'impossibilità di intercettare nativamente le chiamate API JSON nei framework SPA[cite: 3, 4].
+* [cite_start]**Rules Engine Dichiarativo:** Il core dell'estensione interpreta file di configurazione (`config.json`) basati su logica dichiarativa, disaccoppiando le regole sperimentali (trigger, operatori, interventi) dal codice sorgente esecutivo[cite: 16, 17, 92].
+* [cite_start]**Gestione di A/B Testing Multi-Gruppo:** Assegnazione dinamica e filtrazione lato server delle configurazioni per supportare esperimenti complessi con gruppi di trattamento multipli e gruppi di controllo (sola telemetria)[cite: 59, 60].
+* [cite_start]**Telemetria Asincrona e WebSocket:** Architettura di comunicazione bidirezionale in tempo reale tra client e server tramite un'infrastruttura ASGI (Django Channels), accoppiata a un sistema di code bufferizzate lato client per minimizzare il carico di rete[cite: 13, 14, 44].
+* **Generazione AI in Tempo Reale:** Modulo integrato per l'iniezione programmatica di contenuti (fake post) generati dinamicamente o contestualizzati tramite Large Language Models (LLM) sui feed degli utenti.
+* [cite_start]**Tracciamento Multi-Sessione:** Meccanismi resilienti di mantenimento dello stato (timer su disco locale, `SpaWatcher` per il context reset) in grado di sopravvivere ad aggiornamenti della pagina e micro-disconnessioni[cite: 51, 65, 66, 67].
 
 ---
 
-## 📂 Struttura del Progetto
+## 🏗️ Architettura del Sistema
 
-Il codice è organizzato seguendo il principio di **Separation of Concerns (SoC)**:
+[cite_start]Il progetto adotta una chiara separazione delle responsabilità (Separation of Concerns) e sfrutta diversi Design Pattern formali[cite: 92].
 
-    extension/
-    ├── main.js                 # Entry point, inizializza le classi e avvia l'Engine
-    ├── config.json             # (Caricato dal Backend) Il "DNA" dell'esperimento
-    │
-    ├── engine/                 # Il Core agnostico
-    │   ├── core_engine.js      # La State Machine che orchestra l'esperimento
-    │   ├── interventions/      # Logica di manipolazione DOM (es. injectFakePost, ecc.)
-    │   └── operators/          # Operatori logici puri (CONTAINS_ANY, EQUALS)
-    │
-    ├── adapters/               # Interfaccia con la piattaforma ospite (Reddit/GForms)
-    │   ├── RedditAdapter.js    # Metodi UI specifici (es. creazione Modali bloccanti)
-    │   ├── google-forms/       # Script per tracciare il completamento dei survey
-    │   └── observers/          # Sensori sul DOM
-    │       ├── telemetry/      # Tracciano azioni passivamente (es. ClickOnLink)
-    │       └── triggers/       # Generano eventi per il Core Engine (es. SearchSubmitted)
-    │
-    ├── services/               # Gestori logici di alto livello
-    │   ├── ApiManager.js       # Comunicazione REST e WebSocket via background.js
-    │   ├── SurveyManager.js    # Assemblaggio Deep Link e gestione Modali
-    │   └── TimerManager.js     # Gestione cronometri (Active Time vs Absolute Time)
-    │
-    └── utils/                  # Helper trasversali
-        ├── SpaWatcher.js       # Intercetta History API
-        └── logger.js           # Logging formattato per il debug
+### 1. Frontend (Estensione Browser)
+[cite_start]Sviluppata in Vanilla JavaScript senza dipendenze pesanti esterne, l'estensione utilizza un'architettura a eventi[cite: 57]:
+* **Service Worker (Background):** Agisce come un isolante di sicurezza. [cite_start]Si occupa in via esclusiva di tutte le chiamate di rete (HTTP/WebSocket) aggirando i blocchi CORS e CSRF imposti alle finestre dei domini di terze parti[cite: 38, 39].
+* **Motore Centrale (Core Engine):** Coordina il Registry Pattern. [cite_start]Intercetta gli eventi sollevati dagli Observer passivi, valuta gli Operator in base alle regole di ricerca e innesca le classi Intervention[cite: 34, 41, 42].
+* [cite_start]**Platform Adapter (Strategy Pattern):** Isola l'interfaccia utente: il core richiama metodi astratti, ignorando l'implementazione specifica delegata a classi concrete (es. `RedditAdapter`)[cite: 70, 71, 95, 96].
+
+### 2. Backend (Server Django REST)
+[cite_start]Un server centralizzato che agisce da arbitro per la logica dell'esperimento[cite: 6]:
+* [cite_start]**API RESTful:** Basate su Django REST Framework (DRF), gestiscono la validazione rigorosa dei payload della telemetria in ingresso[cite: 40].
+* [cite_start]**Filtrazione Sicura:** Il JSON di configurazione viene mantenuto come Singleton nel database[cite: 94]. [cite_start]Quando un client si connette, il backend filtra il payload esponendo solo le regole pertinenti al gruppo sperimentale assegnato[cite: 60, 63].
 
 ---
 
-## ⚙️ Come funziona: Il Flusso (Data-Driven)
+## 🛠️ Stack Tecnologico
 
-1. **Avvio & Enrollment:** L'`ApiManager` controlla se esiste un `participantId` in memoria. Se assente, contatta il backend per registrarne uno nuovo.
-2. **Safe Mode:** Il `core_engine` scarica la configurazione "Safe" per leggere i dati dei questionari e blocca la UI con il Modale del **Pre-Survey**.
-3. **Armed Mode:** Una volta completato il Pre-Survey (`FormWatcher`), l'estensione ottiene il Gruppo (es. *TREATMENT1*) e scarica la configurazione completa.
-4. **Ascolto Attivo:** Gli `Observer` (Sorgenti di Trigger) ascoltano il DOM. Se avviene un'azione definita nel `config.json` (es. `SearchSubmitted`), notificano l'Engine.
-5. **Valutazione & Intervento:** L'Engine valuta le *Conditions* (es. `search_query CONTAINS_ANY ["vaccini", "5g"]`). Se c'è un match, esegue le funzioni *Intervention* assegnate a quel target group (es. `injectFakePost`).
-6. **Chiusura:** Il `TimerManager` calcola il raggiungimento dell'obiettivo. Scaduto il tempo, il `SurveyManager` genera il Deep Link personalizzato e blocca Reddit con il Modale del **Post-Survey**.
-
----
-
-## 🛠️ Estensibilità: Aggiungere nuovi comportamenti
-
-Il framework è progettato per essere "Plug and Play".
-
-* **Aggiungere una nuova Condizione:** Crea un file in `engine/operators/` (es. `STARTS_WITH.js`) ed esponilo globalmente. Usalo direttamente nel `config.json`.
-* **Aggiungere un nuovo Intervento:** Crea un file in `engine/interventions/` con la logica desiderata. Mappalo in `config.json` nella sezione `interventions` dichiarando il suo `function_fqn`.
-* **Aggiungere un nuovo Tracciamento:** Crea un nuovo Observer estendendo `BaseObserver`, avvialo nel Registro e inserisci il suo nome in `telemetry_settings.track_events` nel JSON di configurazione.
+| Componente | Tecnologie Utilizzate |
+| :--- | :--- |
+| **Frontend** | Vanilla JavaScript, Google Chrome Manifest V3 API |
+| **Backend** | Python, Django, Django REST Framework (DRF) |
+| **Real-Time** | WebSockets, ASGI, Django Channels, Daphne |
+| **Integrazioni** | Google Gemini API (LLM Content Generation) |
 
 ---
 
-## 🚀 Installazione (Developer Mode)
+## ⚙️ Configurazione dell'Esperimento
 
-1. Clona questo repository.
-2. Apri Google Chrome e vai su `chrome://extensions/`.
-3. Attiva la modalità **Sviluppatore** (in alto a destra).
-4. Clicca su **Carica estensione non pacchettizzata** (Load unpacked).
-5. Seleziona la cartella radice del progetto.
-6. Apri la console su Reddit per visionare i log strutturati.
+Un ricercatore non ha bisogno di modificare il codice sorgente dell'estensione. [cite_start]L'intero esperimento viene configurato dichiarativamente nel file di backend `config.json` e tradotto programmaticamente dal Rules Engine[cite: 17, 18]:
+
+```json
+{
+  "experiment": {
+    "experiment_name": "nome_esperimento",
+    "end_condition": {
+        "type": "ACTIVE_MINUTES_ON_PLATFORM",
+        "duration": 15
+    },
+    "groups": ["TREATMENT"]
+  },
+  "triggers": [
+    {
+      "id": "trigger_ricerca",
+      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "conditions": [
+        {
+          "property": "search_query",
+          "operator": "engine.operators.ContainsAny",
+          "value": ["keyword1", "keyword2"]
+        }
+      ],
+      "apply_interventions": {
+        "inject_fake_post": ["TREATMENT"]
+      }
+    }
+  ]
+}
+```
+
+---
+
+## 📜 Struttura delle Directory
+
+```text
+iBEARer/
+├── backend/                  # Server Django e logica API
+│   ├── api/
+│   │   ├── websockets/       # Consumers ASGI per comunicazione Real-Time
+│   │   ├── models.py         # Modelli DB (Participant, TelemetryEvent, Config Singleton)
+│   │   └── views.py          # Endpoints REST e DRF
+│   └── config.json           # Definizione globale dell'esperimento (Master)
+│
+├── extension/                # Codice sorgente dell'estensione Chrome
+│   ├── adapters/             # Moduli Platform Dependent (es. Reddit, Google Forms)
+│   ├── engine/               # Core Engine, Registri, ed Event Listeners
+│   ├── services/             # Manager di Telemetria, Survey, Timer e WebSocket
+│   ├── utils/                # Utility trasversali (Logger, SPA Watcher)
+│   ├── background.js         # Service Worker isolato per il networking
+│   └── manifest.json         # Dichiarazione per Google Chrome
+```
+
+---
+
+## ⚠️ Disclaimer Etico e di Ricerca
+Questo software è stato sviluppato per finalità di ricerca accademica strettamente controllate ("Audit Studies"). La manipolazione dei contenuti, l'A/B testing intrusivo e l'alterazione del DOM sono soggetti all'approvazione formale di un Comitato Etico (IRB). Il tracciamento e la telemetria attiva richiedono il consenso informato preventivo (Pre-Survey) del partecipante.
