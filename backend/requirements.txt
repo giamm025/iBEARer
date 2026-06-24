@@ -26,3 +26,6 @@ txaio==25.9.2
 typing_extensions==4.15.0
 tzdata==2026.1
 zope.interface==8.3
+google-genai
+google-api-python-client
+python-dotenv
