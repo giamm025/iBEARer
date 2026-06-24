@@ -1,6 +1,9 @@
 # Usa un'immagine Python ufficiale e leggera
 FROM python:3.10-slim
 
+# Installa il comando CURL (necessario per caricare il config.json in automatico con il docker-compose)
+RUN apt-get update && apt-get install -y curl
+
 # Imposta variabili d'ambiente per Python (niente file .pyc e output diretto su console)
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

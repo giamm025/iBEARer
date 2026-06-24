@@ -7,4 +7,11 @@ services:
       - .:/app
     env_file:
       - .env
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    
+    # lanciamo le migrazioni e poi carichiamo il config.json (aspettiamo 5sec nel mezzo per dare il tempo al server di partire)
+    command: >
+      sh -c "
+      python manage.py migrate && 
+      (sleep 5 && curl -X PUT http://127.0.0.1:8000/admin/config/ -H 'Content-Type: application/json' -d @config.json) & 
+      python manage.py runserver 0.0.0.0:8000
+      "
