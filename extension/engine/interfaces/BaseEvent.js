@@ -21,6 +21,7 @@ class BaseEvent extends CustomEvent {
             cancelable: true    // permette agli ascoltatori di chiamare event.preventDefault() per impedire l'azione predefinita associata all'evento
         });
         this.payload = payload;
+        this.eventFqn = eventFqn;
 
         // aggiungiamo il nuovo evento al regitro globale (se non esiste lo crea)
         if (!window.EventRegistry) { window.EventRegistry = []; }

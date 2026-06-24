@@ -1,10 +1,13 @@
 // creiamo un nuovo Observer che espone solo la funzione check(): responsabile di controllare se l'utente ha fatto una ricerca 
 // su Reddit e di emettere l'evento corrispondente (SearchSubmitted)
 
-class SearchSubmittedObserver extends BaseObserver {
+class SearchSubmittedObserver extends BaseTriggerObserver {
 
     constructor() {
-        super();
+        
+        // per estrarre il nome dell'evento che questo observer deve intercettare, creiamo un evento fittizio e ne estraiamo il FQN
+        const event = new SearchSubmittedEvent();
+        super(event.eventFqn);
     }
 
     start() {

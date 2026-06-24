@@ -96,7 +96,7 @@ class BaseIntervention {
             for (const rule of payload.dynamic_content) {
                 
                 // usiamo l'operatore CONTAINS_ANY per capire quale post iniettare sulla base della query di ricerca 
-                if (window["CONTAINS_ANY"](search_query, rule.trigger_keywords)) {
+                if (window.OperatorRegistry[rule.operator || "CONTAINS_ANY"](search_query, rule.trigger_keywords)) {
                     return rule.data;
                 }
             }

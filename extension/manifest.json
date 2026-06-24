@@ -51,7 +51,8 @@
         "engine/interfaces/BaseEvent.js",
         "adapters/reddit/events/SearchSubmittedEvent.js",
 
-        "engine/interfaces/BaseObserver.js"
+        "engine/interfaces/BaseObserver.js",
+        "engine/interfaces/BaseTriggerObserver.js"
         ,
         "adapters/reddit/observers/telemetry/ResultsLoadedObserver.js",
         "adapters/reddit/observers/telemetry/ClickOnResultObserver.js",

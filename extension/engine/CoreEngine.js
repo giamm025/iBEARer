@@ -223,8 +223,9 @@ class Engine {
         
         // per ogni evento, recuperiamo l'observer dedicato e lo fermiamo (ogni observer ha il metodo stop() prche lo abbiamo definito nell'interfaccia BaseObserver)
         for (let eventName of trackEvents) {
-            const observer = window[eventName];
-            observer.stop();
+            const observer = window.ObserverRegistry.find(obs => obs.observerFqn === eventName);
+            if (observer) { observer.stop(); Log.engine(`Observer ${eventName} fermato.`); }
+            else { Log.error("Engine", `Observer ${eventName} non trovato nel registro, probabilmente già rimosso o mai inizializzato.`);}
         }
     }
 
@@ -243,15 +244,15 @@ class Engine {
 
             document.addEventListener(eventName, (e) => this.handleEvent(eventName, e.detail));
 
-            // estriamo il nome dell'observer (es. "telemetry.events.SearchSubmittedEvent" => "SearchSubmittedObserver") 
-            let observerName = eventName.split('.').pop();
-            if (observerName.endsWith("Event")) { observerName = observerName.slice(0, -5); }
-            observerName += "Observer";
-
             // estriamo l'observer
-            const observer = window[observerName];
-            if (observer) {  observer.start(); }
-            else { Log.error("Engine", `Observer non trovato nel registro: ${observerName}`); }
+            const observer = window.ObserverRegistry.find(obs => obs.targetEventFqn === eventName);
+            if (observer) {                  
+                observer.start(); 
+                Log.engine(`Observer trigger attivato: ${observer.observerFqn}`);
+ }
+            else { 
+                Log.error("Engine", `Observer non trovato nel registro per l'evento: ${eventName}`); 
+            }
         }
 
         Log.engine(`In ascolto su: ${Array.from(eventsToListen).join(', ')}`);

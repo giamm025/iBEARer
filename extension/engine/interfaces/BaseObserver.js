@@ -5,7 +5,7 @@
  */
 class BaseObserver {
 
-    constructor() {
+    constructor(targetEventFqn = null) {
         
         // Estraiamo il path completo (es. "adapters.observers.SearchSubmittedObserver")
         const leafClassName = new.target.name;
@@ -15,6 +15,10 @@ class BaseObserver {
         this.name = this.observerFqn.split('.').pop();
         this.activeListeners = [];
         this.isActive = false;
+
+        // è il nome dell'evento che questo observer deve intercettare (es. "telemetry.events.SearchSubmitted")
+        // fondamentale per i Trigger Observers.
+        this.targetEventFqn = targetEventFqn;
         
         // aggiungiamo il nuovo observer al regitro globale (se non esiste lo crea)
         if (!window.ObserverRegistry) { window.ObserverRegistry = []; }
