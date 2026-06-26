@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-jdcg58jxe#_z_r3!nc6w5l*4g3@0)xp&$ay$&u62$eby(e%jc3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['bear.spect.ing', 'localhost', '127.0.0.1']
 
 
 # Application definition

@@ -18,8 +18,8 @@ import os
 
 # importiamo le variabili d'ambiente
 load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
+#client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client=None
 # -------------------------------------------- POST /participants: enrollParticipant --------------------------------------------
 @api_view(['POST'])             # dice gia a DRF di accettare solo le richieste POST. Per tutte le altre richieste invia in automatico un Error 405
 @authentication_classes([])     # dice a DRF di non applicare nessuna autenticazione (es. token, session, ecc.) a questa view
