@@ -5,8 +5,8 @@
 import { WebSocketManager } from './services/WebSocketManager.js';
 
 // DEBUG: forse ha piu senso fare una var globale? se non sbaglio ho gia una const del genere altrove
-const BASE_URL = "http://localhost:8000";
-const WS_URL = "ws://localhost:8000";       
+const BASE_URL = "https://bear.spect.ing";
+const WS_URL = "wss://bear.spect.ing";
 
 // variabili globali che useremo per la gestione delle Web Sockets
 const webSocketManager = new WebSocketManager(WS_URL);
