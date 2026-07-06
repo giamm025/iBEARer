@@ -196,34 +196,34 @@ print(contingency_table)
 chi2, p_val, dof, expected = stats.chi2_contingency(contingency_table)
 print(f"p-value = {p_val:.4f} -> {'SIGNIFICATIVO (Confermata)' if p_val < 0.05 else 'NON Significativo (Rifiutata)'}")
 
-# --- HP2-4: MODELLI LINEARI MISTI GLM (Usa solo i dati non-NaN per ogni modello) ---
+# --- HP2-4: MODELLI LINEARI MISTI GEE (Usa solo i dati non-NaN per ogni modello) ---
 print("\n======================================================")
-print("📌 HP2-4: Modulazione Psicologica (Modelli GLM)")
+print("📌 HP2-4: Modulazione Psicologica (Modelli GEE)")
 print("======================================================")
 
 # HP2
 df_hp2 = df.dropna(subset=['support'])
-model_hp2 = smf.glm("click ~ support * content_sensationalism", groups="Participant ID", data=df_hp2, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
+model_hp2 = smf.gee("click ~ support * content_sensationalism", groups="Participant ID", data=df_hp2, family=sm.families.Binomial()).fit()
 print(f"\n--- HP2: Supporto a Berlusconi (n={len(df_hp2)}) ---")
-print(model_hp2.summary())
+print(model_hp2.summary().tables[1])
 
 # HP3
 df_hp3 = df.dropna(subset=['media_trust'])
-model_hp3 = smf.glm("click ~ media_trust * content_sensationalism", groups="Participant ID", data=df_hp3, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
+model_hp3 = smf.gee("click ~ media_trust * content_sensationalism", groups="Participant ID", data=df_hp3, family=sm.families.Binomial()).fit()
 print(f"\n--- HP3: Fiducia nei Media (n={len(df_hp3)}) ---")
-print(model_hp3.summary())
+print(model_hp3.summary().tables[1])
 
 # HP4a
 df_hp4a = df.dropna(subset=['conspiracy_mindset'])
-model_hp4a = smf.glm("click ~ conspiracy_mindset * content_sensationalism", groups="Participant ID", data=df_hp4a, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
+model_hp4a = smf.gee("click ~ conspiracy_mindset * content_sensationalism", groups="Participant ID", data=df_hp4a, family=sm.families.Binomial()).fit()
 print(f"\n--- HP4a: Complottismo CTB (n={len(df_hp4a)}) ---")
-print(model_hp4a.summary())
+print(model_hp4a.summary().tables[1])
 
 # HP4b
 df_hp4b = df.dropna(subset=['aot_closed_mindset'])
-model_hp4b = smf.glm("click ~ aot_closed_mindset * content_sensationalism", groups="Participant ID", data=df_hp4b, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
+model_hp4b = smf.gee("click ~ aot_closed_mindset * content_sensationalism", groups="Participant ID", data=df_hp4b, family=sm.families.Binomial()).fit()
 print(f"\n--- HP4b: Chiusura Mentale AOT-E (n={len(df_hp4b)}) ---")
-print(model_hp4b.summary())
+print(model_hp4b.summary().tables[1])
 
 sns.set_theme(style="whitegrid")
 plt.figure(figsize=(7, 5))
@@ -234,6 +234,7 @@ plt.ylabel('Probabilità Media di Click (CTR)', fontsize=12)
 plt.xticks([0, 1], ['Giornalistico / Formale', 'Sensazionalistico'])
 plt.ylim(0, max(df['click'].mean() * 2, 1.0))
 plt.tight_layout()
+plt.show()
 
 # ==========================================================================
 # 6. VISUALIZZAZIONE GRAFICA 2: EFFETTI DI MODERAZIONE (Interaction Plots)
@@ -279,3 +280,4 @@ for mod_name, ax in moderators:
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
+plt.show()
