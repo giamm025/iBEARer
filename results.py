@@ -236,6 +236,12 @@ print("\n======================================================")
 print("📌 POST-HOC TEST: Confronto Sensazionalistico vs Giornalistico")
 
 framing_types = [(1, 'Sensazionalistico'), (0, 'Giornalistico')]
+variables_to_test = [
+    ('support', 'Supporto Berlusconi'), 
+    ('trust_traditional', 'Fiducia Media Tradizionali'),
+    ('trust_social', 'Fiducia Social Media')
+]
+
 for f_val, f_name in framing_types:
     print(f"\n--- ANALISI SOTTO-INSIEME: {f_name} ---")
     
@@ -244,13 +250,14 @@ for f_val, f_name in framing_types:
     
     # 2. Aggreghiamo i dati: 1 riga per utente (Calcoliamo il CTR medio di quell'utente)
     df_user = df_subset.groupby('Participant ID').agg({
-    'click': 'mean',          # La media dei click = il CTR personale dell'utente
-    'support': 'first',       # Il livello di supporto è fisso per utente
-    'trust_social': 'first'   # Anche la fiducia nei social è fissa
+        'click': 'mean',
+        'support': 'first',
+        'trust_traditional': 'first',
+        'trust_social': 'first'
     }).reset_index()
     
     # 3. Eseguiamo il T-Test separando per la Mediana (Alto vs Basso)
-    for var, name in [('support', 'Supporto Berlusconi'), ('trust_social', 'Fiducia Social Media')]:
+    for var, name in variables_to_test:
         df_clean = df_user.dropna(subset=[var, 'click'])
         median_val = df_clean[var].median()
         
@@ -261,8 +268,6 @@ for f_val, f_name in framing_types:
             print(f"   Impossibile eseguire il test per {name} (gruppi troppo piccoli).")
             continue
             
-        # Il T-Test indipendente per due gruppi (Mediana Alto vs Basso) 
-        # sostituisce l'ANOVA in modo più semplice e lineare, come suggerito dal prof.
         t_stat, p_val = stats.ttest_ind(group_high, group_low, equal_var=False)
         
         print(f"\nT-Test su {name} (Alto vs Basso):")
