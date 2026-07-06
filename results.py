@@ -230,18 +230,24 @@ for var, name in models_to_run:
 
 
 # ==========================================================================
-# 5. POST-HOC TEST (T-Test sui gruppi disgiunti nel framing Sensazionalistico)
+# 5. POST-HOC TEST (T-Test su 1 riga per utente - Solo Sensazionalismo)
 # ==========================================================================
 print("\n======================================================")
-print("📌 POST-HOC TEST (T-Test su contenuto Sensazionalistico)")
-print("Limitiamo il dataframe al sensazionalismo come richiesto dal prof.")
+print("📌 POST-HOC TEST (T-Test: 1 Riga per Utente su Contenuto Sensazionalistico)")
 
 # 1. FILTRIAMO IL DATAFRAME: Prendiamo SOLO i post sensazionalistici
 df_sensational = df[df['content_sensationalism'] == 1]
 
-# 2. Lanciamo il test sui tratti dove graficamente non c'è overlap
+# 2. Aggreghiamo i dati: 1 riga per utente (Calcoliamo il CTR medio di quell'utente)
+df_user = df_sensational.groupby('Participant ID').agg({
+    'click': 'mean',          # La media dei click = il CTR personale dell'utente
+    'support': 'first',       # Il livello di supporto è fisso per utente
+    'trust_social': 'first'   # Anche la fiducia nei social è fissa
+}).reset_index()
+
+# 3. Eseguiamo il T-Test separando per la Mediana (Alto vs Basso)
 for var, name in [('support', 'Supporto Berlusconi'), ('trust_social', 'Fiducia Social Media')]:
-    df_clean = df_sensational.dropna(subset=[var, 'click'])
+    df_clean = df_user.dropna(subset=[var, 'click'])
     median_val = df_clean[var].median()
     
     group_high = df_clean[df_clean[var] > median_val]['click']
@@ -251,16 +257,15 @@ for var, name in [('support', 'Supporto Berlusconi'), ('trust_social', 'Fiducia 
     # sostituisce l'ANOVA in modo più semplice e lineare, come suggerito dal prof.
     t_stat, p_val = stats.ttest_ind(group_high, group_low, equal_var=False)
     
-    print(f"\nNel sotto-insieme Sensazionalismo -> {name} (Alto vs Basso):")
-    print(f"   Media CTR Alto (Quadrato Rosso): {group_high.mean():.2f}")
-    print(f"   Media CTR Basso (Cerchio Blu):   {group_low.mean():.2f}")
+    print(f"\nT-Test su {name} (Alto vs Basso):")
+    print(f"   Media CTR Utenti 'Alto': {group_high.mean():.2f}")
+    print(f"   Media CTR Utenti 'Basso': {group_low.mean():.2f}")
     print(f"   t-statistic: {t_stat:.4f} | p-value: {p_val:.4f}")
     
     if p_val < 0.05:
-        print(f"   🔥 DIFFERENZA STATISTICAMENTE SIGNIFICATIVA! (Confermato il non-overlap grafico)")
+        print(f"   🔥 DIFFERENZA SIGNIFICATIVA! (Effetto utente confermato)")
     else:
-        print(f"   La differenza non è statisticamente significativa (le barre si sovrappongono nel campione attuale).")
-
+        print(f"   Differenza non significativa a livello di singolo utente aggregato.")
 
 # ==========================================================================
 # 6. VISUALIZZAZIONE GRAFICA 1: BAR CHART
