@@ -20,6 +20,7 @@ png/
 ~$*
 *.tmp
 *.log
+*.xlsx
 
 # =========================
 # AMBIENTI VIRTUALI ed ESEGUIBILI

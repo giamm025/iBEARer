@@ -8,6 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import json
 import warnings
+from scipy.stats import zscore
 
 # Ignoriamo i warning per mantenere l'output pulito
 warnings.filterwarnings("ignore")
@@ -143,12 +144,17 @@ def calculate_survey_scores(excel_path):
     ctb_col = get_col_by_keyword(df_survey, "versione ufficiale")
     df_scored['conspiracy_mindset'] = pd.to_numeric(df_survey[ctb_col], errors='coerce')
 
-    # 4. Media Trust 
-    trust_keywords = ["testate giornalistiche nazionali", "social media più popolari"]
-    trust_cols = [get_col_by_keyword(df_survey, kw) for kw in trust_keywords]
-    for col in trust_cols:
-        df_survey[col] = pd.to_numeric(df_survey[col], errors='coerce').replace(99, np.nan)
-    df_scored['media_trust'] = df_survey[trust_cols].mean(axis=1, skipna=True)
+    # 4. Media Trust: DIVIDIAMO TRA Media Tradizionali e Social Media
+    trad_col = get_col_by_keyword(df_survey, "testate giornalistiche nazionali")
+    df_survey[trad_col] = pd.to_numeric(df_survey[trad_col], errors='coerce').replace(99, np.nan)
+    df_scored['trust_traditional'] = df_survey[trad_col]
+
+    social_col = get_col_by_keyword(df_survey, "social media più popolari")
+    df_survey[social_col] = pd.to_numeric(df_survey[social_col], errors='coerce').replace(99, np.nan)
+    df_scored['trust_social'] = df_survey[social_col]
+    
+    # Fiducia Media Totale (Combinata)
+    df_scored['media_trust'] = df_survey[[trad_col, social_col]].mean(axis=1, skipna=True)
 
     # 5. AOT-E (Chiusura Mentale)
     aot_items = [
@@ -176,7 +182,7 @@ def calculate_survey_scores(excel_path):
     return df_scored
 
 # ==========================================================================
-# 4. MERGE E ANALISI STATISTICA (SMART DROP-NA)
+# 4. MERGE, Z-SCORES E ANALISI STATISTICA GLM
 # ==========================================================================
 
 print("\n--- INIZIO PIPELINE DATI ---")
@@ -187,7 +193,12 @@ df_scores = calculate_survey_scores('Pre-Survey_iBEAREr.xlsx')
 df = pd.merge(df_behavior, df_scores, on='Participant ID', how='inner')
 print(f"🔗 Merge Definitivo Completato: {len(df)} osservazioni totali da elaborare.\n")
 
-# --- HP1: CHI-QUADRATO SUL CTR (Usa tutto il dataset) ---
+# STANDARDIZZAZIONE Z-SCORE (Media=0, DevStd=1)
+continuous_vars = ['support', 'conspiracy_mindset', 'media_trust', 'trust_traditional', 'trust_social', 'aot_closed_mindset']
+for var in continuous_vars:
+    df[f"{var}_z"] = zscore(df[var], nan_policy='omit')
+
+# --- HP1: CHI-QUADRATO SUL CTR ---
 print("======================================================")
 print("📌 HP1: Impatto del Sensazionalismo sul CTR")
 print("======================================================")
@@ -196,35 +207,64 @@ print(contingency_table)
 chi2, p_val, dof, expected = stats.chi2_contingency(contingency_table)
 print(f"p-value = {p_val:.4f} -> {'SIGNIFICATIVO (Confermata)' if p_val < 0.05 else 'NON Significativo (Rifiutata)'}")
 
-# --- HP2-4: MODELLI LINEARI MISTI GLM (Usa solo i dati non-NaN per ogni modello) ---
+# --- HP2-4: MODELLI GLM CON VARIABILI STANDARDIZZATE ---
 print("\n======================================================")
-print("📌 HP2-4: Modulazione Psicologica (Modelli GLM)")
+print("📌 HP2-4: Modulazione Psicologica (Modelli GLM - Z-Scores)")
 print("======================================================")
 
-# HP2
-df_hp2 = df.dropna(subset=['support'])
-model_hp2 = smf.glm("click ~ support * content_sensationalism", groups="Participant ID", data=df_hp2, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
-print(f"\n--- HP2: Supporto a Berlusconi (n={len(df_hp2)}) ---")
-print(model_hp2.summary())
+# LISTA COMPLETA DEI 6 MODELLI
+models_to_run = [
+    ('support_z', 'Supporto a Berlusconi'),
+    ('conspiracy_mindset_z', 'Complottismo CTB'),
+    ('aot_closed_mindset_z', 'Chiusura Mentale AOT-E'),
+    ('media_trust_z', 'Fiducia nei Media (Totale)'),
+    ('trust_traditional_z', 'Fiducia Media Tradizionali'),
+    ('trust_social_z', 'Fiducia Social Media')
+]
 
-# HP3
-df_hp3 = df.dropna(subset=['media_trust'])
-model_hp3 = smf.glm("click ~ media_trust * content_sensationalism", groups="Participant ID", data=df_hp3, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
-print(f"\n--- HP3: Fiducia nei Media (n={len(df_hp3)}) ---")
-print(model_hp3.summary())
+for var, name in models_to_run:
+    df_clean = df.dropna(subset=[var])
+    model = smf.glm(f"click ~ {var} * content_sensationalism", data=df_clean, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
+    print(f"\n--- {name} (n={len(df_clean)}) ---")
+    print(model.summary().tables[1])
 
-# HP4a
-df_hp4a = df.dropna(subset=['conspiracy_mindset'])
-model_hp4a = smf.glm("click ~ conspiracy_mindset * content_sensationalism", groups="Participant ID", data=df_hp4a, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
-print(f"\n--- HP4a: Complottismo CTB (n={len(df_hp4a)}) ---")
-print(model_hp4a.summary())
 
-# HP4b
-df_hp4b = df.dropna(subset=['aot_closed_mindset'])
-model_hp4b = smf.glm("click ~ aot_closed_mindset * content_sensationalism", groups="Participant ID", data=df_hp4b, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
-print(f"\n--- HP4b: Chiusura Mentale AOT-E (n={len(df_hp4b)}) ---")
-print(model_hp4b.summary())
+# ==========================================================================
+# 5. POST-HOC TEST (T-Test sui gruppi disgiunti nel framing Sensazionalistico)
+# ==========================================================================
+print("\n======================================================")
+print("📌 POST-HOC TEST (T-Test su contenuto Sensazionalistico)")
+print("Limitiamo il dataframe al sensazionalismo come richiesto dal prof.")
 
+# 1. FILTRIAMO IL DATAFRAME: Prendiamo SOLO i post sensazionalistici
+df_sensational = df[df['content_sensationalism'] == 1]
+
+# 2. Lanciamo il test sui tratti dove graficamente non c'è overlap
+for var, name in [('support', 'Supporto Berlusconi'), ('trust_social', 'Fiducia Social Media')]:
+    df_clean = df_sensational.dropna(subset=[var, 'click'])
+    median_val = df_clean[var].median()
+    
+    group_high = df_clean[df_clean[var] > median_val]['click']
+    group_low = df_clean[df_clean[var] <= median_val]['click']
+    
+    # Il T-Test indipendente per due gruppi (Mediana Alto vs Basso) 
+    # sostituisce l'ANOVA in modo più semplice e lineare, come suggerito dal prof.
+    t_stat, p_val = stats.ttest_ind(group_high, group_low, equal_var=False)
+    
+    print(f"\nNel sotto-insieme Sensazionalismo -> {name} (Alto vs Basso):")
+    print(f"   Media CTR Alto (Quadrato Rosso): {group_high.mean():.2f}")
+    print(f"   Media CTR Basso (Cerchio Blu):   {group_low.mean():.2f}")
+    print(f"   t-statistic: {t_stat:.4f} | p-value: {p_val:.4f}")
+    
+    if p_val < 0.05:
+        print(f"   🔥 DIFFERENZA STATISTICAMENTE SIGNIFICATIVA! (Confermato il non-overlap grafico)")
+    else:
+        print(f"   La differenza non è statisticamente significativa (le barre si sovrappongono nel campione attuale).")
+
+
+# ==========================================================================
+# 6. VISUALIZZAZIONE GRAFICA 1: BAR CHART
+# ==========================================================================
 sns.set_theme(style="whitegrid")
 plt.figure(figsize=(7, 5))
 ax = sns.barplot(x='content_sensationalism', y='click', data=df, errorbar=('ci', 95), palette="mako")
@@ -234,30 +274,40 @@ plt.ylabel('Probabilità Media di Click (CTR)', fontsize=12)
 plt.xticks([0, 1], ['Giornalistico / Formale', 'Sensazionalistico'])
 plt.ylim(0, max(df['click'].mean() * 2, 1.0))
 plt.tight_layout()
+plt.show()
 
 # ==========================================================================
-# 6. VISUALIZZAZIONE GRAFICA 2: EFFETTI DI MODERAZIONE (Interaction Plots)
+# 7. VISUALIZZAZIONE GRAFICA 2: EFFETTI DI MODERAZIONE (6 PLOTS)
 # ==========================================================================
 print("\nGenerazione dei grafici di interazione (Plot 2)...")
 
 df_plot = df.copy()
 df_plot['Framing'] = df_plot['content_sensationalism'].map({0: 'Giornalistico', 1: 'Sensazionalistico'})
 
-# Median split manuale: robusto contro dati fortemente clusterizzati (niente più crash di bin overlapping)
+# Median split manuale per tutti e 6 i tratti
 df_plot['Supporto Berlusconi'] = np.where(df_plot['support'] > df_plot['support'].median(), 'Alto', 'Basso')
-df_plot['Fiducia Media'] = np.where(df_plot['media_trust'] > df_plot['media_trust'].median(), 'Alta', 'Bassa')
 df_plot['Complottismo (CTB)'] = np.where(df_plot['conspiracy_mindset'] > df_plot['conspiracy_mindset'].median(), 'Alto', 'Basso')
-df_plot['Chiusura Mentale (AOT)'] = np.where(df_plot['aot_closed_mindset'] > df_plot['aot_closed_mindset'].median(), 'Alta', 'Bassa')
+df_plot['Chiusura Mentale (AOT)'] = np.where(df_plot['aot_closed_mindset'] > df_plot['aot_closed_mindset'].median(), 'Alto', 'Basso')
+df_plot['Fiducia nei Media (Tot)'] = np.where(df_plot['media_trust'] > df_plot['media_trust'].median(), 'Alto', 'Basso')
+df_plot['Fiducia Tradizionali'] = np.where(df_plot['trust_traditional'] > df_plot['trust_traditional'].median(), 'Alto', 'Basso')
+df_plot['Fiducia Social'] = np.where(df_plot['trust_social'] > df_plot['trust_social'].median(), 'Alto', 'Basso')
 
-fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+# Creiamo una griglia 2x3 (2 righe, 3 colonne) per ospitare 6 grafici
+fig, axes = plt.subplots(2, 3, figsize=(16, 10))
 fig.suptitle('Effetti di Moderazione Psicologica sul CTR (Interaction Plots)', fontsize=16, y=0.98)
 
+# Mappiamo i 6 moderatori ai 6 subplot della griglia
 moderators = [
     ('Supporto Berlusconi', axes[0, 0]),
-    ('Fiducia Media', axes[0, 1]),
-    ('Complottismo (CTB)', axes[1, 0]),
-    ('Chiusura Mentale (AOT)', axes[1, 1])
+    ('Complottismo (CTB)', axes[0, 1]),
+    ('Chiusura Mentale (AOT)', axes[0, 2]),
+    ('Fiducia nei Media (Tot)', axes[1, 0]),
+    ('Fiducia Tradizionali', axes[1, 1]),
+    ('Fiducia Social', axes[1, 2])
 ]
+
+# Colori fissi assoluti
+palette = {'Basso': '#1f77b4', 'Alto': '#d62728'}
 
 for mod_name, ax in moderators:
     sns.pointplot(
@@ -265,17 +315,19 @@ for mod_name, ax in moderators:
         x='Framing', 
         y='click', 
         hue=mod_name, 
+        hue_order=['Basso', 'Alto'],
         dodge=True,
         markers=['o', 's'],
         capsize=.1,
         err_kws={'linewidth': 1.5},
         ax=ax,
-        palette="Set1"
+        palette=palette
     )
-    ax.set_title(f'Moderazione: {mod_name}', fontsize=12)
+    ax.set_title(f'{mod_name}', fontsize=12)
     ax.set_ylabel('Probabilità Media di Click (CTR)')
     ax.set_xlabel('')
-    ax.set_ylim(0, 1) # Assicura che la scala sia fissa per tutti da 0 a 100%
+    ax.set_ylim(0, 1)
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
+plt.show()
