@@ -226,59 +226,60 @@ for var, name in models_to_run:
     df_clean = df.dropna(subset=[var])
     model = smf.glm(f"click ~ {var} * content_sensationalism", data=df_clean, family=sm.families.Binomial(link=sm.families.links.Logit())).fit()
     print(f"\n--- {name} (n={len(df_clean)}) ---")
-    print(model.summary().tables[1])
+    print(model.summary())
 
 
 # ==========================================================================
 # 5. POST-HOC TEST (T-Test su 1 riga per utente - Confronto tra Framing)
 # ==========================================================================
 print("\n======================================================")
-print("📌 POST-HOC TEST: Confronto Sensazionalistico vs Giornalistico")
+print("📌 Confronto Sensazionalistico vs Giornalistico")
+print("======================================================")
 
-framing_types = [(1, 'Sensazionalistico'), (0, 'Giornalistico')]
+framing_types = [(1, 'Post SENSAZIONALISTICI'), (0, 'Post GIORNALISTICI')]
 variables_to_test = [
-    ('support', 'Supporto Berlusconi'), 
-    ('trust_traditional', 'Fiducia Media Tradizionali'),
-    ('trust_social', 'Fiducia Social Media')
+    ('support', 'Supporto a Berlusconi'), 
+    ('trust_traditional', 'Fiducia nei Media Tradizionali'),
+    ('trust_social', 'Fiducia nei Social Media')
 ]
 
-for f_val, f_name in framing_types:
-    print(f"\n--- ANALISI SOTTO-INSIEME: {f_name} ---")
-    
-    # 1. FILTRIAMO IL DATAFRAME: Prendiamo SOLO i post sensazionalistici o SOLO quelli giornalistici
-    df_subset = df[df['content_sensationalism'] == f_val]
-    
-    # 2. Aggreghiamo i dati: 1 riga per utente (Calcoliamo il CTR medio di quell'utente)
-    df_user = df_subset.groupby('Participant ID').agg({
-        'click': 'mean',
-        'support': 'first',
-        'trust_traditional': 'first',
-        'trust_social': 'first'
-    }).reset_index()
-    
-    # 3. Eseguiamo il T-Test separando per la Mediana (Alto vs Basso)
-    for var, name in variables_to_test:
+for var, var_name in variables_to_test:
+    print(f"\n--- {var_name} ---")
+
+    for f_val, f_name in framing_types:
+        # 1. FILTRIAMO IL DATAFRAME: Prendiamo SOLO i post sensazionalistici o SOLO quelli giornalistici
+        df_subset = df[df['content_sensationalism'] == f_val]
+
+        # 2. Aggreghiamo i dati: 1 riga per utente (Calcoliamo il CTR medio di quell'utente)
+        df_user = df_subset.groupby('Participant ID').agg({
+            'click': 'mean',
+            'support': 'first',
+            'trust_traditional': 'first',
+            'trust_social': 'first'
+        }).reset_index()
+
+        # 3. Eseguiamo il T-Test separando per la Mediana (Alto vs Basso)
         df_clean = df_user.dropna(subset=[var, 'click'])
         median_val = df_clean[var].median()
-        
+
         group_high = df_clean[df_clean[var] > median_val]['click']
         group_low = df_clean[df_clean[var] <= median_val]['click']
-        
+
         if len(group_high) < 2 or len(group_low) < 2:
-            print(f"   Impossibile eseguire il test per {name} (gruppi troppo piccoli).")
+            print(f"   Impossibile eseguire il test su {f_name} (gruppi troppo piccoli).")
             continue
-            
+
         t_stat, p_val = stats.ttest_ind(group_high, group_low, equal_var=False)
-        
-        print(f"\nT-Test su {name} (Alto vs Basso):")
+
+        print(f"\n{f_name}:")
         print(f"   Media CTR Utenti 'Alto': {group_high.mean():.2f}")
         print(f"   Media CTR Utenti 'Basso': {group_low.mean():.2f}")
         print(f"   t-statistic: {t_stat:.4f} | p-value: {p_val:.4f}")
-        
+
         if p_val < 0.05:
-            print(f"      🔥 DIFFERENZA SIGNIFICATIVA!")
+            print(f"      ✅ Differenza SIGNIFICATIVA!")
         else:
-            print(f"      Differenza non significativa.")
+            print(f"      ❌ Differenza NON significativa.")
 
 # ==========================================================================
 # 6. VISUALIZZAZIONE GRAFICA 1: BAR CHART
@@ -310,18 +311,17 @@ df_plot['Fiducia nei Media (Tot)'] = np.where(df_plot['media_trust'] > df_plot['
 df_plot['Fiducia Tradizionali'] = np.where(df_plot['trust_traditional'] > df_plot['trust_traditional'].median(), 'Alto', 'Basso')
 df_plot['Fiducia Social'] = np.where(df_plot['trust_social'] > df_plot['trust_social'].median(), 'Alto', 'Basso')
 
-# Creiamo una griglia 2x3 (2 righe, 3 colonne) per ospitare 6 grafici
-fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-fig.suptitle('Effetti di Moderazione Psicologica sul CTR (Interaction Plots)', fontsize=16, y=0.98)
+# DIMENSIONI FOGLIO A4: 8.27 x 11.69 pollici (proporzioni perfette per la stampa o PDF)
+fig, axes = plt.subplots(3, 2, figsize=(8.27, 11.69))
 
-# Mappiamo i 6 moderatori ai 6 subplot della griglia
+# Mappiamo i 6 moderatori ai 6 subplot della griglia (3 righe x 2 colonne)
 moderators = [
     ('Supporto Berlusconi', axes[0, 0]),
     ('Complottismo (CTB)', axes[0, 1]),
-    ('Chiusura Mentale (AOT)', axes[0, 2]),
-    ('Fiducia nei Media (Tot)', axes[1, 0]),
-    ('Fiducia Tradizionali', axes[1, 1]),
-    ('Fiducia Social', axes[1, 2])
+    ('Chiusura Mentale (AOT)', axes[1, 0]),
+    ('Fiducia nei Media (Tot)', axes[1, 1]),
+    ('Fiducia Tradizionali', axes[2, 0]),
+    ('Fiducia Social', axes[2, 1])
 ]
 
 # Colori fissi assoluti
@@ -341,11 +341,15 @@ for mod_name, ax in moderators:
         ax=ax,
         palette=palette
     )
-    ax.set_title(f'{mod_name}', fontsize=12)
-    ax.set_ylabel('Probabilità Media di Click (CTR)')
+    # Riduciamo leggermente i font per farli stare comodamente nel layout A4
+    ax.set_title(f'{mod_name}', fontsize=11)
+    ax.set_ylabel('Probabilità Media di Click (CTR)', fontsize=9)
     ax.set_xlabel('')
+    ax.tick_params(axis='both', labelsize=9)
     ax.set_ylim(0, 1)
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
 
+# Ottimizza gli spazi per evitare sovrapposizioni nei margini del foglio
 plt.tight_layout()
+plt.savefig('modulazione_psicologica_A4.pdf', dpi=300, bbox_inches='tight')
 plt.show()
