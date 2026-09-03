@@ -10,8 +10,8 @@
 
   "survey_settings": {
     "pre_survey": {
-      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLScRK2VN504MnY1dBI9OzL-f4wkdXnaW12Ks1IezcCUwv0RdWA/viewform?",
-      "id_param": "entry.2073234626",
+      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLScUOjPZviDKFnx0Ml1d3sBAtTkjHFFx7YnEuC2J-ZCvnTxJVA/viewform?",
+      "id_param": "entry.2119809368",
       "modal_ui": {
         "title": "Benvenuto nello Studio!",
         "message": "Prima di iniziare la navigazione, ti chiediamo di compilare un breve questionario iniziale.<br><br>Una volta inviate le risposte, la pagina si sbloccherà automaticamente.",
@@ -19,8 +19,8 @@
       }
     },
     "post_survey": {
-      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLSfLwZlKMGLXjHyLRXPQEIu6SQMaa0sRYzzU8elcnrkLtfZK7A/viewform?",
-      "id_param": "entry.1997013841",
+      "base_url": "https://docs.google.com/forms/d/e/1FAIpQLScVnXcdATtuA3C-3TFz1WQx6ip1vAyfJjTUrJ_k5glugbB7Xg/viewform?",
+      "id_param": "entry.2119809368",
       "modal_ui": {
         "title": "L'esperimento è concluso!",
         "message": "Il tempo a tua disposizione per questo studio è terminato. <br><br>Ti preghiamo di completare il questionario finale. Una volta inviato, la pagina si sbloccherà.",
@@ -70,6 +70,23 @@
       "apply_interventions": {
         "inject_fake_post": ["TREATMENT"]
       }
+    },
+
+    {
+      "id": "prova_search",
+      "target_groups": ["TREATMENT"],
+      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "conditions": [
+        {
+          "property": "search_query",
+          "operator": "engine.operators.ContainsAny",
+          "value": ["prova"]
+        }
+      ],
+      "apply_interventions": {
+        "hide_content": ["TREATMENT"],
+        "modify_content": ["TREATMENT"]
+      }
     }
   ],
 
@@ -78,6 +95,38 @@
       "id": "track_results",
       "function_fqn": "adapters.reddit.interventions.tracking.TrackResults",
       "payload": {}
+    },
+
+    {
+      "id": "hide_content",
+      "function_fqn": "adapters.reddit.interventions.ui.RemovePost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "data": {
+              "target_positions": [1, 4]
+            }
+          }
+        ],
+        "default_fallback": null
+      }
+    },
+
+    {
+      "id": "modify_content",
+      "function_fqn": "adapters.reddit.interventions.ui.ModifyPost",
+      "payload": {
+        "dynamic_content": [
+          {
+            "data": {
+              "target_positions": [2, 3],
+              "title": "Caso Epstein: il nome di Silvio Berlusconi appare negli atti ufficiali.",
+              "content_text": "Il nome di Berlusconi figura in una lista di contatti internazionali allegata agli atti del processo SDNY. Al momento non vi sono accuse dirette di reato."
+            }
+          }
+        ],
+        "default_fallback": null
+      }
     },
 
     {
