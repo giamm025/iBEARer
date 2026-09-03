@@ -110,4 +110,12 @@ class BaseIntervention {
             return null;
         }
     }
+
+     /**
+     * Restituisce il PlatformAdapter (es. RedditAdapter, TwitterAdapter, ecc.) in modo che l'intervento possa interagire con la piattaforma specifica.
+     * @returns {BasePlatformAdapter}
+     */
+    get platform() {
+       return PlatformAdapter;
+   }
 }

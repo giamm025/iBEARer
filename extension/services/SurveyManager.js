@@ -1,5 +1,5 @@
 // questo file gestisce tutta la logica di parsing dei Survey 
-// per cambiare il modo in cui i Survey sono mostrati vedere adapters/PlatformAdapter.js
+// per cambiare il modo in cui i Survey sono mostrati modificare il platform adapter concreto (es. adapters/reddit/RedditAdapter.js)
 // per cambiare link, aggiungere questionari, o modificare i messaggi scritti nei modali modificare il config.json
 
 const SurveyManager = {
@@ -30,7 +30,7 @@ const SurveyManager = {
                 };
 
                 // diciamo all'adapter di mostrare il pop-up
-                PlatformAdapter.showSurveyModal(modalConfiguration);
+                PlatformAdapter.showBlockingModal(modalConfiguration);
                     
                 // comunichiamo che l'operazione è finita
                 resolve(); 
@@ -40,7 +40,7 @@ const SurveyManager = {
 
     // metodo helper per chiudere il modale in modo astratto
     hideSurveyModal() {
-        PlatformAdapter.hideSurveyModal();
+        PlatformAdapter.hideBlockingModal();
     },
 
     // metodo heper per fare il parsing del config.json e recuperare i survey_settings

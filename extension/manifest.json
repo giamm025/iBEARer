@@ -21,6 +21,8 @@
     {
       "matches": ["*://*.reddit.com/*"],
       "js": [
+        "engine/interfaces/BasePlatformAdapter.js",
+
         "utils/Logger.js",
         "utils/SpaWatcher.js",
         "services/ApiManager.js",
