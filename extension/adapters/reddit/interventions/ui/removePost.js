@@ -13,26 +13,15 @@ class RemovePostIntervention extends BasePostIntervention {
     applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {
         if (!wrapper.dataset.bearRemoved) {
             
-            // prendiamo i dati originali
-            const rawTitle = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
-            const originalTitle = rawTitle.replace(/\s+/g, ' ').trim() || "Sconosciuto";
-            const originalUrl = titleLink.href;
-            const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
-            const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
+            // prendiamo i dati ORIGINALI del post prima di qualsiasi modifica, per la telemetria
+            const postData = PlatformAdapter.extractPostData(wrapper, titleLink);
 
             // inviamo i dati originali del post al backend
-            this.sendPostToBackend("REMOVED", initialQuery, currentPos, originalTitle, originalSubreddit, originalUrl);
+            this.sendPostToBackend("REMOVED", initialQuery, currentPos, postData.title, postData.subreddit, postData.url);
             
-            // nascondiamo il post (usando display:none)            
-            wrapper.style.display = 'none';
+            // deleghiamo la rimozione del post all'Adapter
+            PlatformAdapter.hidePost(wrapper);
             wrapper.dataset.bearRemoved = "true";
-            
-            // NB. Reddit inserisce un elemento <hr> dopo ogni post nei risultati di ricerca. 
-            // se nascondiamo un post, dobbiamo nascondere anche l'hr sottostante per evitare brutti spazi vuoti nella UI.
-            const nextSibling = wrapper.nextElementSibling;
-            if (nextSibling && nextSibling.tagName === 'HR') {
-                nextSibling.style.display = 'none';
-            }
             
             Log.intervention(`Post rimosso! (Pos: ${currentPos}, Match: ${isKeywordTarget ? 'Keyword' : 'Posizione'})`);
         }

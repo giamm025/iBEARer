@@ -1,7 +1,46 @@
-// espone i metodi che modificano la UI specifica di Reddit
+/**
+ * @class RedditAdapter
+ * @description Adapter specifico per la piattaforma Reddit. Fornisce metodi per l'interazione con i post, la gestione dei modali e l'estrazione dei dati.
+ */ 
 class RedditAdapter {
     
-    // metodo per far apparire il pop-up bloccante (valido sia per Pre che Post-Survey)
+    /** Configura l'estensione per eseguire l'esperimento su REDDIT */
+    run() {
+
+        // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
+        // altrimenti rischiamo di intercettare eventi prima che l'engine sia pronto a gestirli
+        document.addEventListener("EngineReady", () => {
+
+            Log.adapter("Avvio Reddit Adapter...");
+
+            // definiamo la funzione che "sveglia" TUTTI gli observers attivi 
+            const notifyObservers = () => {
+
+                // se ci sono observer registrati, chiamiamo il loro metodo check() per svegliarli
+                if (window.ObserverRegistry) {
+                    for (const observer of window.ObserverRegistry) {
+                        observer.check();
+                    }     
+
+                // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
+                } else {
+                    Log.adapter("Nessun Observer registrato.");
+                }
+            };
+
+            // definiamo la funzione che l'SpaWatcher drovrà eseguire AD OGNI CAMBIO URL. 
+            // nel nostro caso si occuperà solo di attivare gli Observer registrati.
+            SpaWatcher.watch(() => {
+                notifyObservers()
+            });
+        });
+    }
+
+    // =======================================================================
+    // MANIPOLAZIONE QUESTIONARI
+    // =======================================================================
+
+    /** Apre un Modale bloccante di dimensioni configurabili. */
     showSurveyModal(modalConfiguration) {
 
         // usiamo un id fisso per il nostro pop-up, in modo da poterlo identificare e rimuovere facilmente in seguito
@@ -41,42 +80,249 @@ class RedditAdapter {
         document.body.style.overflow = 'hidden';
     }
 
-    // metodo per chiudere il pop-up bloccante (valido sia per Pre che Post-Survey)
+    /** Chiude il Modale aperto con showSurveyModal() e ripristina lo scroll della pagina. */ 
     hideSurveyModal() {
         const modal = document.getElementById('reddit-cospiracy-survey-modal');
         if (modal) modal.remove();
         document.body.style.overflow = ''; 
     }
 
-    // metodo per avviare l'esperimento su REDDIT
-    run() {
+    // =======================================================================
+    // MANIPOLAZIONE POST
+    // =======================================================================
 
-        // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
-        // altrimenti rischiamo di intercettare eventi prima che l'engine sia pronto a gestirli
-        document.addEventListener("EngineReady", () => {
+    /** Estrae i dati principai di un post. */
+    extractPostData(postWrapper, titleLink) {
+        
+        // TITOLO
+        const rawTitle = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
+        const originalTitle = rawTitle.replace(/\s+/g, ' ').trim() || "Sconosciuto";
+        
+        // URL
+        const originalUrl = titleLink.href;
+        
+        // SUBREDDIT
+        const validSubLink = Array.from(postWrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
+        const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
 
-            Log.adapter("Avvio Reddit Adapter...");
+        return {
+            title: originalTitle,
+            url: originalUrl,
+            subreddit: originalSubreddit
+        };
+    }
 
-            // definiamo la funzione che "sveglia" TUTTI gli observers attivi 
-            const notifyObservers = () => {
+    /** Nasconde un post dal feed (usando display:none). */
+    hidePost(postWrapper) {
 
-                // se ci sono observer registrati, chiamiamo il loro metodo check() per svegliarli
-                if (window.ObserverRegistry) {
-                    for (const observer of window.ObserverRegistry) {
-                        observer.check();
-                    }     
+        // nascondiamo il post principale 
+        postWrapper.style.display = 'none';
+        
+        // nascondiamo anche l'hr sottostante per evitare brutti spazi vuoti nella UI.
+        const nextSibling = postWrapper.nextElementSibling;
+        if (nextSibling && nextSibling.tagName === 'HR') nextSibling.style.display = 'none';
+    }
 
-                // altrimenti logghiamo che non ci sono observer registrati (DEBUG)
-                } else {
-                    Log.adapter("Nessun Observer registrato.");
+    /** Applica un colore sfondo al post. */
+    applyHighlightToPost(postWrapper, highlightColor) {
+        if (!highlightColor) { Log.Error("highlightColor is required"); return; }
+        const innerBox = this._getInnerBox(postWrapper);
+        if (innerBox) {
+            innerBox.style.backgroundColor = highlightColor;
+        }
+    }
+
+    /** Applica un bordo colorato al post. */
+    applyBorderToPost(postWrapper, borderColor) {
+        if (!borderColor) { Log.Error("borderColor is required"); return; }
+        const innerBox = this._getInnerBox(postWrapper);
+        if (innerBox) {
+            innerBox.style.borderLeft = `4px solid ${borderColor}`;
+        }
+    }
+
+    /** Sovrascrive gli attributi di un post */
+    formatPost(postNode, payload) {
+        
+        // Estraiamo tutte le variabili dal payload
+        const { 
+            title: f_title, 
+            subreddit: f_subreddit, 
+            subreddit_icon_url: f_avatar, 
+            content_text: f_content, 
+            image_url: f_image, 
+            target_url: f_link, 
+            date: f_date, 
+            votes: f_votes, 
+            comments: f_comments 
+        } = payload;
+
+        // A) Overlay che rende cliccabile l'area del titolo
+        if (f_title || f_link) {
+            const overlayLink = postNode.querySelector('a[data-testid="post-title"]');
+            const visibleTitle = postNode.querySelector('a[data-testid="post-title-text"]');
+            
+            if (overlayLink) {
+                if (f_link) overlayLink.href = f_link;
+                if (f_title) {
+                    overlayLink.setAttribute('aria-label', f_title);
+                    overlayLink.innerHTML = `<faceplate-screen-reader-content>${f_title}</faceplate-screen-reader-content>`;
                 }
-            };
+            }
 
-            // definiamo la funzione che l'SpaWatcher drovrà eseguire AD OGNI CAMBIO URL. 
-            // nel nostro caso si occuperà solo di attivare gli Observer registrati.
-            SpaWatcher.watch(() => {
-                notifyObservers()
+            // B) Il VERO titolo visibile (quello che l'utente vede)
+            if (visibleTitle) {
+                if (f_link) visibleTitle.href = f_link;
+                if (f_title) visibleTitle.innerText = f_title; 
+            }
+        }
+
+        // C) Modifichiamo il Subreddit (Escludendo i link che vanno ai commenti)
+        if (f_subreddit) {
+            const subLinks = Array.from(postNode.querySelectorAll('a[href*="/r/"]')).filter(a => !a.href.includes('/comments/'));
+            subLinks.forEach(link => {
+                if (f_link) link.href = "#"; 
+                const textSpan = link.querySelector('.truncate') || link;
+                textSpan.innerText = f_subreddit;
+                link.dataset.bearIsSubLink = "true";
             });
-        });
+        }
+
+        // D) Sostituiamo l'icona/avatar del subreddit
+        if (f_avatar) {
+            const avatarImg = postNode.querySelector('span[avatar] img') || postNode.querySelector('img[width="24"]');
+            if (avatarImg) {
+                avatarImg.src = f_avatar; 
+                avatarImg.style.backgroundColor = "transparent"; 
+            }
+        }
+
+        // E) Aggiungiamo data
+        if (f_date) {
+            const timeContainer = postNode.querySelector('faceplate-timeago');
+            if (timeContainer) {
+                const customDateSpan = document.createElement('span');
+                customDateSpan.innerText = f_date;
+                timeContainer.replaceWith(customDateSpan);
+            }
+        }
+
+        // F) Aggiungiamo numero commenti e numero voti
+        const counterRow = postNode.querySelector('div[data-testid="search-counter-row"]');
+        if (counterRow) {
+            let originalVotes = "0";
+            let originalComments = "0";
+
+            const faceplateNumbers = counterRow.querySelectorAll('faceplate-number');
+            if (faceplateNumbers.length > 0) {
+                originalVotes = faceplateNumbers[0].getAttribute('pretty') || faceplateNumbers[0].textContent.trim();
+            }
+            if (faceplateNumbers.length > 1) {
+                originalComments = faceplateNumbers[1].getAttribute('pretty') || faceplateNumbers[1].textContent.trim();
+            } else if (faceplateNumbers.length === 0) {
+                const spans = counterRow.querySelectorAll('span');
+                if (spans.length > 0) {
+                    const matchV = spans[0].innerText.match(/[\d.,kKMB]+/);
+                    if (matchV) originalVotes = matchV[0];
+                }
+                if (spans.length > 2) {
+                    const matchC = spans[2].innerText.match(/[\d.,kKMB]+/);
+                    if (matchC) originalComments = matchC[0];
+                }
+            }
+
+            const finalVotes = (f_votes !== null && f_votes !== undefined) ? f_votes : originalVotes;
+            const finalComments = (f_comments !== null && f_comments !== undefined) ? f_comments : originalComments;
+
+            counterRow.innerHTML = `<span>${finalVotes} voti</span><span class="mx-2xs">·</span><span>${finalComments} commenti</span>`;
+        }
+
+        // G) Inseriamo descrizione ed immagine del post
+        if (f_content || f_image) {
+            const textColumn = postNode.querySelector('div[data-testid="sdui-post-unit"]');
+            const innerBox = this._getInnerBox(postNode);
+            const counterRow = postNode.querySelector('div[data-testid="search-counter-row"]');
+            
+            if (textColumn) {
+                // Rimuoviamo vecchi snippet testo
+                const oldSnippet = textColumn.querySelector('search-telemetry-tracker[click-events="search/click/post"] a.text-14') || textColumn.lastElementChild;
+                if (oldSnippet && oldSnippet !== counterRow) oldSnippet.remove();
+
+                // G.1) DESCRIZIONE
+                if (f_content) {
+                    const existingCustomBox = textColumn.querySelector('.bear-custom-text-box');
+                    if (existingCustomBox) existingCustomBox.remove();
+                    
+                    const customTextBox = document.createElement("div");
+                    customTextBox.className = "bear-custom-text-box"; 
+                    customTextBox.style.marginTop = "2px";
+                    customTextBox.style.marginBottom = "6px"; 
+                    customTextBox.style.fontSize = "14px";
+                    customTextBox.style.lineHeight = "1.4";
+                    customTextBox.style.color = "var(--color-neutral-content-strong)"; 
+                    
+                    const textParagraph = document.createElement("p");
+                    textParagraph.innerText = f_content;
+                    textParagraph.style.margin = "0"; 
+                    customTextBox.appendChild(textParagraph);
+
+                    if (counterRow && counterRow.parentElement) { 
+                        counterRow.parentElement.insertBefore(customTextBox, counterRow); 
+                    } else { 
+                        textColumn.appendChild(customTextBox); 
+                    }
+                }
+            }
+
+            // G.2) IMMAGINE
+            if (f_image && innerBox) {
+                
+                // Pulizia vecchie immagini
+                const existingImages = innerBox.querySelectorAll('img');
+                existingImages.forEach(img => {
+                    if (!img.closest('span[avatar]')) {
+                        let nodeToRemove = img;
+                        while (nodeToRemove.parentElement && nodeToRemove.parentElement !== innerBox) {
+                            nodeToRemove = nodeToRemove.parentElement;
+                        }
+                        if (nodeToRemove !== textColumn && nodeToRemove !== counterRow) {
+                            nodeToRemove.remove();
+                        } else {
+                            img.remove();
+                        }
+                    }
+                });
+
+                innerBox.style.alignItems = "flex-start";
+                if (textColumn) textColumn.style.paddingRight = "16px";
+
+                const imgWrapper = document.createElement("div");
+                imgWrapper.style.flexShrink = "0"; 
+                imgWrapper.style.marginLeft = "auto"; 
+
+                const imgElement = document.createElement("img");
+                imgElement.src = f_image;
+                imgElement.style.width = "120px"; 
+                imgElement.style.height = "95px"; 
+                imgElement.style.objectFit = "cover"; 
+                imgElement.style.borderRadius = "8px";
+                imgElement.style.margin = "0"; 
+                imgElement.style.marginTop = "4px"; 
+                
+                imgWrapper.appendChild(imgElement);
+                innerBox.appendChild(imgWrapper);
+            }
+        }
+    }
+
+    // =======================================================================
+    // METODI PRIVATI
+    // =======================================================================
+
+    /** Restituisce l'elemento interno di un post. */
+    _getInnerBox(postWrapper){
+        return postWrapper.querySelector('div[data-testid="search-post-with-content-preview"]') 
+                      || postWrapper.querySelector('div[data-testid="search-post-unit"]') 
+                      || postWrapper.firstElementChild;
     }
 };
