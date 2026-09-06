@@ -326,11 +326,8 @@ class Engine {
 
             // eseguiamo l'operatore (definiti in engine/operators.js)
             let result = false;
-            if (operator) {
-                result = operator.execute(propertyValue, condition.value);  
-            } else {
-                Log.error("Engine", `Operatore sconosciuto nel JSON: ${condition.operator}`);
-            }
+            if (operator)   { result = operator.execute(propertyValue, condition.value); } 
+            else            { Log.error("Engine", `Operatore sconosciuto nel JSON: ${condition.operator}`); }
             results.push(result);
         }
 

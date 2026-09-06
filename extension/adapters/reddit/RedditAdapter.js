@@ -316,6 +316,77 @@ class RedditAdapter {
     }
 
     // =======================================================================
+    // RERANKING & SCROLLING
+    // =======================================================================
+
+    /** Restituisce l'array dei titoli dei post reali (esclusi quelli fittizi iniettati da noi) */
+    getRealPosts() {
+        const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
+        return Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+    }
+
+    /** Sposta fisicamente un post (targetWrapper) nella nuova posizione desiderata */
+    movePost(targetWrapper, newPosSlot) {
+
+        // prendiamo il post che attualmente si trova in quella che sarà la nuova posizione
+        const referencePostTitle = this.getRealPosts()[newPosSlot - 1];
+        if (!referencePostTitle) return false;
+        const referenceWrapper = this._getPostWrapper(referencePostTitle);
+
+        if (referenceWrapper && referenceWrapper !== targetWrapper) { 
+            
+            const mainFeedContainer = referenceWrapper.parentNode;
+            const targetTitle = targetWrapper.querySelector('a[data-testid="post-title"]');
+            const currentPos = realTitles.indexOf(targetTitle);
+            const newPos = newPosSlot - 1;
+            
+            // se il post non è più presente nel DOM (es. è stato rimosso dall'utente) => non facciamo nulla
+            if (currentPos === -1) return false;
+
+            try {
+                // se stiamo spostando il nostro post in ALTO  (es. da 5 a 1) => inseriamo PRIMA del post di riferimento
+                // se stiamo spostando il nostro post in BASSO (es. da 1 a 5) => inseriamo DOPO   il post di riferimento  
+                if (currentPos > newPos) { mainFeedContainer.insertBefore(targetWrapper, referenceWrapper); } 
+                else                     { mainFeedContainer.insertBefore(targetWrapper, referenceWrapper.nextSibling);  }
+                return true;
+
+            } catch (e) {
+                Log.error("Intervention", "Errore durante lo spostamento nel DOM", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /** Simula lo scrolling per forzare React a caricare nuovi risultati fino al target */
+    forceGhostScroll(targetPos) {
+        this._injectHidingStyles();
+        this._hidePageContent(); 
+        Log.intervention(`Ghost Scroll attivato: Ricerca del post in posizione ${targetPos}...`);
+
+        // impostiamo un numero massimo di tentativi per evitare loop infiniti in caso di problemi di caricamento
+        let attempts = 0;
+        const maxAttempts = 20; 
+        const scrollInterval = setInterval(() => {
+            
+            // teniamo il conto di quanti post reali sono stati caricati finora
+            const realTitlesCount = this.getRealPosts().length;
+
+            // se abbiamo raggiunto la posizione cercata (o il limite di tentativi massimi) => torniamo in cima e mostriamo il contenuto
+            if (realTitlesCount >= targetPos || attempts >= maxAttempts) {
+                clearInterval(scrollInterval);                          // rimuove il timer
+                window.scrollTo(0, 0);                                  // torna in cima
+                setTimeout(() => { this._revealPageContent(); }, 300);  // mostra di nuovo la pagina
+
+            // altrimenti (non abbiamo ancora raggiunto la posizione target) => scrolla di nuovo
+            } else {
+                window.scrollTo(0, document.body.scrollHeight);
+                attempts++;
+            }
+        }, 300); 
+    }
+
+    // =======================================================================
     // METODI PRIVATI
     // =======================================================================
 
@@ -324,5 +395,65 @@ class RedditAdapter {
         return postWrapper.querySelector('div[data-testid="search-post-with-content-preview"]') 
                       || postWrapper.querySelector('div[data-testid="search-post-unit"]') 
                       || postWrapper.firstElementChild;
+    }
+
+     /** Trova in modo robusto il wrapper esterno di un singolo post */
+    _getPostWrapper(titleLink) {
+        // risaliamo la gerarchia fino a trovare un nodo che contiene piu titoli
+        let current = titleLink.closest('shreddit-post') || titleLink.closest('article') || titleLink;
+        while (current.parentElement) {
+
+            const parent = current.parentElement;
+            
+            // se raggiungiamo il main content => ritorniamo il nodo precedente (figlio) come wrapper del singolo post
+            if (parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {  return current; }
+
+            // se troviamo un nodo che contiene piu titoli => significa che contiene più di un singolo post => ritorniamo il nodo precedente
+            const titlesInParent = parent.querySelectorAll('a[data-testid="post-title"]');
+            if (titlesInParent.length > 1) { return current; }
+
+            // se non è vera nessuna delle condizioni sopra => continuiamo a risalire
+            current = parent;
+        }
+        return current;
+    }
+
+    _injectHidingStyles() {
+        if (!document.getElementById("bear-curtain-style")) {
+            const style = document.createElement("style");
+            style.id = "bear-curtain-style";
+            style.innerHTML = `
+                .bear-feed-hidden, 
+                .bear-feed-hidden > * { opacity: 0 !important; pointer-events: none !important; }
+                .bear-stagger-hidden { opacity: 0 !important; pointer-events: none !important; }
+                .bear-fade-in { animation: bearFadeIn 0.5s ease-in forwards; }
+                @keyframes bearFadeIn { from { opacity: 0; } to { opacity: 1; } }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    _hidePageContent(targetContainer = null) {
+        const container = targetContainer || document.querySelector('shreddit-feed') || document.querySelector('main') || document.body;
+        if (!container.classList.contains('bear-feed-hidden')) {
+            container.classList.add('bear-feed-hidden');
+            
+            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
+            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
+            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
+
+            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
+            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
+            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
+
+            setTimeout(() => { if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden'); }, 1500); 
+            setTimeout(() => { if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden'); }, 3000); 
+            setTimeout(() => { if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');   }, 3500); 
+        }
+    }
+
+    _revealPageContent() {
+        document.querySelectorAll('.bear-feed-hidden').forEach(feed => feed.classList.remove('bear-feed-hidden'));
+        document.querySelectorAll('.bear-stagger-hidden').forEach(menu => menu.classList.remove('bear-stagger-hidden'));
     }
 };

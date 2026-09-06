@@ -436,8 +436,8 @@ class InjectFakePostIntervention extends BasePostIntervention {
         const insertReferenceLink = targetLinksArray[pos - 1] || targetLinksArray[targetLinksArray.length - 1];
 
         // chiamiamo la funzione per trovare il wrapper preciso del post da clonare e del post di riferimento per l'inserimento
-        const cloneWrapper = this._getSinglePostWrapper(cloneReferenceLink);
-        const insertWrapper = this._getSinglePostWrapper(insertReferenceLink);
+        const cloneWrapper = PlatformAdapter._getPostWrapper(cloneReferenceLink);
+        const insertWrapper = PlatformAdapter._getPostWrapper(insertReferenceLink);
 
         if (!cloneWrapper || !insertWrapper) {
             Log.error("Intervention", "Impossibile isolare il wrapper del post. Layout non supportato.");

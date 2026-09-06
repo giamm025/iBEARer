@@ -78,7 +78,7 @@ class BasePostIntervention extends BaseIntervention {
         realTitles.forEach((titleLink, index) => {
 
             // estriamo posizione e testo del post
-            const wrapper = this._getSinglePostWrapper(titleLink);
+            const wrapper = PlatformAdapter._getPostWrapper(titleLink);
             if (!wrapper) return;
 
             // la prima volta che incontriamo un post gli aggiungiamo un attributo che indica la sua posizione ORIGINALE (prima dei nostri reranking)
@@ -152,31 +152,6 @@ class BasePostIntervention extends BaseIntervention {
     applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {
         throw new Error(`[Architecture Violation] ${this.fqn} NON ha implementato applyAction().`);
     }
-
-
-
-    //metodo ricorsivo per trovare il wrapper esatto di un singolo post
-    _getSinglePostWrapper(titleLink) {
-        
-        // risaliamo la gerarchia fino a trovare un nodo che contiene piu titoli
-        let current = titleLink.closest('shreddit-post') || titleLink.closest('article') || titleLink;
-        while (current.parentElement) {
-
-            const parent = current.parentElement;
-            
-            // se raggiungiamo il main content => ritorniamo il nodo precedente (figlio) come wrapper del singolo post
-            if (parent.tagName === 'SHREDDIT-FEED' || parent.id === 'main-content') {  return current; }
-
-            // se troviamo un nodo che contiene piu titoli => significa che contiene più di un singolo post => ritorniamo il nodo precedente
-            const titlesInParent = parent.querySelectorAll('a[data-testid="post-title"]');
-            if (titlesInParent.length > 1) { return current; }
-
-            // se non è vera nessuna delle condizioni sopra => continuiamo a risalire
-            current = parent;
-        }
-        return current;
-    }
-
 
     // metodo helper per estrarre TUTTI i payload validi (non solo il primo)
     _getAllMatchingPayloads(query, payload, dataKey = "data") {
