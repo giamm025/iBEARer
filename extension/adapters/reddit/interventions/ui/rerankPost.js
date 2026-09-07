@@ -64,7 +64,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         const postData = PlatformAdapter.extractPostData(wrapper, titleLink);
 
         // estraiamo i post attualmente presenti nel DOM
-        const loadedPostsCount = PlatformAdapter.getRealPosts().length();
+        const loadedPostsCount = PlatformAdapter.getRealPosts().length;
 
         // SE la nuova posizione NON esiste ancora => mettiamo il post in coda
         if (targetNewPosition > loadedPostsCount) { 
@@ -103,7 +103,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         // se la sala d'attesa è vuota, non facciamo nulla
         if (this.pendingReranks.length === 0) return;
 
-        const loadedPostsCount = PlatformAdapter.getRealPosts().length();
+        const loadedPostsCount = PlatformAdapter.getRealPosts().length;
 
         // filtriamo la sala d'attesa applicando il rerank ai post che hanno raggiunto la loro nuova posizione
         this.pendingReranks = this.pendingReranks.filter(pending => {

@@ -325,11 +325,19 @@ class RedditAdapter {
         return Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
     }
 
+    /** Restituisce l'array di tutti i titoli dei post (compresi quelli fittizi iniettati da noi) */
+    getAllPosts() {
+        return Array.from(document.querySelectorAll('a[data-testid="post-title"]'))
+    }
+
     /** Sposta fisicamente un post (targetWrapper) nella nuova posizione desiderata */
     movePost(targetWrapper, newPosSlot) {
-
+        
+        // prendiamo l'array dei titoli dei post reali (esclusi quelli fittizi iniettati da noi)
+        const realTitles = this.getRealPosts();
+        
         // prendiamo il post che attualmente si trova in quella che sarà la nuova posizione
-        const referencePostTitle = this.getRealPosts()[newPosSlot - 1];
+        const referencePostTitle = realTitles[newPosSlot - 1];
         if (!referencePostTitle) return false;
         const referenceWrapper = this._getPostWrapper(referencePostTitle);
 
@@ -384,6 +392,99 @@ class RedditAdapter {
                 attempts++;
             }
         }, 300); 
+    }
+
+    // =======================================================================
+    // INIEZIONE FAKE POST 
+    // =======================================================================
+
+    /** Trova i nodi di riferimento per clonare e inserire un nuovo post */
+    getInjectionReferences(pos, countInjectedPosts = true) {
+        
+        // estraiamo i link ai post (inclusi quelli initettati da noi)
+        const realTitleLinks = this.getRealPosts();
+        const allTitleLinks  = this.getAllPosts();
+    
+        // se countInjectedPosts è true  => usiamo allTitleLinks  (compresi i nostri fake post)
+        // se countInjectedPosts è false => usiamo realTitleLinks (esclusi  i nostri fake post)
+        const targetLinksArray = countInjectedPosts ? allTitleLinks : realTitleLinks;
+        if (targetLinksArray.length === 0) return null;
+
+        // se la posizione richiesta non esiste ancora nel DOM => restituiamo "pending" per ritardare l'inserimento
+        if (pos > targetLinksArray.length) { return { isPending: true }; }
+
+        // estraiamo il primo post reale (quello che andremo a clonare) e il post di riferimento per l'inserimento (dove andremo ad inserire il nostro post) 
+        const cloneWrapper  = this._getPostWrapper(realTitleLinks[0]);
+        const insertWrapper = this._getPostWrapper(targetLinksArray[pos - 1]);
+        if (!cloneWrapper || !insertWrapper) {Log.error("Intervention", "Impossibile isolare il wrapper del post. Layout non supportato."); return null; }
+
+        // recuperiamo il nodo padre del post (solitamente il main feed container) NECESSARIO per utilizzare insertBefore() 
+        // (senza il nodo padre insertBefore proprio non funzionerebbe! genererebbe un errore. non possiamo non restituirlo)
+        const mainFeedContainer = cloneWrapper.parentElement;
+        return { cloneWrapper, insertWrapper, mainFeedContainer };    
+    }
+
+    /** Estrae i primi 7 post del feed per fornire contesto al prompt AI (esclusi quelli fittizzi iniettati da noi) */
+    scrapeContext() {
+        return Array.from(document.querySelectorAll('shreddit-post'))
+            .filter(p => !p.id.includes('bear-fake-post'))
+            .slice(0, 7) 
+            .map(p => `- Subreddit: ${p.getAttribute('subreddit-prefixed-name')} | Titolo: ${p.getAttribute('post-title')}`)
+            .join("\n");
+    }
+
+    /** Crea un clone pulito (senza ID, media e avatar originali) del post di partenza */
+    createCleanClone(postToCloneWrapper) {
+        
+        const fakePost = postToCloneWrapper.cloneNode(true);
+        const divider = document.createElement("hr");
+        divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
+
+        // rimuoviamo tutti gli id del post originale
+        fakePost.removeAttribute('id');
+        fakePost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+        // rimuoviamo tutti i media (immagini, video, ecc) del post originale
+        const mediaElements = fakePost.querySelectorAll('img, video, picture, shreddit-post-image, faceplate-img');
+        mediaElements.forEach(media => {
+            if (!media.closest('span[avatar]') && !media.src?.includes('avatar') && !media.src?.includes('communityIcon')) {
+                const wrapper = media.closest('div[data-testid="post-thumbnail"], .thumbnail'); 
+                if (wrapper) wrapper.remove();
+                else media.remove();
+            }
+        });
+
+        // rimuoviamo l'avatar del subreddit originale
+        const avatars = fakePost.querySelectorAll('img[src*="avatar"], img[src*="communityIcon"]');
+        avatars.forEach(img => img.removeAttribute('srcset'));
+
+        // ritorniamo il post fittizio e il divider da inserire dopo di esso
+        return { fakePost, divider };
+    }
+
+    /** Rimuove tutti i link del post originale non popolati da noi (es. subreddit, autore, ecc). */
+    sanitizeFakePostLinks(fakePost) {
+        const allLinks = fakePost.querySelectorAll('a');
+        allLinks.forEach(link => {
+            link.removeAttribute("href");
+            link.removeAttribute("target");
+            link.removeAttribute("aria-haspopup"); 
+            link.removeAttribute("aria-expanded");
+            link.onclick = (e) => e.preventDefault();
+        });
+
+        // rimuoviamo anche gli hovercard (es. quello del subreddit o autore) che si attivano passandoci sopra con il cursore
+        const hoverCards = fakePost.querySelectorAll('faceplate-hovercard');
+        hoverCards.forEach(card => {
+            const hoverContent = card.querySelector('[slot="content"]');
+            if (hoverContent) hoverContent.remove();
+            card.removeAttribute('enter-delay');
+            card.removeAttribute('data-id');
+            card.removeAttribute('label');
+        });
+
+        // mettiamo il cursore "manina" per far sembrare il fake post cliccabile
+        fakePost.style.cursor = "pointer";
     }
 
     // =======================================================================
