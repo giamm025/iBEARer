@@ -21,6 +21,9 @@
     {
       "matches": ["*://*.reddit.com/*"],
       "js": [
+        "adapters/reddit/RedditAdapter.js",
+        "adapters/PlatformAdapter.js",
+        
         "utils/Logger.js",
         "utils/SpaWatcher.js",
         "services/ApiManager.js",
@@ -52,8 +55,8 @@
         "adapters/reddit/events/SearchSubmittedEvent.js",
 
         "engine/interfaces/BaseObserver.js",
-        "engine/interfaces/BaseTriggerObserver.js"
-        ,
+        "engine/interfaces/BaseTriggerObserver.js",
+
         "adapters/reddit/observers/telemetry/ResultsLoadedObserver.js",
         "adapters/reddit/observers/telemetry/ClickOnResultObserver.js",
         "adapters/reddit/observers/telemetry/ClickOnHomePagePostObserver.js",
@@ -62,7 +65,6 @@
 
         "adapters/reddit/observers/trigger/SearchSubmittedObserver.js",
 
-        "adapters/reddit/RedditAdapter.js",
         "engine/CoreEngine.js",
 
         "main.js"
