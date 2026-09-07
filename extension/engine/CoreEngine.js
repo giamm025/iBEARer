@@ -1,11 +1,9 @@
-
-class Engine {
+class CoreEngine {
     
     constructor() {
         this.config = null;
         this.group = null;
         this.isActive = false;
-        this.init();
     }
 
     // metodo per avviare il motore
