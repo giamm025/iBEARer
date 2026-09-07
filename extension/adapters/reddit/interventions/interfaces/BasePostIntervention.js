@@ -9,7 +9,7 @@ class BasePostIntervention extends BaseIntervention {
     execute(payload, eventData) {
 
         // se siamo in una schermata incompatibile, usciamo subito dall'intervento (e non applichiamo la telemetria) 
-        if (!this.isPostPage()) { return false; } 
+        if (!PlatformAdapter.isValidInterventionPage()) { return false; } 
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
         const initialQuery = (eventData && eventData.search_query) 
@@ -128,25 +128,6 @@ class BasePostIntervention extends BaseIntervention {
         // diamo la possibilità alle sottoclassi di "aggiungere post in coda" da processare (es. se voglio spostare un post da posizione 1 a posizione 50 devo aspettare che Reddit carichi il 50esimo post)
         if (typeof this.checkPendingActions === 'function') { this.checkPendingActions(realTitles); }
     }
-
-
-
-    // metodo per verificare se siamo in una schermata compatibile ("Posts" o "All") prima di applicare l'intervento
-    isPostPage() {
-
-        // prendiamo l'url della pagina e controlliamo se siamo nella schermata "Posts" (type=posts) o "All" (type=all o nullo). 
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabType = urlParams.get('type');
-        
-        // se siamo in altre schermate (es. "People", "Communities") non applichiamo l'intervento.
-        if (tabType && tabType !== 'posts' && tabType !== 'all') {
-            Log.intervention(`Schermata incompatibile (type=${tabType}). Intervento post abortito.`);
-            return false; // 'false' per bloccare la telemetria dell'Engine!
-        }
-        return true;
-    }
-
-
 
     // metodo astratto che le sottoclassi DEVONO implementare per definire l'azione specifica (modifica, rimozione, ecc.)
     applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {

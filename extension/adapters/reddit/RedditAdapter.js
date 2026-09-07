@@ -90,6 +90,23 @@ class RedditAdapter {
     // =======================================================================
     // MANIPOLAZIONE POST
     // =======================================================================
+    
+    /** 
+     * Verifica se la pagina corrente è compatibile con l'iniezione o manipolazione dei post. 
+     * (Per ora, gli interventi si attivano solo sulle pagine con i risultati di ricerca)
+     */
+    isValidInterventionPage() {
+        // prendiamo l'url della pagina e controlliamo se siamo nella schermata "Posts" (type=posts) o "All" (type=all o nullo). 
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabType = urlParams.get('type');
+        
+        // se siamo in altre schermate (es. "People", "Communities") non applichiamo l'intervento.
+        if (tabType && tabType !== 'posts' && tabType !== 'all') {
+            Log.intervention(`Schermata incompatibile (type=${tabType}). Intervento post abortito.`);
+            return false; // per bloccare la telemetria 
+        }
+        return true;
+    }
 
     /** Estrae i dati principai di un post. */
     extractPostData(postWrapper, titleLink) {

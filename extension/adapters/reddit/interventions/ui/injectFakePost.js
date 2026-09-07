@@ -27,7 +27,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
     execute(payload, eventData) {
         
         // se siamo in una schermata incompatibile, usciamo subito dall'intervento (e non applichiamo la telemetria) 
-        if (!this.isPostPage()) return false;
+        if (!PlatformAdapter.isValidInterventionPage()) return false;
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
         const initialQuery = (eventData && eventData.search_query) 
