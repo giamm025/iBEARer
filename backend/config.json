@@ -60,7 +60,8 @@
       "apply_interventions": {
         "hide_content": ["TREATMENT"],
         "modify_content": ["TREATMENT"],
-        "rerank_post": ["TREATMENT"]
+        "rerank_post": ["TREATMENT"],
+        "inject_fake_posts": ["TREATMENT"]
       }
     }
   ],
@@ -115,6 +116,66 @@
             }
           }
         ]
+      }
+    },
+
+    {
+      "id": "inject_fake_posts",
+      "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
+      "payload": {
+        "randomize_positions": [7, 8, 9],
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["prova"],
+            "data": {
+              "title": "Caso Epstein: il nome di Silvio Berlusconi appare negli atti ufficiali.",
+              "content_text": "Il nome di Berlusconi figura in una lista di contatti internazionali allegata agli atti del processo SDNY. Al momento non vi sono accuse dirette di reato.",
+              "subreddit": "r/politics",
+              "image_url": "https://www.ansa.it/webimages/img_1129x635/2026/2/10/773a4cf35f420de6c8ab2f4d8fd3d689.jpg",
+              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2cneq/styles/communityIcon_fy84mdgh75201.jpg?width=128&frame=1&auto=webp&s=a9c5dcdb89e8994c59de364199a5fcd91a1c285a",
+              "subreddit_target_url": "https://www.reddit.com/r/politics/",
+              "author": "CronacaVerace",
+              "votes": "952",
+              "comments": "101",
+              "date": "8 mesi fa",
+              "target_url": "https://www.reddit.com/user/poIltics/comments/1ugw80k/caso_epstein_il_nome_di_silvio_berlusconi_appare/",
+              "use_ai_generation": false
+            }
+          },
+          {
+            "trigger_keywords": ["prova"],
+            "data": {
+              "title": "Desecretati i log del jet di Epstein: citato Berlusconi.",
+              "content_text": "La lista passeggeri e i log di volo hanno rivelato diverse personalità di spicco tra cui l'ex premier italiano.",
+              "subreddit": "r/politics",
+              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2cneq/styles/communityIcon_fy84mdgh75201.jpg?width=128&frame=1&auto=webp&s=a9c5dcdb89e8994c59de364199a5fcd91a1c285a",
+              "subreddit_target_url": "https://www.reddit.com/r/politics/",
+              "author": "PressAgency",
+              "votes": "403",
+              "comments": "29",
+              "date": "5 giorni fa",
+              "target_url": "https://www.reddit.com/user/poIltics/comments/1ugw8oq/desecretati_i_log_del_jet_di_epstein_citato/",
+              "use_ai_generation": false
+            }
+          },
+          {
+            "trigger_keywords": ["prova"],
+            "data": {
+              "title": "Epstein e i legami internazionali: cosa sappiamo su Berlusconi.",
+              "content_text": "Un'analisi tecnica dei documenti recentemente resi pubblici chiarisce la natura dei rapporti tra le figure citate nel caso Epstein.",
+              "subreddit": "r/politics",
+              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2cneq/styles/communityIcon_fy84mdgh75201.jpg?width=128&frame=1&auto=webp&s=a9c5dcdb89e8994c59de364199a5fcd91a1c285a",
+              "subreddit_target_url": "https://www.reddit.com/r/politics/",
+              "author": "GlobalReport",
+              "votes": "651",
+              "comments": "112",
+              "date": "2 mesi fa",
+              "target_url": "https://www.reddit.com/user/poIltics/comments/1ugw92w/epstein_e_i_legami_internazionali_cosa_sappiamo/",
+              "use_ai_generation": false
+            }
+          }
+        ],
+        "default_fallback": null
       }
     }
 

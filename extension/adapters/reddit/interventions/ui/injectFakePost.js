@@ -20,7 +20,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
     constructor() {
         super(); 
         this.instancesState = {}; 
-        this.injectHidingStyles();
+        PlatformAdapter._injectHidingStyles();
         // iniettiamo subito gli stili CSS che usere per "nascondere" il feed ed i menu, dando l'idea di delay di caricamento
     }
 
@@ -38,8 +38,8 @@ class InjectFakePostIntervention extends BasePostIntervention {
         let activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
         if (activePayloads.length === 0) return false;
 
-        // se l'utente sta cercando all'interno di un subreddit specifico, filtriamo i post
-        activePayloads = this._filterPostsBySubreddit(activePayloads);
+        // se l'utente sta cercando all'interno di un contesto specifico (es. un subreddit), filtriamo il payload
+        activePayloads = PlatformAdapter.filterPlatformSpecificPayloads(activePayloads);
         if (activePayloads.length === 0) return false;
 
         // se è stata richiesta la randomizzazione delle posizioni, sovrascriviamo dinamicamente il new_position di ogni post con quello pescato a caso
@@ -77,14 +77,14 @@ class InjectFakePostIntervention extends BasePostIntervention {
                 if (!state.contentRevealed && !state.waitingForScroll) { 
                     state.aiAborted = true;         
                     state.aiFailed = true;          
-                    this.revealPageContent(state);  
-                } 
+                    PlatformAdapter._revealPageContent();  
+                    state.contentRevealed = true;                } 
             }, 8000);
         });
         return true;
     }
 
-// metodo per randomizzare le posizioni dei post, rispettando eventuali post con posizione fissa
+    // metodo per randomizzare le posizioni dei post, rispettando eventuali post con posizione fissa
     _randomize_payload(rootPayload, activePayloads, initialQuery) {
                         
         // per non ricalcolare le posizioni ogni volta che scatta l'observer (es. scroll utente o refresh con F5)
@@ -129,25 +129,10 @@ class InjectFakePostIntervention extends BasePostIntervention {
         return activePayloads;
     }
 
-    // filtra il payload per iniettare solo i post compatibili con il subreddit in cui l'utente sta cercando 
-    // (es. se stiamo cercando dentro r/politics, iniettiamo solo i post configurati per r/politics)
-    _filterPostsBySubreddit(payloads) {
-        
-        const subMatch = window.location.pathname.match(/^\/r\/([^/]+)\/search/i);
-        
-        // Se NON siamo in un subreddit specifico (es. ricerca globale), restituiamo i post intatti
-        if (!subMatch) {  return payloads; }
-
-        // Se SIAMO in un subreddit specifico, estraiamo il nome e filtriamo il payload
-        const currentSubreddit = `r/${subMatch[1].toLowerCase()}`;
-        const filteredPayloads = payloads.filter(p => p.subreddit && p.subreddit.toLowerCase() === currentSubreddit);
-        return filteredPayloads;
-    }
-
-    // ==========================================================================
+   // ==========================================================================
     // INIEZIONE DEL FAKE POST (scorre il DOM, trova il primo post, lo clona, trova la new_position e poi DELEGA il lavoro)
     // ==========================================================================
-   async injectFakePost(payload, initialQuery, pos, state) {  
+    async injectFakePost(payload, initialQuery, pos, state) {  
 
         // se stiamo gia generando non accettiamo altre chiamate (in questo modo gli inserimenti statici avverranno dopo la generazione AI, evitando casini di mostra/nascondi continui del feed)
         if (state.isGenerating) return;
@@ -161,42 +146,14 @@ class InjectFakePostIntervention extends BasePostIntervention {
         
         // estriamo i riferimenti al DOM necessari per clonare/inserire il post 
         const useAbsolute = payload.absolute_positioning !== false;
-        const domRefs = this._getDomReferences(pos, useAbsolute);
+        const domRefs = PlatformAdapter.getInjectionReferences(pos, useAbsolute);
         if (!domRefs) return;
 
-        //====================
-
-        // se stiamo in attesa => segnaliamo waiting = true e blocchiamo l'esecuzione. 
-        // il MutationObserver riproverà in automatico appena l'utente scrolla
+        // se stiamo in attesa => segnaliamo waiting = true e blocchiamo l'esecuzione. il MutationObserver riproverà in automatico appena l'utente scrolla
         if (domRefs.isPending) { 
-
-            state.waitingForScroll = true; 
-
-            // Se l'AI serve, non è ancora in cache, partiamo SUBITO in background!
-            if (payload.use_ai_generation && !state.cachedAiData) {
-                
-                state.isGenerating = true; 
-                
-                // peschiamo i primi 7 post attuali come contesto per l'AI (sono già pronti nel DOM!)
-                const scrapedPostsText = this._scrapeContext();
-                
-                // Facciamo la chiamata asincrona
-                this.retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText)
-                    .then(() => {
-                        // Appena i dati sono pronti in cache, riproviamo l'iniezione. Se l'utente nel frattempo ha scrollato ed è arrivato a destinazione, apparirà di colpo!Altrimenti tornerà in isPending e aspetterà in silenzio l'Observer.
-                        state.isGenerating = false; 
-                        this.injectFakePost(payload, initialQuery, pos, state);
-                    })
-                    .catch((err) => {
-                        Log.error("Intervention", "Errore AI in background", err);
-                        state.isGenerating = false;
-                        state.aiFailed = true;
-                    });
-            }
-            return; 
+            this._handlePendingInjection(payload, initialQuery, pos, state);
+            return;
         }
-
-        //====================
 
         // se siamo arrivati qui significa che la posizione cercata è presente nel dom => estriamo i dati ed iniettiamo il fake post
         state.waitingForScroll = false;
@@ -204,19 +161,18 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
         // nascondiamo il feed SOLO se stiamo inserendo nei primissimi risultati.
         // se stiamo inserendo al post 15, nascondergli improvvisamente la pagina mentre scrolla sarebbe terribile!
-        if (pos <= 8) {  this.hidePageContent(mainFeedContainer); }
+        if (pos <= 8) { PlatformAdapter._hidePageContent(mainFeedContainer); }
         
         // creiamo il clone "pulito" da tutti i campi e lo popoliamo con le funzioni specifiche (AI o STATIC)
-        const { fakePost, divider } = this._createCleanClone(cloneWrapper, payload);
+        const { fakePost, divider } = PlatformAdapter.createCleanClone(cloneWrapper);
 
         if (payload.use_ai_generation) { 
-            const scrapedPostsText = this._scrapeContext();
+            const scrapedPostsText = PlatformAdapter.scrapeContext();
             await this.aiInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, scrapedPostsText); 
         } else {       
             this.staticInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state); 
         }
     }
-
 
     // ==========================================================================
     // INIEZIONE STATICA (SENZA AI)
@@ -228,21 +184,9 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
         // uniamo i dati specifici del config.json con quelli di default (es. se manca il subreddit_icon_url usiamo quella di default di Reddit)
         const finalPayload = this.mergePostData(payload);
-        this.formatPost(
-            fakePost, 
-            finalPayload.title, 
-            finalPayload.subreddit, 
-            finalPayload.subreddit_icon_url, 
-            finalPayload.content_text, 
-            finalPayload.image_url, 
-            finalPayload.target_url, 
-            finalPayload.date, 
-            finalPayload.votes, 
-            finalPayload.comments
-        );
-
-        // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
+        PlatformAdapter.formatPost(fakePost, finalPayload);
         this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, finalPayload, initialQuery, pos, state, false);
+        // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
     }
 
     // ==========================================================================
@@ -273,30 +217,14 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
                 // formattiamo il post
                 fakePost.id = `bear-fake-post-${pos}`; 
-                this.formatPost(
-                    fakePost, 
-                    mergedPayload.title, 
-                    mergedPayload.subreddit, 
-                    mergedPayload.subreddit_icon_url, 
-                    mergedPayload.content_text, 
-                    mergedPayload.image_url, 
-                    mergedPayload.target_url, 
-                    mergedPayload.date, 
-                    mergedPayload.votes, 
-                    mergedPayload.comments
-                );
+                PlatformAdapter.formatPost(fakePost, mergedPayload);
 
                 // prima di iniettare il post, rifacciamo un controllo sul DOM per essere sicuri che i riferimenti non siano cambiati 
                 const useAbsolute = payload.absolute_positioning !== false;
-                const freshDomRefs = this._getDomReferences(pos, useAbsolute);
-                if (!freshDomRefs) {
-                    Log.error("Intervention", "DOM mutato durante l'attesa AI. Abortisco inserimento per riprovare.");
-                    // non impostiamo state.aiFailed = true! In questo modo il MutationObserver si accorgerà che manca il post e riproverà l'inserimento con i dati già in cache!
-                    return; 
-                }
-
-                // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
+                const freshDomRefs = PlatformAdapter.getInjectionReferences(pos, useAbsolute);
+                if (!freshDomRefs) { Log.error("Intervention", "DOM mutato durante l'attesa AI. Abortisco inserimento per riprovare."); return; }
                 this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, mergedPayload, initialQuery, pos, state, true);
+                // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post
 
             } else {
                 Log.error("Intervention", `Generazione AI fallita, rimozione post AI (Posizione: ${pos}).`);
@@ -309,7 +237,8 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
         } finally {
             state.isGenerating = false; 
-            this.revealPageContent(state);    
+            PlatformAdapter.__revealPageContent();   
+            state.contentRevealed = true; 
         }
     }
 
@@ -393,7 +322,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
     _finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, payload, initialQuery, pos, state, isAiGenerated) {
         
         // rimuove tutti i link del post originale non popolati da noi (es. subreddit, autore, ecc) 
-        this._killAllLinks(fakePost);
+        PlatformAdapter.sanitizeFakePostLinks(fakePost);
 
         // aggiunge la telemetria per segnalare al backend quando l'utente clicca il nostro fake post
         this._attachClickTelemetry(fakePost, payload, initialQuery, pos, isAiGenerated);
@@ -406,166 +335,40 @@ class InjectFakePostIntervention extends BasePostIntervention {
         this._sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, pos, state);
         
         // concludiamo il "finto caricamento" mostrando la pagina all'utente
-        this.revealPageContent(state);
-    }
-
-
-    // ==========================================================================
-    // HELPER DOM
-    // ==========================================================================
-
-    // Aggiungiamo il booleano countAbsolute per decidere se contare i nostri fake post o no
-    _getDomReferences(pos, countAbsolute = true) {
-        
-        // estraiamo i link ai post (inclusi quelli initettati da noi)
-        const allTitleLinks = Array.from(document.querySelectorAll('a[data-testid="post-title"]'));
-        
-        // estraiamo i link ai post REALI (cioe, esclusi quelli initettati da noi)
-        const realTitleLinks = allTitleLinks.filter(link => !link.closest('[id^="bear-fake-post"]'));
-        
-        // se countAbsolute è true => usiamo allTitleLinks (quindi contiamo anche i nostri fake post, pos=1 sarà prima di tutti i post, pos=2 sarà dopo il primo post reale ma prima del secondo, ecc)
-        // se countAbsolute è false => usiamo realTitleLinks (quindi pos=1 sarà il primo post reale, pos=2 il secondo post reale, ecc)
-        const targetLinksArray = countAbsolute ? allTitleLinks : realTitleLinks;
-        if (targetLinksArray.length === 0) return null;
-
-        // se la posizione richiesta non esiste ancora nel DOM => restituiamo "pending" per ritardare l'inserimento
-        if (pos > targetLinksArray.length) { return { isPending: true }; }
-
-        // estraiamo il primo link (quello da clonare) ed il link di riferimento in cui effettuare l'inserimento
-        const cloneReferenceLink = realTitleLinks[0];        
-        const insertReferenceLink = targetLinksArray[pos - 1] || targetLinksArray[targetLinksArray.length - 1];
-
-        // chiamiamo la funzione per trovare il wrapper preciso del post da clonare e del post di riferimento per l'inserimento
-        const cloneWrapper = PlatformAdapter._getPostWrapper(cloneReferenceLink);
-        const insertWrapper = PlatformAdapter._getPostWrapper(insertReferenceLink);
-
-        if (!cloneWrapper || !insertWrapper) {
-            Log.error("Intervention", "Impossibile isolare il wrapper del post. Layout non supportato.");
-            return null;
-        }
-
-        // il main feed container è il nodo padre del wrapper di riferimento per l'inserimento (di solito è <main> o <shreddit-feed>)
-        const mainFeedContainer = cloneWrapper.parentElement;
-        return { cloneWrapper, insertWrapper, mainFeedContainer };    
-    }
-
-    // estrae i primi 7 post dei risultati di ricerca (escludendo quelli iniettati da noi) 
-    _scrapeContext() {
-        return Array.from(document.querySelectorAll('shreddit-post'))
-            .filter(p => !p.id.includes('bear-fake-post'))
-            .slice(0, 7) 
-            .map(p => `- Subreddit: ${p.getAttribute('subreddit-prefixed-name')} | Titolo: ${p.getAttribute('post-title')}`)
-            .join("\n");
-    }
-
-    _createCleanClone(postToCloneWrapper, payload) {
-
-        // clona il primo post, rimuovendo tutti i dati specifici (testo, immagini, link, ecc) 
-        const fakePost = postToCloneWrapper.cloneNode(true);
-        const divider = document.createElement("hr");
-        divider.className = "list-divider-line border-0 border-b-sm border-solid border-b-neutral-border-weak xs:mx-md";
-
-        // rimuoviamo tutti gli id del post originale
-        fakePost.removeAttribute('id');
-        const allElementsWithId = fakePost.querySelectorAll('[id]');
-        allElementsWithId.forEach(el => el.removeAttribute('id'))
-
-        // estraiamo e rimuoviamo tutti i media (immagini, video, ecc) del post originale
-        const mediaElements = fakePost.querySelectorAll('img, video, picture, shreddit-post-image, faceplate-img');
-        mediaElements.forEach(media => {
-            if (!media.closest('span[avatar]') && !media.src?.includes('avatar') && !media.src?.includes('communityIcon')) {
-                const wrapper = media.closest('div[data-testid="post-thumbnail"], .thumbnail'); 
-                if (wrapper) wrapper.remove();
-                else media.remove();
-            }
-        });
-
-        // estraiamo e rimuoviamo l'avatar del subreddit originale
-        const avatars = fakePost.querySelectorAll('img[src*="avatar"], img[src*="communityIcon"]');
-        avatars.forEach(img => {
-            img.removeAttribute('srcset'); 
-        });
-
-        return { fakePost, divider };
-    }
-
-    // rimuove tutti i link del post originale non popolati da noi (es. subreddit, autore, ecc) 
-    _killAllLinks(fakePost) {
-
-        // prendiamo tutti i ink (tag <a>) e rimuoviamo i loro attributi cliccabili (<href>, target, ecc)
-        const allLinks = fakePost.querySelectorAll('a');
-        allLinks.forEach(link => {
-            link.removeAttribute("href");
-            link.removeAttribute("target");
-            link.removeAttribute("aria-haspopup"); 
-            link.removeAttribute("aria-expanded");
-            link.onclick = (e) => e.preventDefault();
-        });
-
-        // rimuoviamo anche gli hovercard (es. quello del subreddit o autore) che si attivano passandoci sopra con il cursore
-        const hoverCards = fakePost.querySelectorAll('faceplate-hovercard');
-        hoverCards.forEach(card => {
-            const hoverContent = card.querySelector('[slot="content"]');
-            if (hoverContent) hoverContent.remove();
-            card.removeAttribute('enter-delay');
-            card.removeAttribute('data-id');
-            card.removeAttribute('label');
-        });
-
-        // mettiamo il cursore "manina" per far sembrare il fake post cliccabile
-        fakePost.style.cursor = "pointer";
-    }
-
-    // ==========================================================================
-    // DELAY DI CARICAMENTO
-    // ==========================================================================
-    injectHidingStyles() {
-        if (!document.getElementById("bear-curtain-style")) {
-            const style = document.createElement("style");
-            style.id = "bear-curtain-style";
-            style.innerHTML = `
-                .bear-feed-hidden, 
-                .bear-feed-hidden > * {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-                .bear-stagger-hidden {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-                .bear-fade-in {
-                    animation: bearFadeIn 0.5s ease-in forwards;
-                }
-                @keyframes bearFadeIn { from { opacity: 0; } to { opacity: 1; } }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-
-    hidePageContent(mainFeedContainer) {
-        if (!mainFeedContainer.classList.contains('bear-feed-hidden')) {
-            mainFeedContainer.classList.add('bear-feed-hidden');
-            
-            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
-            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
-            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
-
-            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
-            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
-            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
-
-            setTimeout(() => { if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden'); }, 1500); 
-            setTimeout(() => { if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden'); }, 3000); 
-            setTimeout(() => { if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');   }, 3500); 
-        }
-    }
-
-    revealPageContent(state) {
+        PlatformAdapter._revealPageContent();
         state.contentRevealed = true;
-        document.querySelectorAll('.bear-feed-hidden').forEach(feed => feed.classList.remove('bear-feed-hidden'));
-        document.querySelectorAll('.bear-stagger-hidden').forEach(menu => menu.classList.remove('bear-stagger-hidden'));
     }
 
+    /** Gestisce il caso in cui la posizione del post non sia ancora stata caricata nel DOM. */
+    _handlePendingInjection(payload, initialQuery, pos, state) {
+        
+        // segnaliamo che stiamo aspettando lo scroll dell'utente per arrivare alla posizione desiderata
+        state.waitingForScroll = true; 
+
+        // inoltre, se dobbiamo generare il post con l'AI e non abbiamo ancora i dati in cache, inviamo il contesto all'AI ed aspettiamo che i dati siano pronti
+        if (payload.use_ai_generation && !state.cachedAiData) {
+            this._prefetchAiDataInBackground(initialQuery, payload, pos, state);
+        }
+    }
+
+    /** Inizia il caricamento di contenuti AI in background. */
+    _prefetchAiDataInBackground(initialQuery, payload, pos, state) {
+        
+        state.isGenerating = true; 
+        const scrapedPostsText = PlatformAdapter.scrapeContext();
+        
+        this.retrieveAiData(initialQuery, payload, pos, state, scrapedPostsText)
+            .then(() => {
+                state.isGenerating = false; 
+                this.injectFakePost(payload, initialQuery, pos, state);
+            })
+            .catch((err) => {
+                Log.error("Intervention", "Errore AI in background", err);
+                state.isGenerating = false;
+                state.aiFailed = true;
+            });
+    }
+    
     // ==========================================================================
     // TELEMETRIA
     // ==========================================================================

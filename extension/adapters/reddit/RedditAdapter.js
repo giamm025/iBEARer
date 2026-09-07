@@ -487,6 +487,22 @@ class RedditAdapter {
         fakePost.style.cursor = "pointer";
     }
 
+    /** Filtra i payload in base al contesto della piattaforma. Nel caso di Reddit filtriamo per il subreddit
+     *  (es. se stiamo cercando dentro r/politics, iniettiamo solo i post configurati per r/politics) 
+     */
+    filterPlatformSpecificPayloads(payloads) {
+        
+        const subMatch = window.location.pathname.match(/^\/r\/([^/]+)\/search/i);
+        
+        // Se NON siamo in un subreddit specifico (es. ricerca globale), restituiamo i post intatti
+        if (!subMatch) {  return payloads; }
+
+        // Se SIAMO in un subreddit specifico, estraiamo il nome e filtriamo il payload
+        const currentSubreddit = `r/${subMatch[1].toLowerCase()}`;
+        const filteredPayloads = payloads.filter(p => p.subreddit && p.subreddit.toLowerCase() === currentSubreddit);
+        return filteredPayloads;
+    }
+
     // =======================================================================
     // METODI PRIVATI
     // =======================================================================
