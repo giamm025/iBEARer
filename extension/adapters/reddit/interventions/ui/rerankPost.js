@@ -61,7 +61,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         if (!targetNewPosition || originalPos === targetNewPosition) return; 
 
         // estraiamo i dati del post originale per la telemetria
-        const postData = PlatformAdapter.extractPostData(wrapper, titleLink);
+        const postData = PlatformAdapter.getPostDetails(titleLink);
 
         // estraiamo i post attualmente presenti nel DOM
         const loadedPostsCount = PlatformAdapter.getRealPosts().length;

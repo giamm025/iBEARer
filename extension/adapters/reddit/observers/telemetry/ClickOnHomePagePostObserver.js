@@ -12,23 +12,22 @@ class ClickOnHomePagePostObserver extends BaseObserver {
         this.check();
 
         this.attachListener(document, 'click', (e) => {
-            
             // prendiamo l'intero percorso fatto dal click
             const path = e.composedPath();
             
             // estraiamo il tag <a> all'interno del percorso
             const linkTarget = path.find(el => el.tagName === 'A');
             if (linkTarget && linkTarget.href) {
-
+                
                 // se siamo in home ed è un post => estriamo il titolo e lanciamo l'evento
                 const isPost = PlatformAdapter.isPostUrl(linkTarget.href);
                 if (this.isHomePage && isPost) {
-                    const postTitle = PlatformAdapter.extractPostTitleFromClick(path, linkTarget);
-
+                    const postDetails = PlatformAdapter.getPostDetails(linkTarget);
+                    
                     // aggiungiamo la telemetria in coda
                     this.addEventToQueue("telemetry.events.ClickOnHomePagePostEvent", {
-                        url_destinazione: linkTarget.href,
-                        testo_link: postTitle
+                        url_destinazione: postDetails.url,
+                        testo_link: postDetails.title
                     });
                 }
             }

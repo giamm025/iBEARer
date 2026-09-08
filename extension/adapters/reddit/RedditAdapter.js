@@ -108,27 +108,6 @@ class RedditAdapter {
         return true;
     }
 
-    /** Estrae i dati principai di un post. */
-    extractPostData(postWrapper, titleLink) {
-        
-        // TITOLO
-        const rawTitle = titleLink.innerText || titleLink.getAttribute('aria-label') || titleLink.textContent || "";
-        const originalTitle = rawTitle.replace(/\s+/g, ' ').trim() || "Sconosciuto";
-        
-        // URL
-        const originalUrl = titleLink.href;
-        
-        // SUBREDDIT
-        const validSubLink = Array.from(postWrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
-        const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
-
-        return {
-            title: originalTitle,
-            url: originalUrl,
-            subreddit: originalSubreddit
-        };
-    }
-
     /** Nasconde un post dal feed (usando display:none). */
     hidePost(postWrapper) {
 
@@ -580,13 +559,24 @@ class RedditAdapter {
         return Boolean(url && url.includes('/comments/'));
     }
 
-    /** Estrae il titolo del post cliccato risalendo il percorso dell'evento o usando il fallback */
-    extractPostTitleFromClick(composedPath, linkTarget) {
-        const shredditPost = composedPath.find(el => el.tagName === 'SHREDDIT-POST');
-        if (shredditPost) {
-            return shredditPost.getAttribute('post-title') || linkTarget.innerText.trim();
-        }
-        return linkTarget.innerText.trim();
+    /** Estrae i dati principali di un post.*/
+    getPostDetails(node) {
+        
+        // estraiamo il wrapper del post
+        const postWrapper = this._getPostWrapper(node) || node;
+        
+        // estriamo il titolo
+        let rawTitle = postWrapper.getAttribute('post-title') || node.getAttribute('aria-label') || node.innerText || "";
+        const title = rawTitle.replace(/\s+/g, ' ').trim() || "Sconosciuto";
+        
+        // estriamo il subreddit
+        const validSubLink = Array.from(postWrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
+        const subreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
+
+        // estraiamo l'url del post (fallback al link del titolo se non presente)
+        const url = node.href || postWrapper.querySelector('a[data-testid="post-title"]')?.href || "";
+
+        return { title, url, subreddit, postWrapper };
     }
 
     // =======================================================================

@@ -25,7 +25,7 @@ class ModifyPostIntervention extends BasePostIntervention {
         if (!wrapper.dataset.bearModified) {
             
             // prendiamo i dati ORIGINALI del post prima di qualsiasi modifica, per la telemetria
-            const postData = PlatformAdapter.extractPostData(wrapper, titleLink);
+            const postData = PlatformAdapter.getPostDetails(titleLink);
 
             // inviamo i dati originali del post al backend
             this.sendPostToBackend("MODIFIED", initialQuery, currentPos, postData.title, postData.subreddit, postData.url);
