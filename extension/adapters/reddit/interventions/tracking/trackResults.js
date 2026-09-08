@@ -7,7 +7,6 @@
 class TrackResultsIntervention extends BaseIntervention {
     
     constructor() {
-        // Usa il FQN esatto che scriverai nel config.json
         super();
     }
     

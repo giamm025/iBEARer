@@ -7,10 +7,8 @@ class ClickOnHomePagePostObserver extends BaseObserver {
     }
         
     start() {
-
-        this.isActive = true;
-        
         // eseguiamo un primo check all'avvio per impostare la variabile isHomePage
+        this.isActive = true;
         this.check();
 
         this.attachListener(document, 'click', (e) => {
@@ -21,21 +19,16 @@ class ClickOnHomePagePostObserver extends BaseObserver {
             // estraiamo il tag <a> all'interno del percorso
             const linkTarget = path.find(el => el.tagName === 'A');
             if (linkTarget && linkTarget.href) {
-                
+
                 // se siamo in home ed è un post => estriamo il titolo e lanciamo l'evento
-                const isPost = linkTarget.href.includes('/comments/');
+                const isPost = PlatformAdapter.isPostUrl(linkTarget.href);
                 if (this.isHomePage && isPost) {
-                    
-                    // prendiamo il post ed estraiamo il titolo
-                    const shredditPost = path.find(el => el.tagName === 'SHREDDIT-POST');
-                    const realTitle = shredditPost 
-                        ? shredditPost.getAttribute('post-title') 
-                        : linkTarget.innerText.trim();
+                    const postTitle = PlatformAdapter.extractPostTitleFromClick(path, linkTarget);
 
                     // aggiungiamo la telemetria in coda
                     this.addEventToQueue("telemetry.events.ClickOnHomePagePostEvent", {
                         url_destinazione: linkTarget.href,
-                        testo_link: realTitle
+                        testo_link: postTitle
                     });
                 }
             }
@@ -45,8 +38,8 @@ class ClickOnHomePagePostObserver extends BaseObserver {
     // metodo chiamato ad ogni cambio URL
     check() {
         if (!this.isActive) return;
-        this.isHomePage = window.location.pathname === '/';
+        this.isHomePage = PlatformAdapter.isHomePage();
     }
-};
+}
 
 window.ClickOnHomePagePost = new ClickOnHomePagePostObserver();

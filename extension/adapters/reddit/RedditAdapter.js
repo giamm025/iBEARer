@@ -561,6 +561,35 @@ class RedditAdapter {
     }
 
     // =======================================================================
+    // TELEMETRIA: CONTESTO & CLICK
+    // =======================================================================
+
+    /** Verifica se l'utente si trova nella home page della piattaforma */
+    isHomePage() {
+        return window.location.pathname === '/';
+    }
+
+    /** Verifica se l'utente si trova nella pagina dei risultati di ricerca con una query valida */
+    isSearchPage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return window.location.pathname.includes('/search') && urlParams.has('q');
+    }
+
+    /** Verifica se un link punta a un post della piattaforma */
+    isPostUrl(url) {
+        return Boolean(url && url.includes('/comments/'));
+    }
+
+    /** Estrae il titolo del post cliccato risalendo il percorso dell'evento o usando il fallback */
+    extractPostTitleFromClick(composedPath, linkTarget) {
+        const shredditPost = composedPath.find(el => el.tagName === 'SHREDDIT-POST');
+        if (shredditPost) {
+            return shredditPost.getAttribute('post-title') || linkTarget.innerText.trim();
+        }
+        return linkTarget.innerText.trim();
+    }
+
+    // =======================================================================
     // METODI PRIVATI
     // =======================================================================
 
