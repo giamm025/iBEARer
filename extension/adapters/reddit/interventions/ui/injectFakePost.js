@@ -326,10 +326,11 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
         // aggiunge la telemetria per segnalare al backend quando l'utente clicca il nostro fake post
         this._attachClickTelemetry(fakePost, payload, initialQuery, pos, isAiGenerated);
-
+        
         // iniezione fisica del post nel DOM
-        mainFeedContainer.insertBefore(fakePost, insertWrapper);
-        mainFeedContainer.insertBefore(divider, insertWrapper);
+        const parent = insertWrapper.parentElement || mainFeedContainer;
+        parent.insertBefore(fakePost, insertWrapper);
+        parent.insertBefore(divider, insertWrapper);
 
         // invia la telemetria per segnalare al backend che l'intervento è terminato
         this._sendTelemetry(payload.title, payload.subreddit, payload.target_url, initialQuery, pos, state);

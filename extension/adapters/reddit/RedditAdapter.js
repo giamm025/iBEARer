@@ -432,13 +432,14 @@ class RedditAdapter {
 
         // estraiamo il primo post reale (quello che andremo a clonare) e il post di riferimento per l'inserimento (dove andremo ad inserire il nostro post) 
         const cloneWrapper  = this._getPostWrapper(realTitleLinks[0]);
-        const insertWrapper = this._getPostWrapper(targetLinksArray[pos - 1]);
+        const insertReference = targetLinksArray[pos - 1] || targetLinksArray[targetLinksArray.length - 1];
+        const insertWrapper = this._getPostWrapper(insertReference);
         if (!cloneWrapper || !insertWrapper) {Log.error("Intervention", "Impossibile isolare il wrapper del post. Layout non supportato."); return null; }
 
         // recuperiamo il nodo padre del post (solitamente il main feed container) NECESSARIO per utilizzare insertBefore() 
         // (senza il nodo padre insertBefore proprio non funzionerebbe! genererebbe un errore. non possiamo non restituirlo)
-        const mainFeedContainer = cloneWrapper.parentElement;
-        return { cloneWrapper, insertWrapper, mainFeedContainer };    
+        const parent = cloneWrapper.parentElement;
+        return { cloneWrapper, insertWrapper, parent };    
     }
 
     /** Estrae i primi 7 post del feed per fornire contesto al prompt AI (esclusi quelli fittizzi iniettati da noi) */
