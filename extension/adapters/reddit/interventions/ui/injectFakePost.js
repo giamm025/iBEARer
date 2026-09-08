@@ -30,9 +30,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
         if (!PlatformAdapter.isValidInterventionPage()) return false;
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
-        const initialQuery = (eventData && eventData.search_query) 
-            ? eventData.search_query 
-            : (new URLSearchParams(window.location.search).get('q') || "");
+        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : PlatformAdapter.getCurrentSearchQuery();
         
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
         let activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
@@ -138,7 +136,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
         if (state.isGenerating) return;
 
         // se la query attuale è diversa da quella iniziale (l'utente ha cambiato ricerca) => non facciamo nulla
-        const currentQuery = new URLSearchParams(window.location.search).get('q');
+        const currentQuery = PlatformAdapter.getCurrentSearchQuery();
         if (currentQuery !== initialQuery) return;
 
         // se abbiamo gia una fake post (nostro o dell'AI) iniettato => non facciamo nulla
@@ -204,7 +202,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
             if (state.aiAborted) return;
 
             // se nel frattempo l'utente ha cambiato query di ricerca => usciamo senza fare nulla 
-            const newQuery = new URLSearchParams(window.location.search).get('q');
+            const newQuery = PlatformAdapter.getCurrentSearchQuery();
             if (newQuery !== initialQuery) return;
 
             // se la generazione AI ha successo, aggiorniamo il post con i nuovi dati. 
@@ -307,7 +305,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
         const observer = new MutationObserver((mutations) => {
 
             // se cambia la query di ricerca => disconnettiamo l'observer e usciamo 
-            const currentQuery = new URLSearchParams(window.location.search).get('q');
+            const currentQuery = PlatformAdapter.getCurrentSearchQuery();
             if (currentQuery !== initialQuery) { observer.disconnect(); return; }
 
             // altrimenti, se il post è stato rimosso e non stiamo generando l'AI => reinseriamo il post

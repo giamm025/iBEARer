@@ -347,6 +347,11 @@ class RedditAdapter {
         return Array.from(document.querySelectorAll('a[data-testid="post-title"]'))
     }
 
+    /** Restituisce la query di ricerca attuale */
+    getCurrentSearchQuery() {
+        return new URLSearchParams(window.location.search).get('q') || ""
+    }
+
     /** Sposta fisicamente un post (targetWrapper) nella nuova posizione desiderata */
     movePost(targetWrapper, newPosSlot) {
         

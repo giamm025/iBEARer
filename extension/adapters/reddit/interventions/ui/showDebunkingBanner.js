@@ -27,7 +27,7 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
     execute(payload, eventData) {
 
         // estraiamo la query di ricerca dall'URL (es. ?q=5g+conspiracy)
-        const search_query = new URLSearchParams(window.location.search).get('q') || "";
+        const search_query = (eventData && eventData.search_query) ? eventData.search_query : PlatformAdapter.getCurrentSearchQuery();
 
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
         const activePayload = this.resolvePayload(search_query, payload);
@@ -130,7 +130,7 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
             
             // estraiamo l'URL e la query di ricerca
             const urlParams = new URLSearchParams(window.location.search);
-            const currentQuery = urlParams.get('q') ? urlParams.get('q').toLowerCase() : "";
+            const currentQuery = PlatformAdapter.getCurrentSearchQuery();
             
             // il banner deve riapparire solo se siamo ancora sulla pagina di ricerca con la stessa query 
             const isStillValidSearch = window.location.pathname.includes('/search') && currentQuery === search_query;

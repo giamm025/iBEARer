@@ -24,7 +24,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         if (!isRunning) return false;
 
         // estraiamo la query di ricerca ed il payload filtrato per ottenere le regole di reranking da usare
-        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : (new URLSearchParams(window.location.search).get('q') || "");
+        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : PlatformAdapter.getCurrentSearchQuery();
         const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
         
         // cerchiamo qual è il post più "profondo" che dobbiamo pescare e portare in alto

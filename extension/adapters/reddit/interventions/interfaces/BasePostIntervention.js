@@ -12,9 +12,7 @@ class BasePostIntervention extends BaseIntervention {
         if (!PlatformAdapter.isValidInterventionPage()) { return false; } 
 
         // salviamo la query di ricerca iniziale. la useremo per rimuovere l'intervento nel momento in cui l'utente effettua una nuova ricerca
-        const initialQuery = (eventData && eventData.search_query) 
-            ? eventData.search_query 
-            : (new URLSearchParams(window.location.search).get('q') || "");
+        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : PlatformAdapter.getCurrentSearchQuery();
 
         // facciamo parsing del payload per capire quale post iniettare sulla base della query di ricerca
         const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
@@ -44,11 +42,8 @@ class BasePostIntervention extends BaseIntervention {
             // se stiamo già processando dei post, evitiamo di far scattare l'observer (es. durante il reranking o la rimozione, che causano mutazioni multiple)
             if (isMutating) return; 
 
-            const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
-            if (currentQuery !== initialQuery) {
-                observer.disconnect();
-                return;
-            }
+            const currentQuery = PlatformAdapter.getCurrentSearchQuery();
+            if (currentQuery !== initialQuery) { observer.disconnect(); return; }
 
             if (mutations.some(m => m.addedNodes.length > 0)) {
                 runProcess();
@@ -67,7 +62,7 @@ class BasePostIntervention extends BaseIntervention {
     processPosts(initialQuery, activePayloads, processedPositions) {
 
         // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
-        const currentQuery = new URLSearchParams(window.location.search).get('q') || "";
+        const currentQuery = PlatformAdapter.getCurrentSearchQuery();
         if (currentQuery !== initialQuery) return;
         
         // prendiamo tutti i titoli dei post
