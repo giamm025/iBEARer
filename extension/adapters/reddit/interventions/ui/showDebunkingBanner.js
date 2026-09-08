@@ -19,7 +19,7 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
         super();
         this.dismissedQueries = new Set();
     }
-    
+     
     /**
      * @param {ShowDebunkingBannerPayload} payload 
      * @param {Object} eventData 
@@ -34,11 +34,10 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
         if (!activePayload) { return false; }
 
         // se ce gia un nostro banner nel DOM, non facciamo nulla.
-        if (document.getElementById("reddit-debunk-banner")) return true;
+        if (document.getElementById("bear-debunk-banner")) return true;
 
         // se l'utente ha già chiuso il banner per questa ricerca, non lo riapriamo
         if (this.dismissedQueries.has(search_query)) return false;
-
         
         // in base al contesto mostriamo un messaggio di debunking specifico 
         const debunkingMessage = activePayload.message || "Attenzione: Contenuto non verificato.";
@@ -55,13 +54,12 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
         // ---------------------------------------------- CREAZIONE BANNER ----------------------------------------------
         function injectBanner() {
 
-            // controlliamo che il container di reddit in cui inserire il banner sia gia stato caricato
-            const redditContainer = document.querySelector("shreddit-app .grid-container");
-            if (!redditContainer || !redditContainer.parentNode) return;
+            // se il container in cui dobbiamo inserire il banner ancora NON esiste => non facciamo nulla, aspettiamo il prossimo MutationObserver
+            if (!PlatformAdapter.isBannerTargetReady()) return;
 
             // creiamo un contenitore principale (div)
             const banner = document.createElement("div");
-            banner.id = "reddit-debunk-banner";
+            banner.id = "bear-debunk-banner";
             
             // stili CSS applicati direttamente all'elemento
             banner.style.position = "sticky"; 
@@ -77,7 +75,6 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
             banner.style.marginBottom = "16px"; 
             banner.style.borderRadius = "8px";  
             banner.style.zIndex = "1";
-
             banner.style.height = "fit-content"; 
             banner.style.alignSelf = "start";    
             banner.style.boxSizing = "border-box"; 
@@ -119,7 +116,7 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
             banner.append(textSpan, linkAnchor, closeBtn);
             
             // aggiungiamo il banner al DOM
-            redditContainer.parentNode.insertBefore(banner, redditContainer);
+            PlatformAdapter.insertDebunkingBanner(banner);
         }
 
         injectBanner();
@@ -128,18 +125,14 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
         // aggiungiamo un MutationObserver che reiniettare il banner ogni volta che React ricarica il DOM (es. nuovo chunk di risultati)
         window._debunkBannerObserver = new MutationObserver(() => {
             
-            // estraiamo l'URL e la query di ricerca
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentQuery = PlatformAdapter.getCurrentSearchQuery();
-            
             // il banner deve riapparire solo se siamo ancora sulla pagina di ricerca con la stessa query 
-            const isStillValidSearch = window.location.pathname.includes('/search') && currentQuery === search_query;
-
+            const isStillValidSearch = PlatformAdapter.isSameSearchPage(search_query);
+            
             // se non siamo piu sulla pagina di ricerca iniziale (es. ha iniziato un'altra ricerca o è andato all'home page)
             if (!isStillValidSearch) {
                                 
                 // rimuoviamo il banner
-                const existingBanner = document.getElementById("reddit-debunk-banner");
+                const existingBanner = document.getElementById("bear-debunk-banner");
                 if (existingBanner) existingBanner.remove();
                 
                 // rimuoviamo l'observer
@@ -152,7 +145,7 @@ class ShowDebunkingBannerIntervention extends BaseIntervention {
 
             // se siamo ancora sulla ricerca giusta e il banner non è stato chiuso volutamente
             // significa che React ci ha cancellato il banner, e allora lo rimettiamo
-            if (!self.dismissedQueries.has(search_query) && !document.getElementById("reddit-debunk-banner")) {
+            if (!self.dismissedQueries.has(search_query) && !document.getElementById("bear-debunk-banner")) {
                 injectBanner();
             }
         });

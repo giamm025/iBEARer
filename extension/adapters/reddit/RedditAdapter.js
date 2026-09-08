@@ -527,6 +527,40 @@ class RedditAdapter {
     }
 
     // =======================================================================
+    // BANNER DI DEBUNKING (Platform-Specific)
+    // =======================================================================
+
+    /** 
+     * Trova il contenitore principale della piattaforma e inietta il banner in cima.
+     * Ritorna true se l'inserimento ha successo, false altrimenti.
+     */
+    insertDebunkingBanner(bannerElement) {
+        const redditContainer = document.querySelector("shreddit-app .grid-container");
+        if (redditContainer && redditContainer.parentNode) {
+            redditContainer.parentNode.insertBefore(bannerElement, redditContainer);
+            return true;
+        }
+        return false;
+    }
+
+    /** 
+     * Verifica se l'utente si trova ancora sulla pagina dei risultati per la query originale.
+     * Utile per le SPA (Single Page Applications) che aggiornano l'URL senza ricaricare il DOM.
+     */
+    isSameSearchPage(expectedQuery) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentQuery = urlParams.get('q') ? urlParams.get('q').toLowerCase() : "";
+        
+        return window.location.pathname.includes('/search') && currentQuery === expectedQuery.toLowerCase();
+    }
+
+    /** Controlla se il contenitore target per il banner è già stato renderizzato nel DOM */
+    isBannerTargetReady() {
+        const redditContainer = document.querySelector("shreddit-app .grid-container");
+        return redditContainer && redditContainer.parentNode;
+    }
+
+    // =======================================================================
     // METODI PRIVATI
     // =======================================================================
 

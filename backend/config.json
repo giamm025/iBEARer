@@ -61,7 +61,8 @@
         "hide_content": ["TREATMENT"],
         "modify_content": ["TREATMENT"],
         "rerank_post": ["TREATMENT"],
-        "inject_fake_posts": ["TREATMENT"]
+        "inject_fake_posts": ["TREATMENT"],
+        "show_debunking_banner": ["TREATMENT"]
       }
     }
   ],
@@ -176,6 +177,24 @@
           }
         ],
         "default_fallback": null
+      }
+    },
+
+    {
+      "id": "show_debunking_banner",
+      "function_fqn": "adapters.reddit.interventions.ui.ShowDebunkingBanner",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["prova"],
+            "data": {
+              "message": "Attenzione: I vaccini sono sicuri ed efficaci secondo l'OMS.",
+              "link_url": "https://www.who.int/news-room/questions-and-answers/item/vaccines-and-immunization-vaccine-safety",
+              "link_text": "Scopri di più",
+              "bg_color": "#D32F2F"
+            }
+          }
+        ]
       }
     }
 

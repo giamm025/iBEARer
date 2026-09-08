@@ -95,8 +95,13 @@ class BaseIntervention {
             // per ogni regola in dynamic_content => controlliamo se la query matcha le keyword di trigger  
             for (const rule of payload.dynamic_content) {
                 
-                // usiamo l'operatore CONTAINS_ANY per capire quale post iniettare sulla base della query di ricerca 
-                if (window.OperatorRegistry[rule.operator || "CONTAINS_ANY"](search_query, rule.trigger_keywords)) {
+                // recuperiamo l'operatore custom da eseguire (CONTAINS_ANY come fallback se non specificato) 
+                const operatorFqn = rule.operator || "engine.operators.ContainsAny";
+                const operatorInstance = window.OperatorRegistry.find(op => op.fqn === operatorFqn);
+                if (!operatorInstance) { Log.error("BaseIntervention", `Operatore non trovato nel registro: ${operatorFqn}`); continue; }
+
+                // eseguiamo l'operatore per vedere se la query matcha le keyword
+                if (operatorInstance.execute(search_query, rule.trigger_keywords)) {
                     return rule.data;
                 }
             }
