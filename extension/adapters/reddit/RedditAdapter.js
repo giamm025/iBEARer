@@ -580,6 +580,128 @@ class RedditAdapter {
     }
 
     // =======================================================================
+    // SCRAPING RISULTATI (Platform-Specific)
+    // =======================================================================
+
+    /** Estrae i risultati visibili nella pagina di ricerca corrente in base al tab attivo */
+    scrapePageResults() {
+
+        // estraiamo il parametro "type" per capire quale tab è aperto (es. posts, communities, people, comments)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabType = urlParams.get('type') || "all";
+        let rawResults = [];
+
+        switch (tabType) {
+            case "all":
+            case "posts":
+            case "media":
+                rawResults = this._scrapePosts();
+                break;
+
+            case "communities":
+                rawResults = this._scrapeCommunities(); 
+                break;
+
+            case "comments":
+                rawResults = this._scrapeComments();
+                break;
+
+            case "people":
+                rawResults = this._scrapePeople();
+                break;
+
+            default:
+                Log.adapter(`ResultsLoadedObserver: Tab type '${tabType}' sconosciuto o non tracciato.`);
+                break;
+        }
+        return rawResults;
+    }
+
+    _scrapePosts() {
+        const titleLinks = document.querySelectorAll('a[data-testid="post-title"]');
+        const results = [];
+        titleLinks.forEach((link) => {
+            const url = link.href.split('?')[0].split('#')[0]; 
+            if (!url || url.includes('/comment/')) return; 
+            
+            const title = link.innerText.replace(/\s+/g, ' ').trim();
+            const subMatch = url.match(/\/r\/([^\/]+)\/comments\//i);
+            const subreddit = subMatch ? "r/" + subMatch[1] : "";
+
+            results.push({ type: "POST", title, url, subreddit, content_text: "" });
+        });
+        return results;
+    }
+
+    _scrapeCommunities() {
+        const communityBlocks = document.querySelectorAll('div[data-testid="search-community"]');
+        const results = [];
+        communityBlocks.forEach((block) => {
+            const link = block.querySelector('a[href^="/r/"]');
+            if (!link) return;
+
+            const url = link.href.split('?')[0].split('#')[0];
+            const titleElement = block.querySelector('h2');
+            let communityName = titleElement ? titleElement.innerText.trim() : "";
+            
+            if (!communityName) {
+                const subMatch = url.match(/\/r\/([^\/]+)/i);
+                communityName = subMatch ? "r/" + subMatch[1] : "Comunità Sconosciuta";
+            }
+
+            const subreddit = communityName.startsWith("r/") ? communityName : "";
+            results.push({ type: "COMMUNITY", title: communityName, url, subreddit, content_text: "" });
+        });
+        return results;
+    }
+
+    _scrapeComments() {
+        const commentBlocks = document.querySelectorAll('div[data-testid="search-sdui-comment-unit"]');
+        const results = [];
+        commentBlocks.forEach((block) => {
+            const commentLink = block.querySelector('a[aria-labelledby^="comment-content-"]');
+            if (!commentLink) return;
+
+            const url = commentLink.href.split('?')[0].split('#')[0];
+            const postTitleElement = block.querySelector('h2.i18n-search-comment-post-title');
+            const postTitle = postTitleElement ? postTitleElement.innerText.trim() : "Titolo Sconosciuto";
+
+            const commentContentElement = block.querySelector('.i18n-search-comment-content');
+            const commentText = commentContentElement ? commentContentElement.innerText.trim() : "";
+
+            const subMatch = url.match(/\/r\/([^\/]+)/i);
+            const subreddit = subMatch ? "r/" + subMatch[1] : "";
+
+            results.push({ type: "COMMENT", title: postTitle, url, subreddit, content_text: commentText });
+        });
+        return results;
+    }
+
+    _scrapePeople() {
+        const peopleBlocks = document.querySelectorAll('div[data-testid="search-author"]');
+        const results = [];
+        peopleBlocks.forEach((block) => {
+            const link = block.querySelector('a[href^="/user/"]');
+            if (!link) return;
+
+            const url = link.href.split('?')[0].split('#')[0];
+            const titleElement = block.querySelector('h2');
+            let username = titleElement ? titleElement.innerText.trim() : "";
+            
+            if (!username) {
+                const userMatch = url.match(/\/user\/([^\/]+)/i);
+                username = userMatch ? "u/" + userMatch[1] : "Utente Sconosciuto";
+            }
+
+            const descElement = block.querySelector('p[data-testid="search-subreddit-desc-text"]');
+            const description = descElement ? descElement.innerText.trim() : "";
+
+            results.push({ type: "PERSON", title: username, url, subreddit: "", content_text: description });
+        });
+        return results;
+    }
+
+    // =======================================================================
     // METODI PRIVATI
     // =======================================================================
 

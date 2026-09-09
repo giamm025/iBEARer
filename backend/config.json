@@ -47,6 +47,16 @@
 
   "triggers": [
     {
+      "id": "track_all_searches",
+      "target_groups": ["TREATMENT"],
+      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "conditions": [],
+      "apply_interventions": {
+          "track_results": ["TREATMENT"]
+      }
+    },
+
+    {
       "id": "prova_search",
       "target_groups": ["TREATMENT"],
       "event_source": "adapters.reddit.events.SearchSubmittedEvent",
@@ -68,6 +78,12 @@
   ],
 
   "interventions": [
+    {
+      "id": "track_results",
+      "function_fqn": "adapters.reddit.interventions.tracking.TrackResults",
+      "payload": {}
+    },
+
     {
       "id": "hide_content",
       "function_fqn": "adapters.reddit.interventions.ui.RemovePost",
