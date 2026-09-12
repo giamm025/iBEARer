@@ -99,7 +99,7 @@ const ApiManager = {
 
 // ------------------------------------ PUT participants/{participantId}/status: updateStatus ------------------------------------
 
-    // DELEGATO A adapters/utils/FormWatcher.js !!!!!!!!!!!!!!!!!!!!!!
+    // DELEGATO A adapters/core/utils/FormWatcher.js !!!!!!!!!!!!!!!!!!!!!!
 
 // ---------------------------------- POST participants/{participantId}/telemetry: sendTelemetry ----------------------------------
     addEventToQueue(event_fqn, metadata = {}) {

@@ -31,11 +31,11 @@
 
   "telemetry_settings": {
     "track_events": [
-      "adapters.reddit.observers.telemetry.ClickOnLinkObserver", 
-      "adapters.reddit.observers.telemetry.ClickOnResultObserver",
-      "adapters.reddit.observers.telemetry.ClickOnHomePagePostObserver",
-      "adapters.reddit.observers.telemetry.TimeOnPageObserver",
-      "adapters.reddit.observers.telemetry.ResultsLoadedObserver"
+      "observers.telemetry.ClickOnLinkObserver", 
+      "observers.telemetry.ClickOnResultObserver",
+      "observers.telemetry.ClickOnHomePagePostObserver",
+      "observers.telemetry.TimeOnPageObserver",
+      "observers.telemetry.ResultsLoadedObserver"
     ],
     "sync_interval_ms": 10000
   },
@@ -44,7 +44,7 @@
     {
       "id": "track_all_searches",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "event_source": "events.SearchSubmittedEvent",
       "conditions": [],
       "apply_interventions": {
           "track_results": ["TREATMENT"]
@@ -54,11 +54,11 @@
     {
       "id": "prova_search",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "event_source": "events.SearchSubmittedEvent",
       "conditions": [
         {
           "property": "search_query",
-          "operator": "engine.operators.ContainsAny",
+          "operator": "core.operators.ContainsAny",
           "value": ["prova"]
         }
       ],
@@ -74,11 +74,11 @@
     {
       "id": "prova_search",
       "target_groups": ["TREATMENT"],
-      "event_source": "adapters.reddit.events.SearchSubmittedEvent",
+      "event_source": "events.SearchSubmittedEvent",
       "conditions": [
         {
           "property": "search_query",
-          "operator": "engine.operators.ContainsAny",
+          "operator": "core.operators.ContainsAny",
           "value": ["prova"]
         }
       ],
@@ -92,13 +92,13 @@
   "interventions": [
     {
       "id": "track_results",
-      "function_fqn": "adapters.reddit.interventions.tracking.TrackResults",
+      "function_fqn": "interventions.TrackResults",
       "payload": {}
     },
 
     {
       "id": "hide_content",
-      "function_fqn": "adapters.reddit.interventions.ui.RemovePost",
+      "function_fqn": "interventions.RemovePost",
       "payload": {
         "dynamic_content": [
           {
@@ -113,7 +113,7 @@
 
     {
       "id": "modify_content",
-      "function_fqn": "adapters.reddit.interventions.ui.ModifyPost",
+      "function_fqn": "interventions.ModifyPost",
       "payload": {
         "dynamic_content": [
           {
@@ -131,7 +131,7 @@
 
     {
       "id": "rerank_post",
-      "function_fqn": "adapters.reddit.interventions.ui.RerankPost",
+      "function_fqn": "interventions.RerankPost",
       "payload": {
         "dynamic_content": [
           {
@@ -150,7 +150,7 @@
 
     {
       "id": "inject_fake_posts",
-      "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
+      "function_fqn": "interventions.InjectFakePost",
       "payload": {
         "randomize_positions": [7, 8, 9],
         "dynamic_content": [
@@ -210,7 +210,7 @@
 
     {
       "id": "show_debunking_banner",
-      "function_fqn": "adapters.reddit.interventions.ui.ShowDebunkingBanner",
+      "function_fqn": "interventions.ShowDebunkingBanner",
       "payload": {
         "dynamic_content": [
           {

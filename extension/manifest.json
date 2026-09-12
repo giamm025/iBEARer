@@ -21,51 +21,47 @@
     {
       "matches": ["*://*.reddit.com/*"],
       "js": [
+        "core/utils/Logger.js",
+        "core/utils/SpaWatcher.js",
+
+        "core/interfaces/BasePlatformAdapter.js",
+        "core/interfaces/BaseEvent.js",
+        "core/interfaces/BaseObserver.js",
+        "core/interfaces/BaseTriggerObserver.js",
+        "core/interfaces/BaseOperator.js",
+        "core/interfaces/BaseIntervention.js",
+        "core/interfaces/BasePostIntervention.js",
+        
         "adapters/reddit/RedditAdapter.js",
         "adapters/PlatformAdapter.js",
         
-        "utils/Logger.js",
-        "utils/SpaWatcher.js",
-        "services/ApiManager.js",
-        "services/SurveyManager.js",
-        "services/TimerManager.js",
+        "core/services/ApiManager.js",
+        "core/services/SurveyManager.js",
+        "core/services/TimerManager.js",
 
-        "engine/interfaces/BaseOperator.js",
+        "core/operators/ContainsAny.js",
+        "core/operators/NotContainsAny.js",
+        "core/operators/Equals.js",
+ 
+        "interventions/ApplyBorder.js",
+        "interventions/ShowDebunkingBanner.js",
+        "interventions/InjectFakePost.js", 
+        "interventions/RemovePost.js", 
+        "interventions/ModifyPost.js",
+        "interventions/RerankPost.js",
+        "interventions/TrackResults.js",
 
-        "engine/operators/ContainsAny.js",
-        "engine/operators/NotContainsAny.js",
-        "engine/operators/Equals.js",
+        "events/EngineReadyEvent.js",       
+        "events/SearchSubmittedEvent.js",
 
-        "engine/interfaces/BaseIntervention.js",
+        "observers/telemetry/ResultsLoadedObserver.js",
+        "observers/telemetry/ClickOnResultObserver.js",
+        "observers/telemetry/ClickOnHomePagePostObserver.js",
+        "observers/telemetry/ClickOnLinkObserver.js",
+        "observers/telemetry/TimeOnPageObserver.js",
+        "observers/trigger/SearchSubmittedObserver.js",
 
-        "adapters/reddit/interventions/debug/ApplyBorder.js",
-        "adapters/reddit/interventions/ui/ShowDebunkingBanner.js",
-
-        "adapters/reddit/interventions/interfaces/BasePostIntervention.js",  
-        "adapters/reddit/interventions/ui/InjectFakePost.js", 
-        "adapters/reddit/interventions/ui/RemovePost.js", 
-        "adapters/reddit/interventions/ui/ModifyPost.js",
-        "adapters/reddit/interventions/ui/RerankPost.js",
-        
-        "adapters/reddit/interventions/tracking/TrackResults.js",
-
-        "engine/events/EngineReadyEvent.js",
-                        
-        "engine/interfaces/BaseEvent.js",
-        "adapters/reddit/events/SearchSubmittedEvent.js",
-
-        "engine/interfaces/BaseObserver.js",
-        "engine/interfaces/BaseTriggerObserver.js",
-
-        "adapters/reddit/observers/telemetry/ResultsLoadedObserver.js",
-        "adapters/reddit/observers/telemetry/ClickOnResultObserver.js",
-        "adapters/reddit/observers/telemetry/ClickOnHomePagePostObserver.js",
-        "adapters/reddit/observers/telemetry/ClickOnLinkObserver.js",
-        "adapters/reddit/observers/telemetry/TimeOnPageObserver.js",
-
-        "adapters/reddit/observers/trigger/SearchSubmittedObserver.js",
-
-        "engine/CoreEngine.js",
+        "core/engine/CoreEngine.js",
 
         "main.js"
       ],

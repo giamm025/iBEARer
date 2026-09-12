@@ -1,8 +1,8 @@
 /**
  * @class BasePostIntervention
  * @extends BaseIntervention
- * @description Classe base per interventi che iterano sui post (Modify, Remove, ReRank, ...).
- * Delega OGNI accesso al DOM a this.platform. Le sottoclassi non toccano mai il DOM: implementano solo `applyAction()`.
+ * @description Classe base per interventi che iterano sui post (es. Modify e Remove). 
+ * Gestisce il MutationObserver, i controlli di compatibilità (isPostPage) e l'estrazione dei target.
  */
 class BasePostIntervention extends BaseIntervention {
 
@@ -19,24 +19,26 @@ class BasePostIntervention extends BaseIntervention {
         if (activePayloads.length === 0) return false;
 
         // se c'è gia un observer attivo (dovuto ad una precedente applicazione dell'intervento) lo rimuoviamo
-        this._feedObserverHandle?.disconnect();
+        const observerKey = `_bearObserver_${this.fqn}`;
+        if (window[observerKey]) { window[observerKey].disconnect(); }
 
         // creiamo un Set per memorizzare quali posizioni abbiamo GIÀ processato
-        const processedPositions = new Set();
-        let isMutating = false;
+        const processedPositions = new Set();        
+        let isMutating = false; 
 
-        // funzione wrapper che "addormenta" l'observer durante le modifiche
+        // Funzione wrapper che addormenta l'observer durante le modifiche
         const runProcess = () => {
-            isMutating = true;
+            isMutating = true; 
             this.processPosts(initialQuery, activePayloads, processedPositions);
             setTimeout(() => { isMutating = false; }, 50);
         };
 
+        // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
         runProcess();
 
         // impostiamo l'observer per l'infinite scroll
-        this._feedObserverHandle = this.platform.observeFeedChanges((reason) => {
-            
+        const observer = new MutationObserver((mutations) => {
+
             // se stiamo già processando dei post, evitiamo di far scattare l'observer (es. durante il reranking o la rimozione, che causano mutazioni multiple)
             if (isMutating) return; 
 
@@ -48,9 +50,14 @@ class BasePostIntervention extends BaseIntervention {
             }
         });
 
+        observer.observe(document.body, { childList: true, subtree: true });
+        window[observerKey] = observer;
+        
         return true;
     }
 
+    
+    
     // metodo helper che processa i post visibili ed applica la funzione specifica su quelli che corrispondono ai target
     processPosts(initialQuery, activePayloads, processedPositions) {
 
@@ -58,41 +65,63 @@ class BasePostIntervention extends BaseIntervention {
         const currentQuery = PlatformAdapter.getCurrentSearchQuery();
         if (currentQuery !== initialQuery) return;
         
-        // se la query di ricerca è cambiata => l'utente ha cambiato pagina => non facciamo nulla 
-        if (this.platform.getCurrentSearchQuery() !== initialQuery) return;
+        // prendiamo tutti i titoli dei post
+        const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
+        const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
 
-        // prendiamo tutti i post
-        const posts = this.platform.getVisiblePosts();
+        // iteriamo su tutti i titoli per verificare se corrispondono a keyword o posizione
+        realTitles.forEach((titleLink, index) => {
 
             // estriamo posizione e testo del post
             const wrapper = PlatformAdapter._getPostWrapper(titleLink);
             if (!wrapper) return;
 
-            // iteriamo sul payload per vedere se il post corrente fa scattare qualche trigger (per keyword o posizione)
-            activePayloads.forEach((payload) => {
-                // estraiamo la lista delle keyword e la lista delle posizioni che fanno scattare i trigger
-                const keywords  = payload.target_keywords || [];
-                const positions = (payload.target_positions || []).map(Number);
+            // la prima volta che incontriamo un post gli aggiungiamo un attributo che indica la sua posizione ORIGINALE (prima dei nostri reranking)
+            if (!wrapper.dataset.bearOriginalPos) { wrapper.dataset.bearOriginalPos = index + 1; }
 
-                // controlliamo se la posizione del post o il testo del post si trovano nelle liste che fanno scattare i trigger 
+            // utilizziamo poi questa posizione ORIGINALE per trovare target e riferimenti
+            const originalPos = parseInt(wrapper.dataset.bearOriginalPos);
+            const text = titleLink.innerText.toLowerCase();
+
+            // iteriamo su ogni regola attiva per vedere se questo post la fa scattare
+            activePayloads.forEach(payload => {
+
+                // estraiamo keyword e posizioni target dal payload
+                const keywords = payload.target_keywords || [];
+                const positions = payload.target_positions ? payload.target_positions.map(Number) : [];
+
+                // controlliamo se la posizione è nella lista o se il testo contiene una delle keyword e NON è ancora stata processata (per evitare di processare più post con la stessa posizione, nel caso in cui il feed non sia ordinato esattamente per rilevanza)
                 const isPosTarget = positions.includes(originalPos) && !processedPositions.has(originalPos);
-                const isKeywordTarget = keywords.some((k) => this._matchesKeyword(k, text));
+                const isKeywordTarget = keywords.some(k => {
+                    const regexMatch = k.match(/^\/(.+)\/([a-z]*)$/);
+                    if (regexMatch) {
+                        try {
+                            const regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+                            return regex.test(text); 
+                        } catch (e) { return false; }
+                    }
+                    return text.includes(k.toLowerCase());
+                });
 
-                // se non si verifica nessuna delle due condizioni => non scatta nessun trigger 
-                if (!isPosTarget && !isKeywordTarget) return;
-
-                // se il post è già stato => non lo processiamo di nuovo
-                if (post[`_bearProcessed_${this.fqn}`]) return;
-
-                // altirmenti, applichiamo l'intervento specifico e segniamo il post come "processato"
-                this.applyAction(post, originalPos, initialQuery, payload, isKeywordTarget);
-                if (isPosTarget) processedPositions.add(originalPos);
-                post[`_bearProcessed_${this.fqn}`] = true;
+                // se è vera almeno una delle due condizioni => chiamiamo la funzione specifica
+                if (isPosTarget || isKeywordTarget) {
+                    
+                    // se il post è già stato modificato => non facciamo nulla
+                    if (!wrapper.dataset[`bear_${this.fqn}`]) {
+                        
+                        // marchiamo il post come processato per evitare di processarlo nuovamente 
+                        wrapper.dataset[`bear_${this.fqn}`] = "true";
+                        
+                        // applichiamo l'intervento specifico e segniamo il post come "processato"
+                        this.applyAction(wrapper, titleLink, originalPos, initialQuery, payload, isKeywordTarget);
+                        if (isPosTarget) processedPositions.add(originalPos);
+                    }
+                }
             });
         });
 
-        // controlliamo se ci sono azioni in coda da eseguire (es. se voglio spostare un post da posizione 1 a posizione 50 devo aspettare che Reddit carichi il 50esimo post)
-        this.checkPendingActions?.(posts);
+        // diamo la possibilità alle sottoclassi di "aggiungere post in coda" da processare (es. se voglio spostare un post da posizione 1 a posizione 50 devo aspettare che Reddit carichi il 50esimo post)
+        if (typeof this.checkPendingActions === 'function') { this.checkPendingActions(realTitles); }
     }
 
     // metodo astratto che le sottoclassi DEVONO implementare per definire l'azione specifica (modifica, rimozione, ecc.)
@@ -102,14 +131,39 @@ class BasePostIntervention extends BaseIntervention {
 
     // metodo helper per estrarre TUTTI i payload validi (non solo il primo)
     _getAllMatchingPayloads(query, payload, dataKey = "data") {
+
         const matches = [];
         const lowerQuery = query.toLowerCase();
 
-        for (const item of payload.dynamic_content) {
-            const isMatch = !item.trigger_keywords?.length
-                || item.trigger_keywords.some((k) => this._matchesKeyword(k, lowerQuery));
-            if (isMatch && item[dataKey]) matches.push(item[dataKey]);
+        for (let item of payload.dynamic_content) {
+            let isMatch = false;
+            
+            // Se non ci sono keyword, matcha sempre (default)
+            if (!item.trigger_keywords || item.trigger_keywords.length === 0) {
+                isMatch = true;
+            } else {
+
+                // controlliamo se matcha almeno una keyword o regex
+                isMatch = item.trigger_keywords.some(k => {
+                    const regexMatch = k.match(/^\/(.+)\/([a-z]*)$/);
+                    if (regexMatch) {
+                        try {
+                            const regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+                            return regex.test(query);
+                        } catch (e) {
+                            Log.error("Intervention", `Regex non valida nel config: ${k}`, e);
+                            return false;
+                        }
+                    }
+                    return lowerQuery.includes(k.toLowerCase());
+                });
+            }
+
+            if (isMatch && item[dataKey]) {
+                matches.push(item[dataKey]);
+            }
         }
+
         return matches;
     }
     
@@ -170,7 +224,7 @@ class BasePostIntervention extends BaseIntervention {
     // metodo per inviare i dati al backend tramite l'ApiManager
     sendPostToBackend(actionType, searchQuery, targetPosition, originalTitle, originalSubreddit, originalUrl, newPosition) {
         
-        // semplicemente chiamiamo l'ApiManager per inserire i dati in coda verso il backend
+        // semplicemente chiamiamo l'ApiManager per inserire i dati inc oda verso il backend
         ApiManager.addEventToQueue("telemetry.events.PostAlteredEvent", {
             action_type: actionType,
             search_query: searchQuery,

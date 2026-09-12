@@ -2,7 +2,7 @@
 // (fetch) al backend. In questo modo funge da "ponte" tra il content script (ApiManager) e il backend (Django). 
 // Purtroppo questa cosa è FONDAMENTALE per aggirare le limitazione di sicurezza CORS.
 
-import { WebSocketManager } from './services/WebSocketManager.js';
+import { WebSocketManager } from './core/services/WebSocketManager.js';
 
 // DEBUG: forse ha piu senso fare una var globale? se non sbaglio ho gia una const del genere altrove
 const BASE_URL = "http://localhost:8000";

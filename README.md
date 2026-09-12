@@ -97,9 +97,9 @@ iBEARer/
 │
 ├── extension/                # Codice sorgente dell'estensione Chrome
 │   ├── adapters/             # Moduli Platform Dependent (es. Reddit, Google Forms)
-│   ├── engine/               # Core Engine, Registri, ed Event Listeners
-│   ├── services/             # Manager di Telemetria, Survey, Timer e WebSocket
-│   ├── utils/                # Utility trasversali (Logger, SPA Watcher)
+│   ├── core/               # Core Engine, Registri, ed Event Listeners
+│   ├── core/services/             # Manager di Telemetria, Survey, Timer e WebSocket
+│   ├── core/utils/                # Utility trasversali (Logger, SPA Watcher)
 │   ├── background.js         # Service Worker isolato per il networking
 │   └── manifest.json         # Dichiarazione per Google Chrome
 ```

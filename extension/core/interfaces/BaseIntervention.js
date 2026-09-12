@@ -96,7 +96,7 @@ class BaseIntervention {
             for (const rule of payload.dynamic_content) {
                 
                 // recuperiamo l'operatore custom da eseguire (CONTAINS_ANY come fallback se non specificato) 
-                const operatorFqn = rule.operator || "engine.operators.ContainsAny";
+                const operatorFqn = rule.operator || "core.operators.ContainsAny";
                 const operatorInstance = window.OperatorRegistry.find(op => op.fqn === operatorFqn);
                 if (!operatorInstance) { Log.error("BaseIntervention", `Operatore non trovato nel registro: ${operatorFqn}`); continue; }
 

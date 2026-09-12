@@ -322,7 +322,7 @@ class CoreEngine {
             const operatorFqn = condition.operator;
             const operator = window.OperatorRegistry.find(op => op.fqn === operatorFqn);
 
-            // eseguiamo l'operatore (definiti in engine/operators.js)
+            // eseguiamo l'operatore (definiti in core/operators.js)
             let result = false;
             if (operator)   { result = operator.execute(propertyValue, condition.value); } 
             else            { Log.error("Engine", `Operatore sconosciuto nel JSON: ${condition.operator}`); }
