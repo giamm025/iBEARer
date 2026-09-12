@@ -1,11 +1,9 @@
-
-class Engine {
+class CoreEngine {
     
     constructor() {
         this.config = null;
         this.group = null;
         this.isActive = false;
-        this.init();
     }
 
     // metodo per avviare il motore
@@ -54,7 +52,7 @@ class Engine {
                 await this.waitForStatus("PRE-SURVEY-COMPLETED", true);
 
                 // rimuoviamo il pop-up bloccante
-                SurveyManager.hideSurveyModal();
+                SurveyManager.hideModal();
 
                 // gestiamo il nuovo stato (PRE-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
@@ -75,7 +73,7 @@ class Engine {
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
                 
                 // rimuoviamo il pop-up bloccante
-                SurveyManager.hideSurveyModal();
+                SurveyManager.hideModal();
 
                 // forziamo un refresh della pagine per rimuovere tutti gli interventi precedentemente applicati 
                 Log.engine("🔄 Pulizia del DOM in corso... Ricaricamento pagina.");
@@ -326,11 +324,8 @@ class Engine {
 
             // eseguiamo l'operatore (definiti in engine/operators.js)
             let result = false;
-            if (operator) {
-                result = operator.execute(propertyValue, condition.value);  
-            } else {
-                Log.error("Engine", `Operatore sconosciuto nel JSON: ${condition.operator}`);
-            }
+            if (operator)   { result = operator.execute(propertyValue, condition.value); } 
+            else            { Log.error("Engine", `Operatore sconosciuto nel JSON: ${condition.operator}`); }
             results.push(result);
         }
 

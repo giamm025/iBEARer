@@ -32,10 +32,6 @@ class TelemetrySettingsSerializer(serializers.Serializer):
     track_events = serializers.ListField(child=serializers.CharField())
     sync_interval_ms = serializers.IntegerField()
 
-class TargetSerializer(serializers.Serializer):
-    url_pattern = serializers.CharField()
-    dependency = serializers.CharField()
-
 class ConditionSerializer(serializers.Serializer):
     property = serializers.CharField()
     operator = serializers.CharField()
@@ -59,7 +55,6 @@ class ConfigSerializer(serializers.Serializer):
     experiment = ExperimentSettingsSerializer()
     survey_settings = SurveySettingsSerializer()
     telemetry_settings = TelemetrySettingsSerializer()
-    target = TargetSerializer()
     triggers = TriggerSerializer(many=True)
     interventions = InterventionSerializer(many=True)
 

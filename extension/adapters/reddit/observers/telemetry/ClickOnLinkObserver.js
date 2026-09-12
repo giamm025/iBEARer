@@ -7,47 +7,47 @@ class ClickOnLinkObserver extends BaseObserver {
     constructor() {
         super(); 
         this.isSearchPage = false;
+        this.isHomePage = false;
     }
     
-    // metodo per far partire l'osservazione. Serve un riferimento ad ApiManager per poter fare direttamente
-    // la chiamata ad addEventToQueue (altrimenti dovremmo ritornare l'evento all'engine e poi chiama lui 
-    // l'ApiManager ma mi sembra una complicazione inutile, idk)
+    /** 
+     * metodo per far partire l'osservazione. Serve un riferimento ad ApiManager per poter fare direttamente
+     * la chiamata ad addEventToQueue (altrimenti dovremmo ritornare l'evento all'engine e poi chiama lui 
+     * l'ApiManager ma mi sembra una complicazione inutile, idk)
+     */
     start() {
 
         this.isActive = true;
 
         // eseguiamo un primo check all'avvio per impostare la variabile isSearchPage
-        this.check()
+        this.check();
 
         this.attachListener(document, 'click', (e) => {
-            
+
             // estraiamo il link cliccato
             const linkTarget = e.target.closest('a');
             if (linkTarget && linkTarget.href) {
 
                 // similmente a quanto fatto in ClickOnResultObserver.js controlliamo:
                 // se ci troviamo in una pagina di ricerca & il link ha i commenti => è un risultato di ricerca => ignoralo
-                const isPost = linkTarget.href.includes('/comments/');
+                const isPost = PlatformAdapter.isPostUrl(linkTarget.href);
                 if ((this.isSearchPage || this.isHomePage) && isPost) { return; }
 
                 // se non è un risultato di ricerca, è correttamente un ClickOnLink generico e lo mandiamo al backend
                 this.addEventToQueue("telemetry.events.ClickOnLinkEvent", {
                     url_destinazione: linkTarget.href,
                     testo_link: linkTarget.innerText.trim()
-                    // trim serve a togliere spazi bianchi inutili all'inizio o alla fine del testo
+                    // (come in Visual Basic, evviva!) trim serve a togliere spazi bianchi inutili all'inizio o alla fine del testo
                 });
             }
         });
     }
 
-    // metodo chiamato ad ogni cambio URL: nel nostro caso dobbiamo solo aggiornare sapere se ci troviamo in una 
-    // pagina di ricerca oppure no (se siamo in una pagina di ricerca dobbiamo ignorare i click sui post)
     check() {
         if (!this.isActive) return;
-        const urlParams = new URLSearchParams(window.location.search);
-        this.isSearchPage = window.location.pathname.includes('/search') && urlParams.has('q');
-        this.isHomePage = (window.location.pathname === '/');
+        this.isSearchPage = PlatformAdapter.isSearchPage();
+        this.isHomePage = PlatformAdapter.isHomePage();
     }
-};
+}
 
 window.ClickOnLink = new ClickOnLinkObserver();

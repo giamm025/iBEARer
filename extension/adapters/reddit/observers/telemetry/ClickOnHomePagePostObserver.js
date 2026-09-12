@@ -7,14 +7,11 @@ class ClickOnHomePagePostObserver extends BaseObserver {
     }
         
     start() {
-
-        this.isActive = true;
-        
         // eseguiamo un primo check all'avvio per impostare la variabile isHomePage
+        this.isActive = true;
         this.check();
 
         this.attachListener(document, 'click', (e) => {
-            
             // prendiamo l'intero percorso fatto dal click
             const path = e.composedPath();
             
@@ -23,19 +20,14 @@ class ClickOnHomePagePostObserver extends BaseObserver {
             if (linkTarget && linkTarget.href) {
                 
                 // se siamo in home ed è un post => estriamo il titolo e lanciamo l'evento
-                const isPost = linkTarget.href.includes('/comments/');
+                const isPost = PlatformAdapter.isPostUrl(linkTarget.href);
                 if (this.isHomePage && isPost) {
+                    const postDetails = PlatformAdapter.getPostDetails(linkTarget);
                     
-                    // prendiamo il post ed estraiamo il titolo
-                    const shredditPost = path.find(el => el.tagName === 'SHREDDIT-POST');
-                    const realTitle = shredditPost 
-                        ? shredditPost.getAttribute('post-title') 
-                        : linkTarget.innerText.trim();
-
                     // aggiungiamo la telemetria in coda
                     this.addEventToQueue("telemetry.events.ClickOnHomePagePostEvent", {
-                        url_destinazione: linkTarget.href,
-                        testo_link: realTitle
+                        url_destinazione: postDetails.url,
+                        testo_link: postDetails.title
                     });
                 }
             }
@@ -45,8 +37,8 @@ class ClickOnHomePagePostObserver extends BaseObserver {
     // metodo chiamato ad ogni cambio URL
     check() {
         if (!this.isActive) return;
-        this.isHomePage = window.location.pathname === '/';
+        this.isHomePage = PlatformAdapter.isHomePage();
     }
-};
+}
 
 window.ClickOnHomePagePost = new ClickOnHomePagePostObserver();

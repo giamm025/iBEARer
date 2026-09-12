@@ -16,6 +16,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         this.pendingReranks = [];
     }
 
+    // override del metodo execute di BasePostIntervention per aggiungere la logica di "ghost scroll" se necessario
     execute(payload, eventData) {
         
         // lanciamo la logica standard della superclasse per attivare Observer e il processPosts
@@ -23,7 +24,7 @@ class ReRankPostIntervention extends BasePostIntervention {
         if (!isRunning) return false;
 
         // estraiamo la query di ricerca ed il payload filtrato per ottenere le regole di reranking da usare
-        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : (new URLSearchParams(window.location.search).get('q') || "");
+        const initialQuery = (eventData && eventData.search_query) ? eventData.search_query : PlatformAdapter.getCurrentSearchQuery();
         const activePayloads = this._getAllMatchingPayloads(initialQuery, payload, "data");
         
         // cerchiamo qual è il post più "profondo" che dobbiamo pescare e portare in alto
@@ -39,43 +40,8 @@ class ReRankPostIntervention extends BasePostIntervention {
         });
 
         // se dobbiamo recuperare un post molto in basso => simuliamo lo scrolling
-        if (maxTargetNeeded > 0) { this.forceGhostScroll(maxTargetNeeded); }
+        if (maxTargetNeeded > 0) { PlatformAdapter.forceGhostScroll(maxTargetNeeded); }
         return true;
-    }
-
-    // metodo per simulare lo scrolling: nasconde la pagina, scorre veloce giu per forzare reddit a caricare i risultati, e poi torna su
-    forceGhostScroll(targetPos) {
-        
-        this.injectHidingStyles();
-        this.hidePageContent(); 
-        Log.intervention(`Ghost Scroll attivato: Ricerca del post in posizione ${targetPos}...`);
-
-        let attempts = 0;
-        const maxAttempts = 20; 
-        const scrollInterval = setInterval(() => {
-            
-            // teniamo il conto di quanti post reali sono stati caricati finora
-            const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
-            const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
-
-            // se abbiamo caricato abbastanza post da raggiungere la target pos (o superato il limite di tentativi di sicurezza)
-            if (realTitles.length >= targetPos || attempts >= maxAttempts) {
-                
-                // fermiamo lo scroll automatico
-                clearInterval(scrollInterval);
-                
-                // torniamo in cima alla pagina
-                window.scrollTo(0, 0);
-                
-                // scrolliamo per 300ms poi mostriamo il contenuto originale
-                setTimeout(() => { this.revealPageContent(); }, 300);
-                
-            } else {
-                // scorriamo in fondo alla pagina per forzare React a caricare nuovi post
-                window.scrollTo(0, document.body.scrollHeight);
-                attempts++;
-            }
-        }, 300); 
     }
 
     // implementa l'azione specifica di RE-RANKING post
@@ -95,68 +61,24 @@ class ReRankPostIntervention extends BasePostIntervention {
         if (!targetNewPosition || originalPos === targetNewPosition) return; 
 
         // estraiamo i dati del post originale per la telemetria
-        const originalTitle = titleLink.innerText.trim();
-        const originalUrl = titleLink.href;
-        const validSubLink = Array.from(wrapper.querySelectorAll('a[href*="/r/"]')).find(a => !a.href.includes('/comments/'));
-        const originalSubreddit = validSubLink ? validSubLink.innerText.trim() : "Sconosciuto";
+        const postData = PlatformAdapter.getPostDetails(titleLink);
 
         // estraiamo i post attualmente presenti nel DOM
-        const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
-        const realTitles = Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
+        const loadedPostsCount = PlatformAdapter.getRealPosts().length;
 
         // SE la nuova posizione NON esiste ancora => mettiamo il post in coda
-        if (targetNewPosition > realTitles.length) { 
-            return this.addPostToPendingQueue(wrapper, originalPos, targetNewPosition, initialQuery, originalTitle, originalSubreddit, originalUrl); 
+        if (targetNewPosition > loadedPostsCount) { 
+            return this.addPostToPendingQueue(wrapper, originalPos, targetNewPosition, initialQuery, postData.title, postData.subreddit, postData.url); 
         }
 
         // Altrimenti, se la posizione esiste gia => applichiamo il reranking vero e proprio
-        const success = this.rerank(wrapper, targetNewPosition, realTitles);
+        const success = PlatformAdapter.movePost(wrapper, targetNewPosition);
 
         // inviamo la telemetria al backend
         if (success) {
-            this.sendPostToBackend("RERANKED", initialQuery, originalPos, originalTitle, originalSubreddit, originalUrl, targetNewPosition);
+            this.sendPostToBackend("RERANKED", initialQuery, originalPos, postData.title, postData.subreddit, postData.url, targetNewPosition);
             Log.intervention(`Post spostato fisicamente! (Pos Originale: ${originalPos} -> Nuova Pos: ${targetNewPosition})`);        
         }
-    }
-
-    // funzione che sposta fisicamente il post nel DOM alla nuova posizione
-    rerank(targetWrapper, newPosSlot, realTitles) {
-
-        // prendiamo il post che attualmente si trova in quella che sarà la nuova posizione
-        const referencePostTitle = realTitles[newPosSlot - 1];
-        if (referencePostTitle) {
-            
-            // prendiamo il wrapper del post da spostare
-            const referenceWrapper = this._getSinglePostWrapper(referencePostTitle);
-            if (referenceWrapper && referenceWrapper !== targetWrapper) { 
-
-                // prendiamo il genitore comune di entrambi i post (mainFeedContainer)
-                const mainFeedContainer = referenceWrapper.parentNode;
-
-                // troviamo il titolo dentro il targetWrapper per capire la posizion esatta in cui si trova fisicamente il post ORA
-                const targetTitle = targetWrapper.querySelector('a[data-testid="post-title"]');
-                const currentPos = realTitles.indexOf(targetTitle);
-                const newPos = newPosSlot - 1;
-                if (currentPos === -1) return false;
-
-                try {
-
-                    // se stiamo spostando il nostro post in ALTO  (es. da 5 a 1) => inseriamo PRIMA del post di riferimento
-                    // se stiamo spostando il nostro post in BASSO (es. da 1 a 5) => inseriamo DOPO   il post di riferimento
-                    if (currentPos > newPos) { 
-                        mainFeedContainer.insertBefore(targetWrapper, referenceWrapper); 
-                    } else { 
-                        mainFeedContainer.insertBefore(targetWrapper, referenceWrapper.nextSibling); 
-                    }
-                    return true;
-
-                } catch (e) {
-                    Log.error("Intervention", "Errore durante lo spostamento nel DOM", e);
-                    return false;
-                }
-            }
-        }
-        return false;
     }
 
     // funzione che aggiunge un post in "coda di attesa" finché non viene caricata la sua nuova posizione
@@ -175,78 +97,27 @@ class ReRankPostIntervention extends BasePostIntervention {
         });
     }
 
-    // viene chiamato in automatico dalla classe madre ogni volta che l'utente scrolla
-    checkPendingActions(realTitles) {
+    // viene chiamato in automatico dalla classe madre ogni volta che l'utente scrolla (per sbloccare la coda)
+    checkPendingActions() {
         
         // se la sala d'attesa è vuota, non facciamo nulla
         if (this.pendingReranks.length === 0) return;
 
+        const loadedPostsCount = PlatformAdapter.getRealPosts().length;
+
         // filtriamo la sala d'attesa applicando il rerank ai post che hanno raggiunto la loro nuova posizione
         this.pendingReranks = this.pendingReranks.filter(pending => {
             
-            // se la nuova posizione è stata caricata => facciamo riapparire il post e applichiamo il reranking
-            if (realTitles.length >= pending.targetNewPosition) {
+            // se la nuova posizione è stata caricata => facciamo riapparire il post e applichiamo il reranking delegando all'Adapter
+            if (loadedPostsCount >= pending.targetNewPosition) {
                 pending.wrapper.style.display = ''; 
-                const success = this.rerank(pending.wrapper, pending.targetNewPosition, realTitles);
+                const success = PlatformAdapter.movePost(pending.wrapper, pending.targetNewPosition);
                 if (success) { this.sendPostToBackend("RERANKED_DELAYED", pending.initialQuery, pending.originalPos, pending.originalTitle, pending.originalSubreddit, pending.originalUrl, pending.targetNewPosition); }
                 return false; // rimuove dalla coda
             }
             return true; // mantiene in coda
         });
     }
-
-    // ==========================================================================
-    // DELAY DI CARICAMENTO
-    // ==========================================================================
-    injectHidingStyles() {
-        if (!document.getElementById("bear-curtain-style")) {
-            const style = document.createElement("style");
-            style.id = "bear-curtain-style";
-            style.innerHTML = `
-                .bear-feed-hidden, 
-                .bear-feed-hidden > * {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-                .bear-stagger-hidden {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                }
-                .bear-fade-in {
-                    animation: bearFadeIn 0.5s ease-in forwards;
-                }
-                @keyframes bearFadeIn { from { opacity: 0; } to { opacity: 1; } }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-
-    hidePageContent(targetContainer = null) {
-
-        const container = targetContainer || document.querySelector('shreddit-feed') || document.querySelector('main') || document.body;
-        
-        if (!container.classList.contains('bear-feed-hidden')) {
-            container.classList.add('bear-feed-hidden');
-            
-            const upperMenu = document.querySelector('reddit-sidebar-nav, #left-sidebar-container, nav');
-            const leftMenu = document.querySelector('#left-sidebar, reddit-sidebar-nav, #left-sidebar-container');
-            const rightMenu = document.querySelector('[slot="right-sidebar"], right-sidebar, #right-sidebar-container, aside');
-
-            if (upperMenu) upperMenu.classList.add('bear-stagger-hidden');
-            if (leftMenu) leftMenu.classList.add('bear-stagger-hidden');
-            if (rightMenu) rightMenu.classList.add('bear-stagger-hidden');
-
-            setTimeout(() => { if (upperMenu) upperMenu.classList.remove('bear-stagger-hidden'); }, 1500); 
-            setTimeout(() => { if (rightMenu) rightMenu.classList.remove('bear-stagger-hidden'); }, 3000); 
-            setTimeout(() => { if (leftMenu) leftMenu.classList.remove('bear-stagger-hidden');   }, 3500); 
-        }
-    }
-
-    revealPageContent() {
-        document.querySelectorAll('.bear-feed-hidden').forEach(feed => feed.classList.remove('bear-feed-hidden'));
-        document.querySelectorAll('.bear-stagger-hidden').forEach(menu => menu.classList.remove('bear-stagger-hidden'));
-    }
 }
-
 
 new ReRankPostIntervention();

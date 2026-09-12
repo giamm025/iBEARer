@@ -1,178 +1,222 @@
 /**
  * @class BasePlatformAdapter
- * @abstract
- * @description
- * Interfaccia astratta che ogni platform adapter concreto (Reddit, Twitter, ...) DEVE implementare.
- * Ogni metodo di questa classe dovrebbe esprime un'azione desiderata ("dammi il titolo del post", "nascondi questo post", 
- * "iniettami un warning") senza specificare come viene fatte (che ovviamente dipende dalla piattaforma specifica su cui
- * si lavora e, pertanto, viene completamebte delegato al platform adapter concreto Reddit, Twitter, ...)
+ * @description Interfaccia astratta che definisce i metodi obbligatori per tutti i Platform Adapter (es. RedditAdapter, TwitterAdapter).
+ * Qualsiasi nuovo adapter DEVE estendere questa classe e implementarne tutti i metodi.
  */
 class BasePlatformAdapter {
-
-    /** @throws {Error} Se si prova a istanziare direttamente BasePlatformAdapter (astratta) */
+    
     constructor() {
-        if (new.target === BasePlatformAdapter) { throw new Error("[Architecture Violation] BasePlatformAdapter è astratta. Instanzia una sottoclasse (es. RedditPlatformAdapter).");}
+        if (new.target === BasePlatformAdapter) {
+            throw new TypeError("Impossibile istanziare direttamente BasePlatformAdapter. È una classe astratta.");
+        }
     }
 
-    /** @returns {boolean} Ritorna true se la pagina corrente è una pagina di elenco post su cui gli interventi "post-based" possono operare (es. risultati di ricerca) */
-    isPostPage() { this._notImplemented("isPostPage"); }
-
-    /** @returns {string} La query di ricerca corrente (stringa vuota se assente) */
-    getCurrentSearchQuery() { this._notImplemented("getCurrentSearchQuery"); }
-
-    /** @returns {string|null} Il nome del subreddit in cui ci troviamo (es. "r/politics"). Se siamo in una pagina generica con più subreddit (es. pagina dei risultati) ritorna null. */
-    getCurrentCommunityScope() { this._notImplemented("getCurrentCommunityScope"); }
-
+    // =======================================================================
+    // SETUP & INIZIALIZZAZIONE
+    // =======================================================================
+    
     /**
-     * @param {Object} [options]
-     * @param {boolean} [options.includeSynthetic=false] true se la lista di ritorno deve includere anche i post finti iniettati da noi
-     * @returns {PostHandle[]} L'elenco dei post attualmente visibili nel DOM. */
-    getVisiblePosts({ includeSynthetic = false } = {}) { this._notImplemented("getVisiblePosts"); }
+     * @abstract
+     * @description Inizializza l'Adapter, agganciandosi agli eventi del Core Engine e impostando i watcher di navigazione (es. per SPA).
+     */
+    run() { this._notImplemented('run'); }
 
-    /** 
-     * @param {PostHandle} post 
-     * @returns {number} La posizione originale del post, prima di qualsiasi intervento. */
-    getPostOriginalPosition(post) { this._notImplemented("getPostOriginalPosition"); }
-
-    /** 
-     * @param {PostHandle} post 
-     * @returns {string} Testo del Titolo del post. */
-    getPostTitle(post) { this._notImplemented("getPostTitle"); }
-
-    /** 
-     * @param {PostHandle} post 
-     * @returns {string} URL di destinazione del post. */
-    getPostUrl(post) { this._notImplemented("getPostUrl"); }
-
-    /** 
-     * @param {PostHandle} post 
-     * @returns {string} Nome del subreddit/community di appartenenza. */
-    getPostCommunity(post) { this._notImplemented("getPostCommunity"); }
-
-    /** 
-     * @param {PostHandle} post 
-     * @returns {{votes: string, comments: string}} Numero di voti e numero di commenti del post. */
-    getPostCounters(post) { this._notImplemented("getPostCounters"); }
-
+    // =======================================================================
+    // MANIPOLAZIONE QUESTIONARI
+    // =======================================================================
+    
     /**
-     * Sovrascrive uno o più atributi di un post (l'oggetto fields ha tutti campi opzionali):
-     * @param {PostHandle} post
-     * @param {Object} fields
-     * @param {string} [fields.title]
-     * @param {string} [fields.url]
-     * @param {string} [fields.community]
-     * @param {string} [fields.communityIconUrl]
-     * @param {string} [fields.communityUrl]
-     * @param {string} [fields.avatarUrl]
-     * @param {string} [fields.bodyText]
-     * @param {string} [fields.imageUrl]
-     * @param {string} [fields.date]
-     * @param {string|number} [fields.votes]
-     * @param {string|number} [fields.comments] */
-    formatPost(post, fields) { this._notImplemented("formatPost"); }
-
+     * @abstract
+     * @description Mostra un modale bloccante sovrapposto all'interfaccia della piattaforma.
+     * @param {Object} modalConfiguration Dati del modale (title, message, link, buttonText).
+     */
+    showModal(modalConfiguration) { this._notImplemented('showModal'); }
+    
     /**
-     * Evidenzia un post con un bordo/sfondo (originariamente utilizzato  in ModifyPost per segnalare un contenuto).
-     * @param {PostHandle} post
-     * @param {{backgroundColor?: string, borderColor?: string}} style */
-    applyPostHighlight(post, style) { this._notImplemented("applyPostHighlight"); }
+     * @abstract
+     * @description Chiude il modale bloccante e ripristina la normale interazione con la pagina.
+     */
+    hideModal() { this._notImplemented('hideModal'); }
 
+    // =======================================================================
+    // MANIPOLAZIONE POST
+    // =======================================================================
+    
     /**
-     * Permette di aggiungere un qualsiasi nodo HTML (es. un warning) all'interno del post.
-     * @param {PostHandle} post
-     * @param {HTMLElement} warningElement */
-    injectWarningNode(post, warningElement) { this._notImplemented("injectWarningNode"); }
+     * @abstract
+     * @description Verifica se la pagina corrente è idonea all'applicazione degli interventi UI sui post.
+     * @returns {boolean} True se gli interventi possono essere applicati, false altrimenti.
+     */
+    isValidInterventionPage() { this._notImplemented('isValidInterventionPage'); }
+    
+    /**
+     * @abstract
+     * @description Nasconde visivamente un post dal feed senza rimuoverlo dal DOM.
+     * @param {HTMLElement} postWrapper L'elemento contenitore principale del post.
+     */
+    hidePost(postWrapper) { this._notImplemented('hidePost'); }
+    
+    /**
+     * @abstract
+     * @description Applica un colore di sfondo evidenziato al post.
+     * @param {HTMLElement} postWrapper L'elemento contenitore principale del post.
+     * @param {string} highlightColor Colore esadecimale o testuale (es. "#FF0000").
+     */
+    applyHighlightToPost(postWrapper, highlightColor) { this._notImplemented('applyHighlightToPost'); }
+    
+    /**
+     * @abstract
+     * @description Applica un bordo laterale colorato al post.
+     * @param {HTMLElement} postWrapper L'elemento contenitore principale del post.
+     * @param {string} borderColor Colore esadecimale o testuale.
+     */
+    applyBorderToPost(postWrapper, borderColor) { this._notImplemented('applyBorderToPost'); }
+    
+    /**
+     * @abstract
+     * @description Sovrascrive i metadati e il contenuto di un post esistente.
+     * @param {HTMLElement} postNode L'elemento post da modificare.
+     * @param {Object} payload Oggetto contenente i nuovi dati (titolo, immagine, autore, ecc.).
+     */
+    formatPost(postNode, payload) { this._notImplemented('formatPost'); }
 
+    // =======================================================================
+    // RERANKING & SCROLLING
+    // =======================================================================
+    
+    /**
+     * @abstract
+     * @description Estrae la query di ricerca attuale dall'interfaccia o dall'URL della piattaforma.
+     * @returns {string} La query di ricerca (es. "vaccini").
+     */
+    getCurrentSearchQuery() { this._notImplemented('getCurrentSearchQuery'); }
+    
+    /**
+     * @abstract
+     * @description Sposta fisicamente un post nel DOM verso una nuova posizione bersaglio.
+     * @param {HTMLElement} targetWrapper Il post da spostare.
+     * @param {number} newPosSlot La nuova posizione (1-based index).
+     * @returns {boolean} True se lo spostamento ha successo, false altrimenti.
+     */
+    movePost(targetWrapper, newPosSlot) { this._notImplemented('movePost'); }
+    
+    /**
+     * @abstract
+     * @description Forza il caricamento di nuovi risultati simulando uno scroll, utile per le piattaforme con infinite-scroll.
+     * @param {number} targetPos La posizione minima da raggiungere prima di interrompere lo scroll.
+     */
+    forceGhostScroll(targetPos) { this._notImplemented('forceGhostScroll'); }
+
+    // =======================================================================
+    // INIEZIONE FAKE POST
+    // =======================================================================
+    
+    /**
+     * @abstract
+     * @description Restituisce i nodi necessari per clonare e inserire un post fittizio.
+     * @param {number} pos La posizione in cui inserire il post.
+     * @param {boolean} countInjectedPosts Se true, calcola la posizione tenendo conto dei fake post già inseriti.
+     * @returns {Object|null} Oggetto con { cloneWrapper, insertWrapper, parent } o null se non trovati.
+     */
+    getDomReferences(pos, countInjectedPosts = true) { this._notImplemented('getDomReferences'); }
+    
+    /**
+     * @abstract
+     * @description Estrae i titoli e i metadati dei primi post visibili per fornire contesto a un eventuale generatore AI.
+     * @returns {string} Stringa di testo formattata con il contesto della pagina.
+     */
+    scrapeContext() { this._notImplemented('scrapeContext'); }
+    
+    /**
+     * @abstract
+     * @description Crea una copia strutturale di un post rimuovendo ID univoci e media.
+     * @param {HTMLElement} postToCloneWrapper Il post da clonare.
+     * @returns {Object} Oggetto contenente il post clonato (fakePost) ed eventuali separatori (divider).
+     */
+    createCleanClone(postToCloneWrapper) { this._notImplemented('createCleanClone'); }
+    
+    /**
+     * @abstract
+     * @description Rimuove i link e gli script nativi dal post clonato per evitare fughe di navigazione non previste.
+     * @param {HTMLElement} fakePost Il post fittizio da sanitizzare.
+     */
+    sanitizeFakePostLinks(fakePost) { this._notImplemented('sanitizeFakePostLinks'); }
+    
+    /**
+     * @abstract
+     * @description Filtra i payload in base al contesto specifico della piattaforma (es. gruppi, subreddit, canali).
+     * @param {Array} payloads Lista di payload disponibili per l'iniezione.
+     * @returns {Array} Lista filtrata dei payload applicabili.
+     */
+    filterPlatformSpecificPayloads(payloads) { this._notImplemented('filterPlatformSpecificPayloads'); }
+
+    // =======================================================================
+    // BANNER DI DEBUNKING
+    // =======================================================================
+    
+    /**
+     * @abstract
+     * @description Inserisce il banner di debunking nel contenitore principale della piattaforma.
+     * @param {HTMLElement} bannerElement L'elemento HTML del banner.
+     * @returns {boolean} True se inserito correttamente.
+     */
+    insertDebunkingBanner(bannerElement) { this._notImplemented('insertDebunkingBanner'); }
+    
+    /**
+     * @abstract
+     * @description Verifica se la navigazione SPA ha mantenuto l'utente sulla stessa ricerca.
+     * @param {string} expectedQuery La query di ricerca originaria da confrontare.
+     * @returns {boolean} True se la ricerca è invariata.
+     */
+    isSameSearchPage(expectedQuery) { this._notImplemented('isSameSearchPage'); }
+    
+    /**
+     * @abstract
+     * @description Verifica se il contenitore fisico in cui andrà inserito il banner è pronto nel DOM.
+     * @returns {boolean}
+     */
+    isBannerTargetReady() { this._notImplemented('isBannerTargetReady'); }
+
+    // =======================================================================
+    // TELEMETRIA: CONTESTO & CLICK
+    // =======================================================================
+    
+    /** @abstract @returns {boolean} True se ci si trova nella home page. */
+    isHomePage() { this._notImplemented('isHomePage'); }
+    
+    /** @abstract @returns {boolean} True se ci si trova in una pagina di risultati di ricerca validi. */
+    isSearchPage() { this._notImplemented('isSearchPage'); }
+    
     /** 
-     * Nasconde completamente un post. 
-     * @param {PostHandle} post */
-    hidePost(post) { this._notImplemented("hidePost"); }
-
-    /** 
-     * Rende di nuovo visibile un post precedentemente nascosto. 
-     * @param {PostHandle} post */
-    revealPost(post) { this._notImplemented("revealPost"); }
-
+     * @abstract 
+     * @param {string} url L'URL da verificare.
+     * @returns {boolean} True se l'URL appartiene a un post organico della piattaforma. 
+     */
+    isPostUrl(url) { this._notImplemented('isPostUrl'); }
+    
     /**
-     * Sposta un post in modo che occupi la targetPosition nell'elenco dei currentPosts.
-     * @param {PostHandle} post
-     * @param {number} targetPosition
-     * @param {PostHandle[]} currentPosts
-     * @returns {boolean} true se lo spostamento è andato a buon fine. */
-    movePostToSlot(post, targetPosition, currentPosts) { this._notImplemented("movePostToSlot"); }
+     * @abstract
+     * @description Estrae dinamicamente i dati di un post partendo da un suo nodo interno (es. un link cliccato).
+     * @param {HTMLElement} node L'elemento target (es. link, immagine o contenitore cliccato).
+     * @returns {Object} Dati del post { title, url, subreddit/channel, postWrapper }.
+     */
+    getPostDetails(node) { this._notImplemented('getPostDetails'); }
 
+    // =======================================================================
+    // SCRAPING RISULTATI
+    // =======================================================================
+    
     /**
-     * Simula uno scroll utente verso il basso per forzare il caricamento di ulteriori post.
-     * @param {number} minCount La posizione a cui si vuole arrivare
-     * @returns {Promise<void>}*/
-    ensurePostsLoadedUpTo(minCount) { this._notImplemented("ensurePostsLoadedUpTo"); }
+     * @abstract
+     * @description Scansiona il DOM per estrarre tutti i risultati visibili (post, profili, gruppi) formattati per la telemetria.
+     * @returns {Array<Object>} Lista di oggetti con { type, title, url, subreddit, content_text }.
+     */
+    scrapePageResults() { this._notImplemented('scrapePageResults'); }
 
-    /**
-     * Crea un clone di un post reale completamente ripulito (senza titolo, descrizione, foto, etc...) pronto per essere riempito con attributi personalizzati della funzione formatPost
-     * @returns {PostHandle|null} */
-    createSyntheticPost() { this._notImplemented("createSyntheticPost"); }
-
-    /**
-     * Inserisce un post in una posizione specifica (quella subito prima di beforePost) e lo marca con un id personalizzato così da poter essere ritrovato facilmente da chiamate successive.
-     * @param {PostHandle} syntheticPost
-     * @param {PostHandle} beforePost
-     * @param {string} syntheticId */
-    insertSyntheticPost(syntheticPost, beforePost, syntheticId) { this._notImplemented("insertSyntheticPost"); }
-
-    /** 
-     * Restituisce un post identificato tramite il suo id personalizzato (se non è presente restituisce null).
-     * @param {string} syntheticId 
-     * @returns {PostHandle|null} Il post trovato, o null se non è presente. */
-    findSyntheticPost(syntheticId) { this._notImplemented("findSyntheticPost"); }
-
-    /**
-     * Rimuove tutti i link ed interazioni del post originale (link, hovercard, popup) così da poter "sovrascrivere" e personalizzare quelle opzioni.
-     * @param {PostHandle} post */
-    neutralizeNativeNavigation(post) { this._notImplemented("neutralizeNativeNavigation"); }
-
-    /** 
-     * Mostra un banner in cima al feed. 
-     * @param {{id:string, render:(container:HTMLElement)=>void, onDismiss?:Function}} bannerConfig */
-    showPageBanner(bannerConfig) { this._notImplemented("showPageBanner"); }
-
-    /** 
-     * Rimuove il banner mostrato con showPageBanner. 
-     * @param {string} id */
-    removePageBanner(id) { this._notImplemented("removePageBanner"); }
-
-    /** Nasconde il feed principale (usato per simulare un ritardo di caricamento nella generazione dinamica di contenuti con AI). */
-    hideFeedContent() { this._notImplemented("hideFeedContent"); }
-
-    /** Ripristina la visibilità del feed nascosto con hideFeedContent. */
-    revealFeedContent() { this._notImplemented("revealFeedContent"); }
-
-    /** 
-     * Mostra un modale bloccante a schermo intero (es. per i survey pre/post esperimento). 
-     * @param {{title:string, message:string, link:string, buttonText:string}} modalConfig */
-    showBlockingModal(modalConfig) { this._notImplemented("showBlockingModal"); }
-
-    /** Chiude il modale bloccante aperto con showBlockingModal. */
-    hideBlockingModal() { this._notImplemented("hideBlockingModal"); }
-
-    /**
-     * Permette di aggiungere un azione ad un post (es. mandare telemetria + cambia pagina).
-     * @param {PostHandle} post
-     * @param {(interaction: {targetUrl: string|null, openInNewTab: boolean}) => void} onInteract
-     * @param {{scope?: PostHandle, openInNewTab?: boolean, targetUrl?: string}} [options] */
-    attachInteractionTelemetry(post, onInteract, options = {}) { this._notImplemented("attachInteractionTelemetry"); }
-
-    /**
-     * Osserva possibili cambiamenti nel feed o nella query di ricerca ed, eventualmente, richiama la callback.
-     * @param {(reason: "MUTATION"|"QUERY_CHANGED") => void} callback
-     * @returns {{disconnect: () => void}} */
-    observeFeedChanges(callback) { this._notImplemented("observeFeedChanges"); }
-
-    // ==========================================================================
-    // Metodi Privati
-    // ==========================================================================
-
-    /** Metodo privato per segnalare che un metodo astratto non è stato implementato da una sottoclasse. */
+    // =======================================================================
+    // HELPER INTERNO
+    // =======================================================================
     _notImplemented(methodName) {
-        throw new Error(`[Architecture Violation] ${this.constructor.name} non implementa il metodo richiesto '${methodName}()' di BasePlatformAdapter.`);
+        throw new Error(`[Architecture Violation] Il metodo '${methodName}()' non è stato implementato dall'Adapter corrente.`);
     }
 }

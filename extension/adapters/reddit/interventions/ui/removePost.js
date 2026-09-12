@@ -9,21 +9,22 @@ class RemovePostIntervention extends BasePostIntervention {
         super();
     }
 
-    /** implementa l'azione specifica di RIMOZIONE post */
-    applyAction(post, originalPosition, initialQuery, payload, isKeywordTarget) {
+    // implementa l'azione specifica di RIMOZIONE post
+    applyAction(wrapper, titleLink, currentPos, initialQuery, payload, isKeywordTarget) {
+        if (!wrapper.dataset.bearRemoved) {
+            
+            // prendiamo i dati ORIGINALI del post prima di qualsiasi modifica, per la telemetria
+            const postData = PlatformAdapter.getPostDetails(titleLink);
 
-        // leggiamo i dati originali PRIMA di nascondere il post, per la telemetria
-        const originalTitle = this.platform.getPostTitle(post);
-        const originalUrl = this.platform.getPostUrl(post);
-        const originalCommunity = this.platform.getPostCommunity(post);
-
-        // inviamo i dati originali del post al backend
-        this.sendPostToBackend("REMOVED", initialQuery, originalPosition, originalTitle, originalCommunity, originalUrl);
-
-        // nascondiamo il post          
-        this.platform.hidePost(post);
-
-        Log.intervention(`Post rimosso! (Pos: ${originalPosition}, Match: ${isKeywordTarget ? 'Keyword' : 'Posizione'})`);
+            // inviamo i dati originali del post al backend
+            this.sendPostToBackend("REMOVED", initialQuery, currentPos, postData.title, postData.subreddit, postData.url);
+            
+            // deleghiamo la rimozione del post all'Adapter
+            PlatformAdapter.hidePost(wrapper);
+            wrapper.dataset.bearRemoved = "true";
+            
+            Log.intervention(`Post rimosso! (Pos: ${currentPos}, Match: ${isKeywordTarget ? 'Keyword' : 'Posizione'})`);
+        }
     }
 }
 

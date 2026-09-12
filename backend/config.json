@@ -40,11 +40,6 @@
     "sync_interval_ms": 10000
   },
 
-  "target": {
-    "url_pattern": "*://*.reddit.com/*",
-    "dependency": "adapters/reddit_adapter.js"
-  },
-
   "triggers": [
     {
       "id": "track_all_searches",
@@ -57,18 +52,22 @@
     },
 
     {
-      "id": "epstein_trump_search",
+      "id": "prova_search",
       "target_groups": ["TREATMENT"],
       "event_source": "adapters.reddit.events.SearchSubmittedEvent",
       "conditions": [
         {
           "property": "search_query",
           "operator": "engine.operators.ContainsAny",
-          "value": ["/(epstein|trump|maxwell|flight logs|island|isola|lista|documenti|scandalo)/i"]
+          "value": ["prova"]
         }
       ],
       "apply_interventions": {
-        "inject_fake_post": ["TREATMENT"]
+        "hide_content": ["TREATMENT"],
+        "modify_content": ["TREATMENT"],
+        "rerank_post": ["TREATMENT"],
+        "inject_fake_posts": ["TREATMENT"],
+        "show_debunking_banner": ["TREATMENT"]
       }
     },
 
@@ -118,6 +117,7 @@
       "payload": {
         "dynamic_content": [
           {
+            "trigger_keywords": ["prova"],
             "data": {
               "target_positions": [2, 3],
               "title": "Caso Epstein: il nome di Silvio Berlusconi appare negli atti ufficiali.",
@@ -130,13 +130,32 @@
     },
 
     {
-      "id": "inject_fake_post",
-      "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
+      "id": "rerank_post",
+      "function_fqn": "adapters.reddit.interventions.ui.RerankPost",
       "payload": {
-        "randomize_positions": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
         "dynamic_content": [
           {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
+            "trigger_keywords": ["prova"],
+            "data": {
+              "target_positions": [5, 6],
+              "moves": [
+                { "target": 5, "new_position": 30 },
+                { "target": 6, "new_position": 5 }
+              ]
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "id": "inject_fake_posts",
+      "function_fqn": "adapters.reddit.interventions.ui.InjectFakePost",
+      "payload": {
+        "randomize_positions": [7, 8, 9],
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["prova"],
             "data": {
               "title": "Caso Epstein: il nome di Silvio Berlusconi appare negli atti ufficiali.",
               "content_text": "Il nome di Berlusconi figura in una lista di contatti internazionali allegata agli atti del processo SDNY. Al momento non vi sono accuse dirette di reato.",
@@ -153,7 +172,7 @@
             }
           },
           {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
+            "trigger_keywords": ["prova"],
             "data": {
               "title": "Desecretati i log del jet di Epstein: citato Berlusconi.",
               "content_text": "La lista passeggeri e i log di volo hanno rivelato diverse personalità di spicco tra cui l'ex premier italiano.",
@@ -169,7 +188,7 @@
             }
           },
           {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
+            "trigger_keywords": ["prova"],
             "data": {
               "title": "Epstein e i legami internazionali: cosa sappiamo su Berlusconi.",
               "content_text": "Un'analisi tecnica dei documenti recentemente resi pubblici chiarisce la natura dei rapporti tra le figure citate nel caso Epstein.",
@@ -183,126 +202,29 @@
               "target_url": "https://www.reddit.com/user/poIltics/comments/1ugw92w/epstein_e_i_legami_internazionali_cosa_sappiamo/",
               "use_ai_generation": false
             }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "Berlusconi e il caso Epstein: facciamo chiarezza sugli atti.",
-              "content_text": "Molta confusione circola sul web riguardo ai documenti. Ecco una sintesi imparziale delle pagine che menzionano il Cavaliere.",
-              "subreddit": "r/news",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2qh3l/styles/communityIcon_fmygcobc22z81.png?width=128&frame=1&auto=webp&s=2eed903aecf7427101848ba8a22d4856d1efa797",
-              "image_url": "https://media-assets.wired.it/photos/698b65136d69bf0246d7f7d1/master/w_1600%2Cc_limit/Valentini.jpg",
-              "subreddit_target_url": "https://www.reddit.com/r/news/",
-              "author": "FactCheckIt",
-              "votes": "984",
-              "comments": "240",
-              "date": "2 mesi fa",
-              "target_url": "https://www.reddit.com/user/niews__/comments/1ugwfj0/berlusconi_e_il_caso_epstein_facciamo_chiarezza/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "Documenti giudiziari: nuovi dettagli sui rapporti tra Berlusconi ed Epstein.",
-              "content_text": "Sono stati desecretati nuovi atti legati al caso Epstein che citano contatti tra l'ex premier italiano e la rete del finanziere. Gli inquirenti stanno analizzando le date.",
-              "subreddit": "r/news",
-              "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Silvio_Berlusconi_%282010%29_cropped.jpg/250px-Silvio_Berlusconi_%282010%29_cropped.jpg",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2qh3l/styles/communityIcon_fmygcobc22z81.png?width=128&frame=1&auto=webp&s=2eed903aecf7427101848ba8a22d4856d1efa797",
-              "subreddit_target_url": "https://www.reddit.com/r/news/",
-              "author": "AnsaBot",
-              "votes": "290",
-              "comments": "14",
-              "date": "5 mesi fa",
-              "target_url": "https://www.reddit.com/user/niews__/comments/1ugwgl3/documenti_giudiziari_nuovi_dettagli_sui_rapporti/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "🚨 BOMBA: Berlusconi era presente sull'isola di Epstein? La verità nascosta! 🚨",
-              "image_url": "https://www.lacapitalenews.it/wp-content/uploads/2026/02/epstein-berlusconi-1024x576.png",
-              "subreddit": "r/conspiracy",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2qh4r/styles/communityIcon_njjmedw5gmv41.jpg?width=128&frame=1&auto=webp&s=b7fff63bedfb66f6caa4d27ec9786af418c0523a",
-              "subreddit_target_url": "https://www.reddit.com/r/conspiracy/",
-              "author": "VeritaNascosta",
-              "content_text": "Non ve lo dicono al telegiornale! I documenti provano che Berlusconi era molto più vicino a Epstein di quanto si pensi. Condividete prima che censurino tutto!",
-              "votes": "465",
-              "comments": "67",
-              "date": "5 mesi fa",
-              "target_url": "https://www.reddit.com/user/cospiiracy/comments/1ugwiku/bomba_berlusconi_era_presente_sullisola_di/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "Epstein-Berlusconi: ecco cosa c'era davvero dietro quel viaggio!",
-              "content_text": "I media mainstream tacciono, ma noi abbiamo le foto del jet privato. Una connessione che cambierà la storia della politica italiana per sempre!",
-              "subreddit": "r/conspiracy",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2qh4r/styles/communityIcon_njjmedw5gmv41.jpg?width=128&frame=1&auto=webp&s=b7fff63bedfb66f6caa4d27ec9786af418c0523a",
-              "subreddit_target_url": "https://www.reddit.com/r/conspiracy/",
-              "author": "TruthHunter",
-              "votes": "950",
-              "comments": "24",
-              "date": "7 mesi fa",
-              "target_url": "https://www.reddit.com/user/cospiiracy/comments/1ugwjr7/epsteinberlusconi_ecco_cosa_cera_davvero_dietro/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "SHOCK! La connessione tra il Cavaliere e Epstein è ufficiale!",
-              "content_text": "Tutto collegato. Politica, potere e il caso Epstein. Scopri la lista completa di chi era con Berlusconi nel jet privato!",
-              "subreddit": "r/Epstein",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_1lruuu/styles/communityIcon_rmxt76bi8ag31.png?width=128&frame=1&auto=webp&s=ae95035d62d3971605690415ea09f5f6c6187adc",
-              "subreddit_target_url": "https://www.reddit.com/r/Epstein/",
-              "author": "RedPill",
-              "votes": "325",
-              "comments": "23",
-              "date": "7 mesi fa",
-              "image_url": "https://www.facta.news/wp-content/uploads/2026/02/immagine-articolo-2026-02-02T130655.620.png",
-              "target_url": "https://www.reddit.com/user/Eipstein_/comments/1ugwndi/shock_la_connessione_tra_il_cavaliere_e_epstein_%C3%A8/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "SCANDALO: Il nome di Berlusconi nella Black List di Epstein! 😱",
-              "content_text": "La lista proibita è stata finalmente svelata e il Cavaliere è in cima! Nessuno è al sicuro. Ecco le prove che tutti ignorano.",
-              "subreddit": "r/italia",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2rbm5/styles/communityIcon_x16ofcvvvacg1.jpeg?width=128&frame=1&auto=webp&s=2010c49149cd5c087ec9c85c6ab37526d509702f",
-              "subreddit_target_url": "https://www.reddit.com/r/italia/",
-              "author": "FreePress",
-              "votes": "998",
-              "comments": "47",
-              "date": "7 mesi fa",
-              "target_url": "https://www.reddit.com/user/itaIia/comments/1ugx1c8/scandalo_il_nome_di_berlusconi_nella_black_list/",
-              "use_ai_generation": false
-            }
-          },
-          {
-            "trigger_keywords": ["/(berlusconi|epstein|maxwell|flight logs|italia|isola|lista|documenti|scandalo)/i"],
-            "data": {
-              "title": "BERLUSCONI E L'ISOLA DEGLI ORRORI: Le prove che non volevano farti vedere!",
-              "content_text": "Siamo stati hackerati? No, sono gli atti del processo! Leggete le trascrizioni prima che vengano rimosse dai server!",
-              "subreddit": "r/italia",
-              "subreddit_icon_url": "https://styles.redditmedia.com/t5_2rbm5/styles/communityIcon_x16ofcvvvacg1.jpeg?width=128&frame=1&auto=webp&s=2010c49149cd5c087ec9c85c6ab37526d509702f",
-              "subreddit_target_url": "https://www.reddit.com/r/italia/",
-              "author": "AnonymusIt",
-              "votes": "740",
-              "comments": "29",
-              "date": "7 mesi fa",
-              "target_url": "https://www.reddit.com/user/itaIia/comments/1ugx29o/berlusconi_e_lisola_degli_orrori_le_prove_che_non/",
-              "use_ai_generation": false
-            }
           }
         ],
         "default_fallback": null
       }
+    },
+
+    {
+      "id": "show_debunking_banner",
+      "function_fqn": "adapters.reddit.interventions.ui.ShowDebunkingBanner",
+      "payload": {
+        "dynamic_content": [
+          {
+            "trigger_keywords": ["prova"],
+            "data": {
+              "message": "Attenzione: I vaccini sono sicuri ed efficaci secondo l'OMS.",
+              "link_url": "https://www.who.int/news-room/questions-and-answers/item/vaccines-and-immunization-vaccine-safety",
+              "link_text": "Scopri di più",
+              "bg_color": "#D32F2F"
+            }
+          }
+        ]
+      }
     }
+
   ]
 }
