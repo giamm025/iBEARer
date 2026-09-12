@@ -1,10 +1,14 @@
 /**
  * @class RedditAdapter
- * @description Adapter specifico per la piattaforma Reddit. Fornisce metodi per l'interazione con i post, la gestione dei modali e l'estrazione dei dati.
- */ 
+ * @extends BasePlatformAdapter
+ * @description Implementazione specifica per il DOM e la logica SPA di Reddit (shreddit-app).
+ */
 class RedditAdapter extends BasePlatformAdapter {
     
-    /** Configura l'estensione per eseguire l'esperimento su REDDIT */
+    /** 
+     * @override 
+     * @description Attende l'evento "EngineReady" e aggancia lo SpaWatcher ai cambiamenti di routing di React.
+     */
     run() {
 
         // facciamo partire l'adapter per intercettare eventi SOLO DOPO che l'engine è partito
@@ -40,7 +44,10 @@ class RedditAdapter extends BasePlatformAdapter {
     // MANIPOLAZIONE QUESTIONARI
     // =======================================================================
 
-    /** Apre un Modale bloccante di dimensioni configurabili. */
+    /** 
+     * @override
+     * @description Crea un overlay assoluto (z-index elevato) per bloccare l'UI di Reddit. 
+     */    
     showModal(modalConfiguration) {
 
         // usiamo un id fisso per il nostro pop-up, in modo da poterlo identificare e rimuovere facilmente in seguito
@@ -80,7 +87,10 @@ class RedditAdapter extends BasePlatformAdapter {
         document.body.style.overflow = 'hidden';
     }
 
-    /** Chiude il Modale aperto con showModal() e ripristina lo scroll della pagina. */ 
+    /** 
+     * @override
+     * @description Chiude il Modale aperto con showModal() e ripristina lo scroll della pagina. 
+     */
     hideModal() {
         const modal = document.getElementById('reddit-cospiracy-survey-modal');
         if (modal) modal.remove();
@@ -92,8 +102,8 @@ class RedditAdapter extends BasePlatformAdapter {
     // =======================================================================
     
     /** 
-     * Verifica se la pagina corrente è compatibile con l'iniezione o manipolazione dei post. 
-     * (Per ora, gli interventi si attivano solo sulle pagine con i risultati di ricerca)
+     * @override
+     * @description Su Reddit, gli interventi sono validi solo se l'URL parameter 'type' è 'posts', 'all' o nullo. 
      */
     isValidInterventionPage() {
         // prendiamo l'url della pagina e controlliamo se siamo nella schermata "Posts" (type=posts) o "All" (type=all o nullo). 
@@ -108,7 +118,10 @@ class RedditAdapter extends BasePlatformAdapter {
         return true;
     }
 
-    /** Nasconde un post dal feed (usando display:none). */
+    /** 
+     * @override
+     * @description Nasconde sia lo shreddit-post che il tag <hr> (per evitare spazi vuoti nel feed) con display: none.
+     */
     hidePost(postWrapper) {
 
         // nascondiamo il post principale 
@@ -119,7 +132,10 @@ class RedditAdapter extends BasePlatformAdapter {
         if (nextSibling && nextSibling.tagName === 'HR') nextSibling.style.display = 'none';
     }
 
-    /** Applica un colore sfondo al post. */
+    /** 
+     * @override
+     * @description Trova l'inner-box usando data-testid="search-post-unit" per applicare il colore senza sbordare.
+     */
     applyHighlightToPost(postWrapper, highlightColor) {
         if (!highlightColor) { Log.Error("highlightColor is required"); return; }
         const innerBox = this._getInnerBox(postWrapper);
@@ -128,7 +144,10 @@ class RedditAdapter extends BasePlatformAdapter {
         }
     }
 
-    /** Applica un bordo colorato al post. */
+    /** 
+     * @override
+     * @description Applica un bordo colorato al post.
+     */
     applyBorderToPost(postWrapper, borderColor) {
         if (!borderColor) { Log.Error("borderColor is required"); return; }
         const innerBox = this._getInnerBox(postWrapper);
@@ -137,7 +156,9 @@ class RedditAdapter extends BasePlatformAdapter {
         }
     }
 
-    /** Sovrascrive gli attributi di un post */
+    /** @override
+     * @description Interviene sui web-components di Reddit (es. faceplate-timeago, faceplate-number) per iniettare le fake-info senza rompere i listener React.
+     */
     formatPost(postNode, payload) {
         
         // Estraiamo tutte le variabili dal payload
@@ -315,23 +336,35 @@ class RedditAdapter extends BasePlatformAdapter {
     // RERANKING & SCROLLING
     // =======================================================================
 
-    /** Restituisce l'array dei titoli dei post reali (esclusi quelli fittizi iniettati da noi) */
+    /** 
+     * @override
+     * @description Rileva i post reali di Reddit ignorando gli elementi con id che inizia per "bear-fake-post".
+     */
     getRealPosts() {
         const allTitles = document.querySelectorAll('a[data-testid="post-title"]');
         return Array.from(allTitles).filter(link => !link.closest('[id^="bear-fake-post"]'));
     }
 
-    /** Restituisce l'array di tutti i titoli dei post (compresi quelli fittizi iniettati da noi) */
+    /** 
+     * @override
+     * @description Restituisce l'array di tutti i titoli dei post (compresi quelli fittizi iniettati da noi).
+     */
     getAllPosts() {
         return Array.from(document.querySelectorAll('a[data-testid="post-title"]'))
     }
 
-    /** Restituisce la query di ricerca attuale */
+    /** 
+     * @override
+     * @description Legge la stringa di ricerca dal parametro 'q' dell'URL di Reddit.
+     */
     getCurrentSearchQuery() {
         return new URLSearchParams(window.location.search).get('q') || ""
     }
 
-    /** Sposta fisicamente un post (targetWrapper) nella nuova posizione desiderata */
+    /** 
+     * @override
+     * @description Ricalcola il target usando insertBefore() nel parent 'shreddit-feed' o 'main-content'.
+     */
     movePost(targetWrapper, newPosSlot) {
         
         // prendiamo l'array dei titoli dei post reali (esclusi quelli fittizi iniettati da noi)
@@ -367,7 +400,10 @@ class RedditAdapter extends BasePlatformAdapter {
         return false;
     }
 
-    /** Simula lo scrolling per forzare React a caricare nuovi risultati fino al target */
+    /** 
+     * @override
+     * @description Inietta un CSS temporaneo che oscura il feed (per evitare sfarfallii) ed esegue scroll lenti e distanziati per non allarmare l'anti-scraping di Reddit (ReCAPTCHA timeout).
+     */
     forceGhostScroll(targetPos) {
         this._injectHidingStyles();
         this._hidePageContent(); 
@@ -399,7 +435,7 @@ class RedditAdapter extends BasePlatformAdapter {
     // INIEZIONE FAKE POST 
     // =======================================================================
 
-    /** Trova i nodi di riferimento per clonare e inserire un nuovo post */
+    /** @override */
     getDomReferences(pos, countInjectedPosts = true) {
         
         // estraiamo i link ai post (inclusi quelli initettati da noi)
@@ -426,7 +462,10 @@ class RedditAdapter extends BasePlatformAdapter {
         return { cloneWrapper, insertWrapper, parent };    
     }
 
-    /** Estrae i primi 7 post del feed per fornire contesto al prompt AI (esclusi quelli fittizzi iniettati da noi) */
+    /** 
+     * @override
+     * @description Isola i primi 7 <shreddit-post> leggendo i loro attributi shadow-dom.
+     */
     scrapeContext() {
         return Array.from(document.querySelectorAll('shreddit-post'))
             .filter(p => !p.id.includes('bear-fake-post'))
@@ -435,7 +474,10 @@ class RedditAdapter extends BasePlatformAdapter {
             .join("\n");
     }
 
-    /** Crea un clone pulito (senza ID, media e avatar originali) del post di partenza */
+    /** 
+     * @override
+     * @description Spoglia il nodo degli id nativi e rimuove i tag 'shreddit-post-image' e 'faceplate-img' nativi di Reddit.
+     */
     createCleanClone(postToCloneWrapper) {
         
         const fakePost = postToCloneWrapper.cloneNode(true);
@@ -464,7 +506,10 @@ class RedditAdapter extends BasePlatformAdapter {
         return { fakePost, divider };
     }
 
-    /** Rimuove tutti i link del post originale non popolati da noi (es. subreddit, autore, ecc). */
+    /** 
+     * @override
+     * @description Rimuove attributi aria-* specifici di Reddit e neutralizza i popup 'faceplate-hovercard' sulle informazioni autore.
+     */
     sanitizeFakePostLinks(fakePost) {
         const allLinks = fakePost.querySelectorAll('a');
         allLinks.forEach(link => {
@@ -489,8 +534,9 @@ class RedditAdapter extends BasePlatformAdapter {
         fakePost.style.cursor = "pointer";
     }
 
-    /** Se necessaril, filtra i payload in base al contesto della piattaforma. Nel caso di Reddit filtriamo per il subreddit
-     *  (es. se stiamo cercando dentro r/politics, iniettiamo solo i post configurati per r/politics) 
+    /** 
+     * @override
+     * @description Valuta se ci troviamo in una ricerca confinata a un sub (es. /r/politics/search) scartando i payload di altri subreddit.
      */
     filterPlatformSpecificPayloads(payloads) {
         
@@ -510,8 +556,8 @@ class RedditAdapter extends BasePlatformAdapter {
     // =======================================================================
 
     /** 
-     * Trova il contenitore principale della piattaforma e inietta il banner in cima.
-     * Ritorna true se l'inserimento ha successo, false altrimenti.
+     * @override
+     * @description Ancóra il banner prima del nodo 'shreddit-app .grid-container'.
      */
     insertDebunkingBanner(bannerElement) {
         const redditContainer = document.querySelector("shreddit-app .grid-container");
@@ -523,7 +569,8 @@ class RedditAdapter extends BasePlatformAdapter {
     }
 
     /** 
-     * Verifica se l'utente si trova ancora sulla pagina dei risultati per la query originale.
+     * @override
+     * @description Verifica se l'utente si trova ancora sulla pagina dei risultati per la query originale.
      * Utile per le SPA (Single Page Applications) che aggiornano l'URL senza ricaricare il DOM.
      */
     isSameSearchPage(expectedQuery) {
@@ -533,7 +580,10 @@ class RedditAdapter extends BasePlatformAdapter {
         return window.location.pathname.includes('/search') && currentQuery === expectedQuery.toLowerCase();
     }
 
-    /** Controlla se il contenitore target per il banner è già stato renderizzato nel DOM */
+    /** 
+     * @override
+     * @description Controlla se il contenitore target per il banner è già stato renderizzato nel DOM.
+     */
     isBannerTargetReady() {
         const redditContainer = document.querySelector("shreddit-app .grid-container");
         return redditContainer && redditContainer.parentNode;
@@ -543,23 +593,35 @@ class RedditAdapter extends BasePlatformAdapter {
     // TELEMETRIA: CONTESTO & CLICK
     // =======================================================================
 
-    /** Verifica se l'utente si trova nella home page della piattaforma */
+    /** 
+     * @override
+     * @description Verifica se l'utente si trova nella home page della piattaforma
+     */
     isHomePage() {
         return window.location.pathname === '/';
     }
 
-    /** Verifica se l'utente si trova nella pagina dei risultati di ricerca con una query valida */
+    /** 
+     * @override
+     * @description Verifica se l'utente si trova nella pagina dei risultati di ricerca con una query valida.
+     */
     isSearchPage() {
         const urlParams = new URLSearchParams(window.location.search);
         return window.location.pathname.includes('/search') && urlParams.has('q');
     }
 
-    /** Verifica se un link punta a un post della piattaforma */
+    /** 
+     * @override
+     * @description Identifica i post verificando la presenza di '/comments/' nel percorso.
+     */
     isPostUrl(url) {
         return Boolean(url && url.includes('/comments/'));
     }
 
-    /** Estrae i dati principali di un post.*/
+    /** 
+     * @override
+     * @description Risale il DOM per trovare il titolo e il Subreddit dai componenti specifici (es. data-testid="post-title").
+     */
     getPostDetails(node) {
         
         // estraiamo il wrapper del post
@@ -583,7 +645,10 @@ class RedditAdapter extends BasePlatformAdapter {
     // SCRAPING RISULTATI (Platform-Specific)
     // =======================================================================
 
-    /** Estrae i risultati visibili nella pagina di ricerca corrente in base al tab attivo */
+    /** 
+     * @override
+     * @description Direziona lo scraping specifico (Post, Community, Commenti, Utenti) valutando il parametro URL 'type' tipico della ricerca Reddit.
+     */
     scrapePageResults() {
 
         // estraiamo il parametro "type" per capire quale tab è aperto (es. posts, communities, people, comments)
