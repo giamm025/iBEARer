@@ -40,11 +40,6 @@
     "sync_interval_ms": 10000
   },
 
-  "target": {
-    "url_pattern": "*://*.reddit.com/*",
-    "dependency": "adapters/reddit_adapter.js"
-  },
-
   "triggers": [
     {
       "id": "track_all_searches",

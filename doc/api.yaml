@@ -163,7 +163,7 @@ components:
 
     Config:
       description: The raw, unfiltered rules engine configuration uploaded by the researcher.
-      required: [experiment, telemetry_settings, target, triggers, interventions, survey_settings]
+      required: [experiment, telemetry_settings, triggers, interventions, survey_settings]
       properties:
         experiment:
           $ref: '#/components/schemas/ExperimentSettings'
@@ -171,8 +171,6 @@ components:
           $ref: '#/components/schemas/SurveySettings'
         telemetry_settings:
           $ref: '#/components/schemas/TelemetrySettings'
-        target:
-          $ref: '#/components/schemas/TargetSettings'
         triggers:
           type: array
           items:
@@ -224,14 +222,12 @@ components:
 
     FilteredConfig:
       description: The filtered configuration delivered to the browser extension (contains no group mappings).
-      required: [experiment, telemetry_settings, target, triggers, interventions]
+      required: [experiment, telemetry_settings, triggers, interventions]
       properties:
         experiment:
           $ref: '#/components/schemas/ExperimentSettings'
         telemetry_settings:
           $ref: '#/components/schemas/TelemetrySettings'
-        target:
-          $ref: '#/components/schemas/TargetSettings'
         triggers:
           type: array
           items:
@@ -347,13 +343,6 @@ components:
             type: string
         sync_interval_ms:
           type: integer
-          
-    TargetSettings:
-      properties:
-        url_pattern:
-          type: string
-        dependency:
-          type: string
 
     Condition:
       required: [property, operator, value]
