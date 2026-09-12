@@ -41,7 +41,7 @@ class RedditAdapter {
     // =======================================================================
 
     /** Apre un Modale bloccante di dimensioni configurabili. */
-    showSurveyModal(modalConfiguration) {
+    showModal(modalConfiguration) {
 
         // usiamo un id fisso per il nostro pop-up, in modo da poterlo identificare e rimuovere facilmente in seguito
         if (document.getElementById('reddit-cospiracy-survey-modal')) return;
@@ -80,8 +80,8 @@ class RedditAdapter {
         document.body.style.overflow = 'hidden';
     }
 
-    /** Chiude il Modale aperto con showSurveyModal() e ripristina lo scroll della pagina. */ 
-    hideSurveyModal() {
+    /** Chiude il Modale aperto con showModal() e ripristina lo scroll della pagina. */ 
+    hideModal() {
         const modal = document.getElementById('reddit-cospiracy-survey-modal');
         if (modal) modal.remove();
         document.body.style.overflow = ''; 
@@ -400,7 +400,7 @@ class RedditAdapter {
     // =======================================================================
 
     /** Trova i nodi di riferimento per clonare e inserire un nuovo post */
-    getInjectionReferences(pos, countInjectedPosts = true) {
+    getDomReferences(pos, countInjectedPosts = true) {
         
         // estraiamo i link ai post (inclusi quelli initettati da noi)
         const realTitleLinks = this.getRealPosts();
@@ -489,7 +489,7 @@ class RedditAdapter {
         fakePost.style.cursor = "pointer";
     }
 
-    /** Filtra i payload in base al contesto della piattaforma. Nel caso di Reddit filtriamo per il subreddit
+    /** Se necessaril, filtra i payload in base al contesto della piattaforma. Nel caso di Reddit filtriamo per il subreddit
      *  (es. se stiamo cercando dentro r/politics, iniettiamo solo i post configurati per r/politics) 
      */
     filterPlatformSpecificPayloads(payloads) {

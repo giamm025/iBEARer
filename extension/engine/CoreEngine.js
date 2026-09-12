@@ -52,7 +52,7 @@ class CoreEngine {
                 await this.waitForStatus("PRE-SURVEY-COMPLETED", true);
 
                 // rimuoviamo il pop-up bloccante
-                SurveyManager.hideSurveyModal();
+                SurveyManager.hideModal();
 
                 // gestiamo il nuovo stato (PRE-SURVEY-COMPLETED)
                 await this.handleParticipantStatus();
@@ -73,7 +73,7 @@ class CoreEngine {
                 await this.waitForStatus("POST-SURVEY-COMPLETED", false);
                 
                 // rimuoviamo il pop-up bloccante
-                SurveyManager.hideSurveyModal();
+                SurveyManager.hideModal();
 
                 // forziamo un refresh della pagine per rimuovere tutti gli interventi precedentemente applicati 
                 Log.engine("🔄 Pulizia del DOM in corso... Ricaricamento pagina.");

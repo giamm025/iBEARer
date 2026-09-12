@@ -144,7 +144,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
         
         // estriamo i riferimenti al DOM necessari per clonare/inserire il post 
         const useAbsolute = payload.absolute_positioning !== false;
-        const domRefs = PlatformAdapter.getInjectionReferences(pos, useAbsolute);
+        const domRefs = PlatformAdapter.getDomReferences(pos, useAbsolute);
         if (!domRefs) return;
 
         // se stiamo in attesa => segnaliamo waiting = true e blocchiamo l'esecuzione. il MutationObserver riproverà in automatico appena l'utente scrolla
@@ -219,7 +219,7 @@ class InjectFakePostIntervention extends BasePostIntervention {
 
                 // prima di iniettare il post, rifacciamo un controllo sul DOM per essere sicuri che i riferimenti non siano cambiati 
                 const useAbsolute = payload.absolute_positioning !== false;
-                const freshDomRefs = PlatformAdapter.getInjectionReferences(pos, useAbsolute);
+                const freshDomRefs = PlatformAdapter.getDomReferences(pos, useAbsolute);
                 if (!freshDomRefs) { Log.error("Intervention", "DOM mutato durante l'attesa AI. Abortisco inserimento per riprovare."); return; }
                 this._finalizeInjection(fakePost, insertWrapper, mainFeedContainer, divider, mergedPayload, initialQuery, pos, state, true);
                 // concludiamo l'iniezione rimuovendo i link, aggiungendo la telemetria e iniettando fisicamente il post

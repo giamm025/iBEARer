@@ -30,7 +30,7 @@ const SurveyManager = {
                 };
 
                 // diciamo all'adapter di mostrare il pop-up
-                PlatformAdapter.showSurveyModal(modalConfiguration);
+                PlatformAdapter.showModal(modalConfiguration);
                     
                 // comunichiamo che l'operazione è finita
                 resolve(); 
@@ -39,8 +39,8 @@ const SurveyManager = {
     },
 
     // metodo helper per chiudere il modale in modo astratto
-    hideSurveyModal() {
-        PlatformAdapter.hideSurveyModal();
+    hideModal() {
+        PlatformAdapter.hideModal();
     },
 
     // metodo heper per fare il parsing del config.json e recuperare i survey_settings
