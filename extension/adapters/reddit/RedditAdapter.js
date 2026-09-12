@@ -2,7 +2,7 @@
  * @class RedditAdapter
  * @description Adapter specifico per la piattaforma Reddit. Fornisce metodi per l'interazione con i post, la gestione dei modali e l'estrazione dei dati.
  */ 
-class RedditAdapter {
+class RedditAdapter extends BasePlatformAdapter {
     
     /** Configura l'estensione per eseguire l'esperimento su REDDIT */
     run() {
