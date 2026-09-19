@@ -1,61 +1,439 @@
-# Data Dictionary
-# Questo file serve a spiegare quali sono i defaults forniti dalla nostra estensione,
-# che dovranno essere implementati e messi direttamente a disposizione dei ricercatori,
-# senza dover effettuare modifiche (es. cambiare l'adapter.js).
+# Questo file è una guida di riferimento per ricercatori che devono SCRIVERE un config.json valido. 
 
-event_source:
-  description: "Questi sono gli eventi asincroni (Fully Qualified Names delle classi) che l'Adapter lancia per svegliare il Motore dell'estensione."
-  values:
-    adapters.events.PageLoadedEvent: "Appena la pagina viene caricata." 
-    adapters.events.SearchSubmittedEvent: "Quando l'utente invia una richiesta di ricerca." 
-    adapters.events.ResultsLoadedEvent: "Quando i risultati di una ricerca sono stati caricati e sono visibili all'utente."
-    adapters.events.FeedUpdatedEvent: "Quando lo scroll infinito carica nuovi chunk del feed."
-    adapters.events.ClickOnPostEvent: "Quando l'utente clicca per aprire un post."
-    adapters.events.ClickOnLinkEvent: "Quando l'utente clicca su un link."
-    adapters.events.TimerEvent: "Quando termina un determinato periodo di tempo."
+# ------------------------------------------------------------------------------
+# 1. experiment
+# ------------------------------------------------------------------------------
+experiment:
+  __required__: true
+  experiment_name:
+    type: string
+    required: true
+    description: >
+      Nome identificativo dell'esperimento. Solo per organizzazione interna,
+      non letto da nessuna logica critica dell'estensione.
 
-property:
-  description: "Questa è l'astrazione pura del DOM. Il ricercatore sceglie cosa analizzare, l'Adapter saprà dove andarlo a pescare nell'HTML." 
-  values:
-    search_query: "Il testo che l'utente ha digitato nella barra di ricerca."
-    post_title: "Il titolo principale del contenuto visualizzato."
-    post_caption: "Il testo completo all'interno del post."
-    post_links: "Tutti gli URL (array) in uscita presenti nel post."
-    post_subreddit: "Il subreddit in cui è stato pubblicato il post."
+  end_condition:
+    required: true
+    description: Condizione che determina quando l'esperimento termina per un partecipante e si apre il post-survey.
+    type:
+      required: true
+      allowed_values:
+        - ACTIVE_MINUTES_ON_PLATFORM   # tempo ATTIVO (tab visibile) accumulato su Reddit, in MINUTI
+        - ABSOLUTE_DAYS                # tempo ASSOLUTO trascorso dal primo avvio, in GIORNI (calcolato anche a tab chiusa)
+    duration:
+      type: number
+      required: true
+      description: >
+        Unità dipendente da "type":
+        - ACTIVE_MINUTES_ON_PLATFORM -> minuti (es. 30 = mezz'ora di navigazione attiva)
+        - ABSOLUTE_DAYS               -> giorni (es. 7 = una settimana di calendario)
+      gotcha: >
+        Non esiste validazione: un "type" diverso dai due valori sopra viene
+        silenziosamente ignorato (solo un Log.error), il timer non parte MAI
+        e l'esperimento non terminerà mai per il partecipante.
 
-operator:
-  description: "L'operatore utilizzato per valutare una condizione."
-  values:
-    CONTAINS_ANY: "Vero se la property contiene almeno uno dei valori."
-    CONTAINS_ALL: "Vero se la property contiene tutti i valori."
-    NOT_CONTAINS_ANY: "Vero se la property non contiene nessuno dei valori."
-    EQUALS: "Vero se property e valore sono identici (Match esatto)."
-    NOT_EQUALS: "Vero se property e valore differiscono."
-    MATCHES_REGEX: "Vero se la property rispetta l'espressione regolare (Avanzato)."
+  groups:
+    type: array<string>
+    required: true
+    description: >
+      Elenco di TUTTI i possibili gruppi sperimentali di questo esperimento
+      (es. ["TREATMENT", "CONTROL"]). È la fonte di verità che il backend usa
+      per validare "target_groups" nei trigger e negli interventi.
 
-logical_operator:
-  description: |
-    Definisce come devono essere combinate le varie condizioni (conditions) all'interno di un trigger.
-    Ha valore solo se la lista di conditions di un trigger contiene più di 1 elemento (altrimenti viene ignorato).
-  values:
-    AND: "Il trigger scatta SE TUTTE le condizioni sono vere."
-    OR: "Il trigger scatta SE ALMENO UNA delle condizioni è vera."
 
-function_fqn:
-  description: "Il Fully Qualified Name (FQN) della funzione di intervento da eseguire quando scatta un trigger."
-  values:
-    interventions.core.hideContent:
-      description: "Nascondere visivamente il nodo dalla vista dell'utente."
-      payload: "{}"
-    interventions.ui.showWarningBanner:
-      description: "Iniettare un banner grafico sopra o sotto il contenuto."
-      payload: "{\"message\": ...}"
-    interventions.dom.demotePost:
-      description: "Spostare fisicamente il contenuto in fondo alla pagina."
-      payload: "{\"new_position\": ...}"
+# ------------------------------------------------------------------------------
+# 2. survey_settings
+# ------------------------------------------------------------------------------
+survey_settings:
+  __required__: true
+  description: Configurazione dei due questionari (Google Form) mostrati come modale bloccante.
+  pre_survey: &survey_config
+    __required__: true
+    base_url:
+      type: string (URL)
+      required: true
+      description: >
+        URL del Google Form. Il codice ci appende automaticamente il
+        parametro dell'ID partecipante (con "?" o "&" a seconda che l'URL
+        contenga già un "?").
+    id_param:
+      type: string
+      required: true
+      description: >
+        Nome del campo "entry.XXXXXXXXX" del Google Form dove va scritto
+        l'ID del partecipante (deve corrispondere a una domanda nascosta/
+        pre-compilata del form, altrimenti l'ID non verrà salvato).
+    modal_ui:
+      required: true
+      title:
+        type: string
+        required: true
+      message:
+        type: string (HTML)
+        required: true
+        gotcha: >
+          Viene inserito con innerHTML, quindi supporta tag come <br>, <b>,
+          ecc. — ma NON sanitizzato: non copiare/incollare testo da fonti
+          non fidate qui dentro.
+      button_text:
+        type: string
+        required: true
+  post_survey:
+    <<: *survey_config
+    description: Stessa struttura di pre_survey, mostrato a fine esperimento.
 
-end_condition_type:
-  description: "Definisce quando deve essere valutata la fine di un intervento (end_condition)."
-  values:
-    ACTIVE_MINUTES_ON_PLATFORM: "Il timer termina dopo che l'utente ha passato un certo numero di minuti sulla piattaforma."
-    ABSOLUTE_DAYS: "Il timer termina dopo un certo numero di giorni (indipendentemente dall'attività dell'utente)."
+
+# ------------------------------------------------------------------------------
+# 3. telemetry_settings
+# ------------------------------------------------------------------------------
+telemetry_settings:
+  __required__: true
+  track_events:
+    type: array<string>
+    required: true
+    description: >
+      Elenco degli Observer di telemetria da attivare. Ognuno traccia un
+      evento diverso e lo manda in coda verso il backend.
+    allowed_values:
+      - observers.telemetry.ClickOnLinkObserver
+      - observers.telemetry.ClickOnResultObserver
+      - observers.telemetry.ClickOnHomePagePostObserver
+      - observers.telemetry.TimeOnPageObserver
+      - observers.telemetry.ResultsLoadedObserver
+    gotcha: >
+      Un valore non presente in questa lista viene loggato come errore e
+      semplicemente ignorato — nessun crash, ma quell'evento non verrà
+      tracciato.
+  sync_interval_ms:
+    type: number
+    required: false
+    default: 10000
+    description: Ogni quanti millisecondi la coda di telemetria viene inviata al backend.
+
+
+# ------------------------------------------------------------------------------
+# 4. triggers[]
+# ------------------------------------------------------------------------------
+# Un trigger collega un evento (es. "l'utente ha cercato qualcosa") a una o
+# più interventions da eseguire, sotto condizione.
+triggers:
+  __required__: true
+  __type__: array
+  id:
+    type: string
+    required: true
+    gotcha: >
+      DEVE essere univoco. Il codice NON lo valida: se due trigger hanno lo
+      stesso id, non si rompe nulla a runtime (l'id serve solo per telemetria
+      "TriggerActivated"), ma diventa impossibile distinguerli nei log/analisi
+      a posteriori. Controlla sempre di non avere id duplicati nel file.
+
+  target_groups:
+    type: array<string>
+    required: true
+    description: >
+      Sottoinsieme di experiment.groups. Il backend consegna questo trigger
+      SOLO ai partecipanti il cui gruppo compare in questa lista.
+
+  event_source:
+    type: string
+    required: true
+    description: FQN dell'evento che fa scattare la valutazione del trigger.
+    allowed_values:
+      - events.SearchSubmittedEvent   # scatta ogni volta che l'utente invia una ricerca su Reddit
+    event_data_shape:
+      events.SearchSubmittedEvent: { search_query: string }
+
+  conditions:
+    type: array<Condition>
+    required: true
+    description: >
+      Lista di condizioni da valutare su eventData. Può essere un array
+      VUOTO ([]) per un trigger che scatta sempre — ma solo se
+      conditions_logical_operator è AND (vedi gotcha sotto).
+    item_shape: &condition
+      property:
+        type: string
+        required: true
+        description: >
+          Nome del campo da leggere da eventData (es. "search_query" per
+          events.SearchSubmittedEvent).
+      operator:
+        type: string
+        required: true
+        allowed_values:
+          - core.operators.ContainsAny       # value: array<string|regex-literal>. Match se ALMENO uno è contenuto (case-insensitive) o fa match come regex.
+          - core.operators.NotContainsAny    # value: array<string>.               Match se NESSUNA stringa è contenuta. NON supporta la sintassi regex.
+          - core.operators.Equals            # value: qualsiasi.                   Match se property === value (confronto stretto).
+      value:
+        type: string | array<string> | any
+        required: true
+        description: >
+          Il formato dipende dall'operator scelto sopra (vedi allowed_values).
+        regex_literal_syntax: >
+          Per ContainsAny, ogni stringa dell'array può essere una regex
+          scritta come "/pattern/flags" (es. "/vaccin[oi]/i"). Il flag "i"
+          viene aggiunto automaticamente se te lo scordi. NotContainsAny non
+          supporta questa sintassi: tratta sempre la stringa come testo letterale.
+
+  conditions_logical_operator:
+    type: string
+    required: false
+    default: AND
+    allowed_values: [AND, OR]
+    description: >
+      Come combinare i risultati di più condizioni. Consigliato specificarlo
+      sempre esplicitamente quando ci sono 2+ condizioni, anche se il default
+      è AND.
+    gotcha: >
+      Con conditions: [] (array vuoto), "AND su array vuoto" è
+      vacuously true (il trigger scatta sempre) mentre "OR su array vuoto"
+      è vacuously false (il trigger non scatta MAI). Con zero condizioni,
+      quindi, l'unico comportamento sensato è il default AND — non impostare
+      qui "OR" se conditions è vuoto.
+
+  apply_interventions:
+    type: object<string, array<string>>
+    required: true
+    description: >
+      Mappa "intervention_id -> lista dei gruppi per cui quell'intervento va
+      applicato quando questo trigger scatta". La chiave DEVE corrispondere
+      a un "id" presente nella sezione interventions[] più sotto. Il
+      partecipante riceverà solo gli intervention_id il cui array contiene
+      il proprio gruppo.
+    example:
+      hide_content: ["TREATMENT"]
+      modify_content: ["TREATMENT", "CONTROL"]
+
+
+# ------------------------------------------------------------------------------
+# 5. interventions[]
+# ------------------------------------------------------------------------------
+interventions:
+  __required__: true
+  __type__: array
+  id:
+    type: string
+    required: true
+    description: Referenziato dalle chiavi di trigger[].apply_interventions.
+  function_fqn:
+    type: string
+    required: true
+    description: Quale classe Intervention eseguire. Determina la shape di "payload" (vedi sezioni 5.x sotto).
+    allowed_values:
+      - interventions.TrackResults
+      - interventions.ApplyBorder
+      - interventions.ModifyPost
+      - interventions.RemovePost
+      - interventions.RerankPost
+      - interventions.InjectFakePost
+      - interventions.ShowDebunkingBanner
+  payload:
+    type: object
+    required: true
+    description: Vedi la sezione dedicata a ciascun function_fqn più sotto.
+
+
+# ------------------------------------------------------------------------------
+# 6. payloads (a seconda dell'intervento)
+# ------------------------------------------------------------------------------
+
+payload_schemas:
+
+  interventions.TrackResults:
+    description: >
+      Nessun campo. Serve solo a far scattare lo scraping/telemetria dei
+      risultati di ricerca correnti.
+    payload: {}
+
+  interventions.ApplyBorder:
+    description: >
+      Nessun targeting per query/posizione: applica il bordo a document.body
+      ogni volta che il trigger scatta.
+    payload:
+      border_style:
+        type: string
+        required: true
+        description: Shorthand CSS "border", es. "10px solid red".
+
+  interventions.RemovePost:
+    description: >
+      Serve almeno uno tra target_positions e target_keywords nella "data" di
+      una regola, altrimenti nessun post verrà rimosso.
+    payload:
+      dynamic_content:
+        type: array
+        required: true
+        item_shape:
+          trigger_keywords:
+            type: array<string>
+            required: false
+            description: >
+              Se assente/vuoto, la regola matcha sempre, qualunque sia la
+              query di ricerca. Il match è "contains, case-insensitive" o
+              regex "/pattern/flags".
+          data:
+            target_positions:
+              type: array<number>
+              required: false
+              description: Posizioni ORIGINALI (1-based, prima di qualsiasi rerank).
+            target_keywords:
+              type: array<string>
+              required: false
+              description: Testate contro il testo del titolo del post (contains/regex).
+
+  interventions.ModifyPost:
+    payload:
+      dynamic_content:
+        type: array
+        required: true
+        item_shape:
+          trigger_keywords:
+            type: array<string>
+            required: false
+            description: Stesso comportamento di RemovePost.trigger_keywords.
+          data:
+            target_positions: { type: array<number>, required: false }
+            target_keywords:  { type: array<string>, required: false }
+            highlight_color:
+              type: string
+              required: false
+              description: Colore sfondo del post (es. "#ffebee").
+            border_color:
+              type: string
+              required: false
+              description: Colore bordo sinistro 4px (es. "#d32f2f").
+            title:              { type: string, required: false, description: Sovrascrive il titolo. }
+            subreddit:          { type: string, required: false, description: Sovrascrive il nome subreddit visibile. }
+            subreddit_icon_url: { type: string, required: false, description: Sovrascrive l'icona del subreddit. }
+            content_text:       { type: string, required: false, description: Testo/spiegazione inserito sotto il titolo. }
+            image_url:          { type: string, required: false, description: Immagine di anteprima. }
+            target_url:         { type: string, required: false, description: Cambia il link di destinazione del click sul post. }
+            date:               { type: string, required: false, description: Sovrascrive la data mostrata. }
+            votes:              { type: string|number, required: false, description: Sovrascrive il contatore voti. }
+            comments:           { type: string|number, required: false, description: Sovrascrive il contatore commenti. }
+
+  interventions.RerankPost:
+    payload:
+      dynamic_content:
+        type: array
+        required: true
+        item_shape:
+          trigger_keywords:
+            type: array<string>
+            required: false
+          data:
+            target_positions: { type: array<number>, required: false }
+            target_keywords:  { type: array<string>, required: false }
+            keyword_new_position:
+              type: number
+              required: false
+              description: Slot di destinazione per i post intercettati via KEYWORD (non tramite "moves").
+            moves:
+              type: array
+              required: false
+              description: Regole di spostamento per POSIZIONE fissa.
+              item_shape:
+                target:
+                  type: number
+                  required: true
+                  description: Posizione ORIGINALE (1-based) da spostare.
+                new_position:
+                  type: number
+                  required: true
+                  description: Nuovo slot visivo di destinazione (1-based).
+              gotcha: >
+                "target" e "new_position" sono sempre relativi al feed COSÌ
+                COM'È nel momento in cui il rerank scatta (posizioni
+                originali, prima di altri spostamenti). Se serve spostare un
+                post molto in basso (es. dal 50), il codice simula
+                automaticamente lo scroll ("ghost scroll") per farlo caricare
+                da Reddit — non serve nessuna configurazione aggiuntiva,
+                avviene in automatico quando new_position < target.
+
+  interventions.InjectFakePost:
+    payload:
+      randomize_positions:
+        type: array<number>
+        required: false
+        description: >
+          A LIVELLO DI PAYLOAD (non dentro "data"). Pool di slot tra cui
+          scegliere a caso la posizione dei post che NON hanno un
+          "new_position" fisso. La scelta random è fissa per (query,
+          sessione) grazie a una cache in sessionStorage.
+      dynamic_content:
+        type: array
+        required: true
+        item_shape:
+          trigger_keywords:
+            type: array<string>
+            required: false
+          data:
+            new_position:
+              type: number
+              required: false
+              description: Default 1, o pescato da randomize_positions se presente.
+            use_ai_generation: { type: boolean, required: false, default: false }
+            ai_prompt_context:
+              type: string
+              required: false
+              description: RICHIESTO se use_ai_generation è true. Istruzioni per il prompt AI.
+            title: { type: string, required: false, default: "Attenzione: Informazione" }
+            subreddit:
+              type: string
+              required: false
+              default: "r/iBEARer"
+              gotcha: >
+                Se l'utente sta cercando DENTRO un subreddit specifico (URL
+                tipo .../r/politics/search?...), il fake post viene mostrato
+                SOLO se questo campo combacia ESATTAMENTE (case-insensitive)
+                col subreddit corrente. Se non combacia, l'INTERA regola
+                viene scartata per quella pagina — non è solo un dato
+                visivo, è anche un filtro. Se il fake post deve apparire sia
+                in ricerca globale sia dentro un subreddit specifico, questo
+                campo va impostato esattamente al nome di quel subreddit
+                (es. "r/politics").
+            subreddit_icon_url:   { type: string, required: false, description: "Default: avatar reddit di default." }
+            subreddit_target_url: { type: string, required: false, description: Se assente, il nome del subreddit non è cliccabile. }
+            author:               { type: string, required: false, description: Non mostrato nella UI attuale di ricerca Reddit. }
+            content_text:         { type: string, required: false }
+            image_url:            { type: string, required: false }
+            target_url:           { type: string, required: false, description: Link cliccando sul resto del post. }
+            date:                 { type: string, required: false, default: "2 mesi fa" }
+            votes:                { type: string|number, required: false }
+            comments:             { type: string|number, required: false }
+            absolute_positioning: { type: boolean, required: false, default: true }
+      gotcha: >
+        use_ai_generation e i campi statici (title, content_text, ecc.)
+        possono coesistere: se use_ai_generation è true, i dati generati
+        dall'AI vengono fusi SOPRA quelli statici (l'AI vince sui campi che
+        genera, i campi statici restano come fallback per tutto il resto,
+        es. subreddit_icon_url).
+
+  interventions.ShowDebunkingBanner:
+    payload:
+      dynamic_content:
+        type: array
+        required: true
+        item_shape:
+          trigger_keywords:
+            type: array<string>
+            required: true
+          operator:
+            type: string
+            required: false
+            default: core.operators.ContainsAny
+            allowed_values: [core.operators.ContainsAny, core.operators.NotContainsAny, core.operators.Equals]
+          data:
+            message:    { type: string, required: false, default: "Attenzione: Contenuto non verificato." }
+            link_url:   { type: string, required: false, default: "#", description: "Con il default il link non naviga da nessuna parte." }
+            link_text:  { type: string, required: false, default: "Scopri di più" }
+            bg_color:   { type: string, required: false, default: "#D32F2F" }
+        gotcha: >
+          Viene applicata SOLO la PRIMA regola che matcha. Se due regole di
+          questo intervento potrebbero matchare la stessa query, l'ordine in
+          cui le scrivi nell'array conta.
+      default_fallback:
+        type: object
+        required: false
+        description: Stessa shape di "data" qui sopra. Usato se NESSUNA regola matcha.
