@@ -6,7 +6,7 @@
 
 Il sistema permette ai ricercatori di manipolare dinamicamente l'esperienza utente a fini sperimentali (es. re-ranking dei feed, iniezione di contenuti controllati, occultamento di post) aggirando le rigorose policy di sicurezza introdotte dal Google Manifest V3. 
 
-Nato come esperimento pilota su Reddit, il sistema è stato ingegnerizzato come una libreria flessibile e agnostica rispetto alla piattaforma, permettendo l'estensione a futuri ambienti (es. YouTube, X) tramite l'implementazione di Adapter specifici.
+Il sistema nasce come una libreria flessibile e agnostica rispetto alla piattaforma, permettendo l'estensione a piattaforme specifiche (es. YouTube, X) tramite l'implementazione di nuovi Platform Adapters. La versione in questa repository offre già un implementazione funzionante per Reddit. 
 
 ---
 
